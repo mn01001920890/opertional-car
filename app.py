@@ -1,3 +1,15 @@
+from flask import send_from_directory
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path),
+        'favicon.ico',
+        mimetype='image/vnd.microsoft.icon'
+    )
+
+
+
 # ======================================================
 # 🚗 Flask Authorization System — Integrated with SQLAlchemy (Fixed)
 # ======================================================
@@ -127,3 +139,4 @@ def get_authorizations():
 # ---------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+

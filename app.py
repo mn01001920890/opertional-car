@@ -135,8 +135,112 @@ def get_authorizations():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+# ✅ API: إضافة سائق
+@app.route("/api/drivers", methods=["POST"])
+def add_driver():
+    data = request.get_json() or {}
+    try:
+        new_driver = Driver(
+            name=data.get("name"),
+            phone=data.get("phone"),
+            license_no=data.get("license_no"),
+            notes=data.get("notes")
+        )
+        db.session.add(new_driver)
+        db.session.commit()
+        return jsonify({"message": "✅ Driver added", "driver": new_driver.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+# ✅ API: عرض السائقين
+@app.route("/api/drivers", methods=["GET"])
+def get_drivers():
+    drivers = Driver.query.order_by(Driver.id.desc()).all()
+    return jsonify([d.to_dict() for d in drivers])
+
+
+# ✅ API: إضافة سيارة
+@app.route("/api/cars", methods=["POST"])
+def add_car():
+    data = request.get_json() or {}
+    try:
+        new_car = Car(
+            plate=data.get("plate"),
+            model=data.get("model"),
+            car_type=data.get("car_type"),
+            status=data.get("status"),
+            daily_rent=data.get("daily_rent")
+        )
+        db.session.add(new_car)
+        db.session.commit()
+        return jsonify({"message": "✅ Car added", "car": new_car.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+# ✅ API: عرض السيارات
+@app.route("/api/cars", methods=["GET"])
+def get_cars():
+    cars = Car.query.order_by(Car.id.desc()).all()
+    return jsonify([c.to_dict() for c in cars])
+
+
+
+
+
+# ---------------------------------------------
+# 🔹 جدول السائقين Drivers
+# ---------------------------------------------
+class Driver(db.Model):
+    __tablename__ = "drivers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(50))
+    license_no = db.Column(db.String(80))
+    notes = db.Column(db.Text)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "phone": self.phone,
+            "license_no": self.license_no,
+            "notes": self.notes
+        }
+
+
+# ---------------------------------------------
+# 🔹 جدول السيارات Cars
+# ---------------------------------------------
+class Car(db.Model):
+    __tablename__ = "cars"
+
+    id = db.Column(db.Integer, primary_key=True)
+    plate = db.Column(db.String(50), nullable=False)
+    model = db.Column(db.String(80))
+    car_type = db.Column(db.String(80))
+    status = db.Column(db.String(50), default="متاحة")
+    daily_rent = db.Column(db.Numeric(10,2))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "plate": self.plate,
+            "model": self.model,
+            "car_type": self.car_type,
+            "status": self.status,
+            "daily_rent": float(self.daily_rent or 0)
+        }
+
+
 # ---------------------------------------------
 # 🔹 تشغيل محلي (اختياري)
 # ---------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+

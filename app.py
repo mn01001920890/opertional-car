@@ -1,37 +1,37 @@
-
-
-
-
 # ======================================================
-# 🚗 Flask Authorization System — Integrated with SQLAlchemy (Fixed)
+# 🚗 Flask Authorization System — Integrated with SQLAlchemy (Final Clean Version)
 # ======================================================
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 
+# ---------------------------------------------
+# 🔹 تهيئة تطبيق Flask
+# ---------------------------------------------
 app = Flask(__name__)
 
-            from flask import send_from_directory
-            
-            @app.route('/favicon.ico')
-            def favicon():
-                return send_from_directory(
-                    os.path.join(app.root_path),
-                    'favicon.ico',
-                    mimetype='image/vnd.microsoft.icon'
-                )
+# ---------------------------------------------
+# 🔹 مسار الأيقونة favicon
+# ---------------------------------------------
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path),
+        'favicon.ico',
+        mimetype='image/vnd.microsoft.icon'
+    )
 
 # ---------------------------------------------
 # 🔹 إعداد الاتصال بقاعدة البيانات PostgreSQL (Neon)
 # ---------------------------------------------
-DATABASE_URL = os.environ.get("POSTGRES_URL")
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise ValueError("❌ لم يتم ضبط متغير البيئة POSTGRES_URL في Vercel")
+    raise ValueError("❌ لم يتم ضبط متغير البيئة DATABASE_URL في Vercel")
 
-# 🔸 إصلاح خاص لـ Vercel وNeon: تحويل URI القديمة postgresql:// → postgres://
+# إصلاح عنوان الاتصال القديم إن وُجد
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -43,7 +43,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 # ---------------------------------------------
-# 🔹 تعريف جدول Authorizations
+# 🔹 تعريف جدول التفويضات Authorizations
 # ---------------------------------------------
 class Authorization(db.Model):
     __tablename__ = "authorizations"
@@ -92,7 +92,7 @@ def issue_page():
     return render_template("issue.html")
 
 # ---------------------------------------------
-# 🔹 واجهات API (Backend)
+# 🔹 واجهات الـ API (Backend)
 # ---------------------------------------------
 @app.route("/api/issue", methods=["POST"])
 def add_authorization():
@@ -101,7 +101,7 @@ def add_authorization():
         start_date = None
         if data.get("start_date"):
             try:
-                # 🧠 إصلاح تنسيق التاريخ القادم من HTML (مثل 2025-11-11T14:30)
+                # تنسيق التاريخ من HTML (مثل 2025-11-11T14:30)
                 start_date = datetime.fromisoformat(data["start_date"])
             except Exception:
                 start_date = None
@@ -135,11 +135,8 @@ def get_authorizations():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 # ---------------------------------------------
 # 🔹 تشغيل محلي (اختياري)
 # ---------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-
-

@@ -56,6 +56,42 @@
   <div class="search-box">
     <input id="search" type="text" placeholder="🔍 ابحث برقم اللوحة..." oninput="filterCars()">
   </div>
+              <div class="car-item" style="margin-bottom:12px">
+            <div class="row-inline" style="display:flex;gap:8px">
+              <input id="new_plate" placeholder="رقم اللوحة" />
+              <input id="new_model" placeholder="الموديل" />
+              <input id="new_type"  placeholder="النوع" />
+              <input id="new_rent"  type="number" step="0.01" placeholder="الإيجار/يوم" />
+              <button id="addCarBtn" style="background:#0d6efd;color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer">➕ إضافة سيارة</button>
+            </div>
+            <div id="carAddMsg" style="margin-top:6px;font-weight:bold"></div>
+          </div>
+          
+          <script>
+          document.getElementById("addCarBtn").addEventListener("click", async () => {
+            const payload = {
+              plate:     document.getElementById("new_plate").value.trim(),
+              model:     document.getElementById("new_model").value.trim(),
+              car_type:  document.getElementById("new_type").value.trim(),
+              daily_rent: Number(document.getElementById("new_rent").value || 0),
+              status: "متاحة"
+            };
+            const box = document.getElementById("carAddMsg");
+            box.textContent = "⏳ جاري الإضافة...";
+            try {
+              const res = await fetch("/api/cars", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
+              const data = await res.json();
+              if (res.ok) {
+                box.style.color = "#0f5132"; box.textContent = "✅ تمت إضافة السيارة";
+                loadCars(); // موجودة أصلاً في الصفحة
+              } else {
+                box.style.color = "#842029"; box.textContent = "❌ فشل: " + (data.error || "خطأ");
+              }
+            } catch (e) {
+              box.style.color = "#842029"; box.textContent = "⚠️ مشكلة اتصال";
+            }
+          });
+          </script>
 
   <div id="carList"></div>
 
@@ -127,3 +163,4 @@
 
 </body>
 </html>
+

@@ -7,6 +7,8 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 import os
+import traceback
+
 
 app = Flask(__name__)
 
@@ -123,78 +125,92 @@ def rented_cars_page():
 def cars_status_page():
     return render_template("cars-status.html")
 
+@app.route("/api/health")
+def api_health():
+    return jsonify({"ok": True})
+
+@app.route("/api/debug/dburl")
+def api_debug_dburl():
+    # خليك مطمن إن DATABASE_URL متضبوطة على Vercel
+    return jsonify({"DATABASE_URL_present": bool(os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL"))})
+
+
 # ---------------- APIs ----------------
 # إصدار تفويض جديد
 @app.route("/api/issue", methods=["POST"])
 def add_authorization():
-    data = request.get_json() or {}
-
-    # 0) تحقق من الحقول الأساسية
-    driver_name = (data.get("driver_name") or "").strip()
-    car_plate   = (data.get("car_number") or "").strip()
-    if not driver_name:
-        return jsonify({"error": "برجاء اختيار السائق"}), 400
-    if not car_plate:
-        return jsonify({"error": "برجاء اختيار السيارة"}), 400
-
-    # 1) السيارة + حالتها
-    car = Car.query.filter_by(plate=car_plate).first()
-    if not car:
-        return jsonify({"error": "السيارة غير موجودة في قاعدة البيانات"}), 400
-    if car.status != "متاحة":
-        return jsonify({"error": "السيارة غير متاحة حالياً"}), 400
-
-    # 2) منع ازدواج التفويض المفتوح
-    open_auth = (Authorization.query
-                 .filter_by(car_number=car_plate)
-                 .filter(Authorization.end_date.is_(None))
-                 .first())
-    if open_auth:
-        return jsonify({"error": "هناك تفويض مفتوح لهذه السيارة بالفعل"}), 400
-
-    # 3) تجهيز التاريخ
-    start_date = None
-    sd = (data.get("start_date") or "").strip()
-    if sd:
-        try:
-            start_date = datetime.fromisoformat(sd)
-        except Exception:
-            return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601 مثل 2025-11-12T10:30"}), 400
-
-    # 4) الموديل/النوع/الإيجار
-    car_model = data.get("car_model") or car.model
-    car_type  = data.get("car_type") or car.car_type
-
-    # daily_rent: لو مبعوت استخدمه بعد تحويله لDecimal، وإلا خُد من العربية
-    daily_rent = car.daily_rent
-    if data.get("daily_rent") not in (None, "", " "):
-        try:
-            daily_rent = Decimal(str(data.get("daily_rent")))
-        except (InvalidOperation, ValueError, TypeError):
-            return jsonify({"error": "قيمة الإيجار اليومي غير صحيحة"}), 400
-
-    new_auth = Authorization(
-        driver_name=driver_name,
-        car_number=car_plate,
-        car_model=car_model,
-        car_type=car_type,
-        start_date=start_date,
-        daily_rent=daily_rent,
-        details=data.get("details"),
-        status=data.get("status") or "مؤجرة",
-        end_date=None
-    )
-
     try:
-        db.session.add(new_auth)
-        # تحديث حالة العربية لمؤجرة
-        car.status = "مؤجرة"
-        db.session.commit()
-        return jsonify({"message": "✅ Authorization added successfully"}), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"DB error: {str(e)}"}), 500
+        data = request.get_json() or {}
 
+        # 0) تحقق من الحقول الأساسية
+        driver_name = (data.get("driver_name") or "").strip()
+        car_plate   = (data.get("car_number") or "").strip()
+        if not driver_name:
+            return jsonify({"error": "برجاء اختيار السائق"}), 400
+        if not car_plate:
+            return jsonify({"error": "برجاء اختيار السيارة"}), 400
+
+        # 1) السيارة + حالتها
+        car = Car.query.filter_by(plate=car_plate).first()
+        if not car:
+            return jsonify({"error": "السيارة غير موجودة في قاعدة البيانات"}), 400
+        if (car.status or "").strip() != "متاحة":
+            return jsonify({"error": f"السيارة غير متاحة حالياً (الحالة: {car.status})"}), 400
+
+        # 2) منع ازدواج التفويض المفتوح
+        open_auth = (Authorization.query
+                     .filter_by(car_number=car_plate)
+                     .filter(Authorization.end_date.is_(None))
+                     .first())
+        if open_auth:
+            return jsonify({"error": "هناك تفويض مفتوح لهذه السيارة بالفعل"}), 400
+
+        # 3) تجهيز التاريخ (اختياري)
+        start_date = None
+        sd = (data.get("start_date") or "").strip()
+        if sd:
+            try:
+                start_date = datetime.fromisoformat(sd)
+            except Exception:
+                return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601 مثل 2025-11-12T10:30"}), 400
+
+        # 4) الموديل/النوع/الإيجار
+        car_model = data.get("car_model") or car.model
+        car_type  = data.get("car_type") or car.car_type
+
+        # الإيجار اليومي: لو مبعوت استخدمه بعد تحويله لDecimal، وإلا خُد من العربية
+        daily_rent = car.daily_rent
+        if data.get("daily_rent") not in (None, "", " "):
+            try:
+                daily_rent = Decimal(str(data.get("daily_rent")))
+            except (InvalidOperation, ValueError, TypeError):
+                return jsonify({"error": "قيمة الإيجار اليومي غير صحيحة"}), 400
+
+        new_auth = Authorization(
+            driver_name=driver_name,
+            car_number=car_plate,
+            car_model=car_model,
+            car_type=car_type,
+            start_date=start_date,
+            daily_rent=daily_rent,
+            details=data.get("details"),
+            status=data.get("status") or "مؤجرة",
+            end_date=None
+        )
+
+        try:
+            db.session.add(new_auth)
+            car.status = "مؤجرة"
+            db.session.commit()
+            return jsonify({"message": "✅ Authorization added successfully"}), 201
+        except Exception as e:
+            db.session.rollback()
+            traceback.print_exc()
+            return jsonify({"error": f"DB error: {str(e)}"}), 500
+
+    except Exception as outer:
+        traceback.print_exc()
+        return jsonify({"error": f"Server error: {str(outer)}"}), 500
 # جلب كل التفويضات
 @app.route("/api/authorizations", methods=["GET"])
 def get_authorizations():
@@ -286,3 +302,4 @@ def add_driver():
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+

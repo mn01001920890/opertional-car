@@ -71,6 +71,43 @@
   </div>
 
   <!-- قائمة السائقين -->
+
+          <div class="card" style="margin-bottom:12px">
+          <div class="row-inline" style="display:flex;gap:8px">
+            <input id="d_name"  placeholder="اسم السائق" />
+            <input id="d_phone" placeholder="الجوال" />
+            <input id="d_lic"   placeholder="رقم الرخصة" />
+            <input id="d_note"  placeholder="ملاحظات (اختياري)" />
+            <button id="addDriverBtn" style="background:#0d6efd;color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer">➕ إضافة سائق</button>
+          </div>
+          <div id="dAddMsg" style="margin-top:6px;font-weight:bold"></div>
+        </div>
+        
+        <script>
+        document.getElementById("addDriverBtn").addEventListener("click", async ()=>{
+          const payload = {
+            name: document.getElementById("d_name").value.trim(),
+            phone: document.getElementById("d_phone").value.trim(),
+            license_no: document.getElementById("d_lic").value.trim(),
+            notes: document.getElementById("d_note").value.trim()
+          };
+          const box = document.getElementById("dAddMsg");
+          box.textContent = "⏳ جاري الإضافة...";
+          try {
+            const res = await fetch("/api/drivers", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)});
+            const data = await res.json();
+            if(res.ok){
+              box.style.color="#0f5132"; box.textContent="✅ تمت إضافة السائق";
+              loadDrivers(); // موجودة أصلاً في الصفحة
+            }else{
+              box.style.color="#842029"; box.textContent="❌ فشل: " + (data.error || "خطأ");
+            }
+          } catch(e){
+            box.style.color="#842029"; box.textContent="⚠️ مشكلة اتصال";
+          }
+        });
+        </script>
+        
   <div id="driverList"></div>
 
   <button onclick="location.href='/'" style="width:100%;padding:12px;border:none;border-radius:10px;background:#fff;color:#0d6efd;margin-top:15px;font-weight:bold;font-size:16px">🏠 الرجوع للصفحة الرئيسية</button>
@@ -137,3 +174,4 @@
   </script>
 </body>
 </html>
+

@@ -5,6 +5,7 @@ Flask backend for Car Rental / Authorizations
 - Robust issue (authorization) creation with validations
 - End authorization endpoint updates car status back to "متاحة"
 - Works on Vercel/Neon: reads DATABASE_URL (fallback POSTGRES_URL), fixes postgres:// → postgresql://
+- **NEW**: UI routes for serving index.html وباقي الصفحات لمنع 404 على الجذر والمسارات الأمامية
 """
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -123,8 +124,64 @@ def _json_error(msg, code=400):
 
 
 # ------------------------------
-# Static helpers
+# Static / UI routes (fix 404 on "/" and pages)
 # ------------------------------
+ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+
+@app.route('/')
+def home():
+    # Serve index.html from project root
+    return send_from_directory(ROOT_DIR, 'index.html')
+
+@app.route('/index')
+@app.route('/index.html')
+def index_page():
+    return send_from_directory(ROOT_DIR, 'index.html')
+
+@app.route('/cars')
+@app.route('/cars.html')
+def cars_page():
+    return send_from_directory(ROOT_DIR, 'cars.html')
+
+@app.route('/drivers')
+@app.route('/drivers.html')
+def drivers_page():
+    return send_from_directory(ROOT_DIR, 'drivers.html')
+
+@app.route('/issue')
+@app.route('/issue.html')
+def issue_page():
+    return send_from_directory(ROOT_DIR, 'issue.html')
+
+@app.route('/rented')
+@app.route('/rented.html')
+def rented_page():
+    return send_from_directory(ROOT_DIR, 'rented.html')
+
+@app.route('/view')
+@app.route('/view.html')
+def view_page():
+    return send_from_directory(ROOT_DIR, 'view.html')
+
+@app.route('/cars-status')
+@app.route('/cars-status.html')
+def cars_status_page():
+    return send_from_directory(ROOT_DIR, 'cars-status.html')
+
+# generic static handler (serve any .html file if present)
+@app.route('/<path:fname>')
+def static_files(fname):
+    # if requesting a known api path, let other routes handle it
+    if fname.startswith('api/'):
+        return _json_error('Not Found', 404)
+    # try to serve the requested file from project root
+    fpath = os.path.join(ROOT_DIR, fname)
+    if os.path.isfile(fpath):
+        directory = os.path.dirname(fpath)
+        filename = os.path.basename(fpath)
+        return send_from_directory(directory, filename)
+    return _json_error('Not Found', 404)
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path), 'favicon.ico', mimetype='image/vnd.microsoft.icon')

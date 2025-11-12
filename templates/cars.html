@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🚗 إدارة السيارات</title>
+
+  <style>
+    body {
+      font-family: "Tajawal", sans-serif;
+      background: linear-gradient(135deg, #0d6efd, #6c63ff);
+      margin: 0;
+      padding: 15px;
+      color: #fff;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 26px;
+      color: #fff;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+
+    .car-item {
+      background: #fff;
+      color: #333;
+      padding: 13px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: .3s;
+    }
+
+    .highlight {
+      border: 2px solid #ffcc00;
+      background: #fff6d1;
+      transform: scale(1.04);
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>🚗 إدارة السيارات</h2>
+
+  <!-- بحث -->
+  <div class="search-box">
+    <input id="search" type="text" placeholder="🔍 ابحث برقم اللوحة..." oninput="filterCars()">
+  </div>
+
+  <div id="carList"></div>
+
+  <button onclick="location.href='/'" style="width:100%;padding:12px;border:none;border-radius:10px;background:#fff;color:#0d6efd;margin-top:15px;font-weight:bold;font-size:16px">🏠 الرجوع للصفحة الرئيسية</button>
+
+  <script>
+    let carsData = [];
+
+    async function loadCars() {
+      const list = document.getElementById("carList");
+      list.innerHTML = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
+
+      const res = await fetch("/api/cars");
+      const data = await res.json();
+      carsData = data;
+
+      renderCars(carsData);
+      autoFocusCar();
+    }
+
+    function renderCars(data) {
+      const list = document.getElementById("carList");
+      list.innerHTML = "";
+
+      data.forEach(c => {
+        const id = "car-" + c.plate.replace(/\s+/g,'-').replace(/\W+/g,'-');
+
+        const item = document.createElement("div");
+        item.className = "car-item";
+        item.id = id;
+
+        item.innerHTML = `
+          <div><b>رقم اللوحة:</b> ${c.plate}</div>
+          <div><b>الموديل:</b> ${c.model || "—"}</div>
+          <div><b>النوع:</b> ${c.car_type || "—"}</div>
+          <div><b>الحالة:</b> ${c.status || "—"}</div>
+          <div><b>الإيجار:</b> ${c.daily_rent} ريال</div>
+        `;
+
+        list.appendChild(item);
+      });
+    }
+
+    function filterCars() {
+      const term = document.getElementById("search").value.trim().toLowerCase();
+      const filtered = carsData.filter(c => c.plate.toLowerCase().includes(term));
+      renderCars(filtered);
+    }
+
+    function autoFocusCar() {
+      const params = new URLSearchParams(window.location.search);
+      let focusPlate = params.get("focus");
+      if (!focusPlate) return;
+
+      focusPlate = focusPlate.replace(/\W+/g,'-');
+      const targetId = "car-" + focusPlate;
+
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.classList.add("highlight");
+        el.scrollIntoView({ behavior: "smooth", block:"center" });
+
+        setTimeout(() => el.classList.remove("highlight"), 3500);
+      }
+    }
+
+    loadCars();
+  </script>
+
+</body>
+</html>

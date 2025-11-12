@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📊 حالة السيارات</title>
+
+  <style>
+    body {
+      font-family: "Tajawal", sans-serif;
+      background: linear-gradient(135deg, #0d6efd, #6c63ff);
+      margin: 0; padding: 20px; color: #fff;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 26px;
+      margin-bottom: 20px;
+    }
+
+    .status-box {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      flex: 1;
+      min-width: 30%;
+      background: rgba(255,255,255,0.9);
+      color: #333;
+      padding: 15px;
+      border-radius: 14px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    .card {
+      background: #fff;
+      color: #333;
+      padding: 15px;
+      border-radius: 14px;
+      margin-bottom: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+    }
+
+    .row { margin: 6px 0; font-size: 15px; }
+    .label { font-weight: bold; color: #0d6efd; }
+
+    .section-title {
+      color: #fff;
+      font-size: 22px;
+      margin: 20px 0 10px;
+      font-weight: bold;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      margin-top: 15px;
+      background: #fff;
+      color: #0d6efd;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: .3s;
+    }
+
+    button:hover { background:#0d6efd; color:#fff; transform: scale(1.03); }
+  </style>
+</head>
+
+<body>
+
+  <h2>📊 حالة أسطول السيارات</h2>
+
+  <!-- إحصائيات -->
+  <div class="status-box">
+    <div class="stat" id="availableCount">✅ المتاحة: 0</div>
+    <div class="stat" id="rentedCount">🚗 المؤجرة: 0</div>
+    <div class="stat" id="maintenanceCount">🔧 تحت الصيانة: 0</div>
+  </div>
+
+  <!-- المتاحة -->
+  <div class="section-title">✅ السيارات المتاحة</div>
+  <div id="availableList"></div>
+
+  <!-- المؤجرة -->
+  <div class="section-title">🚗 السيارات المؤجرة</div>
+  <div id="rentedList"></div>
+
+  <!-- الصيانة -->
+  <div class="section-title">🔧 سيارات تحت الصيانة</div>
+  <div id="maintenanceList"></div>
+
+  <button onclick="location.href='/'">🏠 الرجوع للصفحة الرئيسية</button>
+
+  <script>
+    async function loadCars() {
+      const res = await fetch("/api/cars");
+      const data = await res.json();
+
+      const available = data.filter(c => c.status === "متاحة");
+      const rented = data.filter(c => c.status === "مؤجرة");
+      const maintenance = data.filter(c => c.status === "تحت الصيانة");
+
+      // عدّاد الإحصائيات
+      document.getElementById("availableCount").textContent = `✅ المتاحة: ${available.length}`;
+      document.getElementById("rentedCount").textContent = `🚗 المؤجرة: ${rented.length}`;
+      document.getElementById("maintenanceCount").textContent = `🔧 تحت الصيانة: ${maintenance.length}`;
+
+      // طباعة القوائم
+      renderList("availableList", available);
+      renderList("rentedList", rented);
+      renderList("maintenanceList", maintenance);
+    }
+
+    function renderList(target, arr) {
+      const box = document.getElementById(target);
+      box.innerHTML = arr.map(c => `
+        <div class="card">
+          <div class="row"><span class="label">رقم اللوحة:</span> ${c.plate}</div>
+          <div class="row"><span class="label">الموديل:</span> ${c.model || "—"}</div>
+          <div class="row"><span class="label">النوع:</span> ${c.car_type || "—"}</div>
+          <div class="row"><span class="label">الإيجار اليومي:</span> ${c.daily_rent} ريال</div>
+        </div>
+      `).join("");
+    }
+
+    loadCars();
+  </script>
+
+</body>
+</html>

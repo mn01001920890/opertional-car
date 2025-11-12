@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>👤 إدارة السائقين</title>
+
+  <style>
+    body {
+      font-family: "Tajawal", sans-serif;
+      background: linear-gradient(135deg, #0d6efd, #6c63ff);
+      margin: 0;
+      padding: 15px;
+      color: #fff;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 26px;
+      color: #fff;
+    }
+
+    .search-box {
+      width: 100%;
+      margin-bottom: 15px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    .card {
+      background: #fff;
+      color: #333;
+      padding: 15px;
+      border-radius: 14px;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+
+    .driver-item {
+      background: #fff;
+      color: #333;
+      padding: 13px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: .3s;
+    }
+
+    .highlight {
+      border: 2px solid #ffcc00;
+      background: #fff6d1;
+      transform: scale(1.04);
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>👤 إدارة السائقين</h2>
+
+  <!-- بحث -->
+  <div class="search-box">
+    <input id="search" type="text" placeholder="🔍 ابحث باسم السائق..." oninput="filterDrivers()">
+  </div>
+
+  <!-- قائمة السائقين -->
+  <div id="driverList"></div>
+
+  <button onclick="location.href='/'" style="width:100%;padding:12px;border:none;border-radius:10px;background:#fff;color:#0d6efd;margin-top:15px;font-weight:bold;font-size:16px">🏠 الرجوع للصفحة الرئيسية</button>
+
+  <script>
+    let driversData = [];
+
+    async function loadDrivers() {
+      const list = document.getElementById("driverList");
+      list.innerHTML = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
+
+      const res = await fetch("/api/drivers");
+      const data = await res.json();
+      driversData = data;
+
+      renderDrivers(driversData);
+      autoFocusDriver();
+    }
+
+    function renderDrivers(data) {
+      const list = document.getElementById("driverList");
+      list.innerHTML = "";
+
+      data.forEach(d => {
+        const item = document.createElement("div");
+        item.className = "driver-item";
+        item.id = "driver-" + d.name.replace(/\s+/g, '-').replace(/\W+/g,'-');
+
+        item.innerHTML = `
+          <div><b>الاسم:</b> ${d.name}</div>
+          <div><b>الجوال:</b> ${d.phone || "—"}</div>
+          <div><b>الرخصة:</b> ${d.license_no || "—"}</div>
+          <div><b>ملاحظات:</b> ${d.notes || "—"}</div>
+        `;
+
+        list.appendChild(item);
+      });
+    }
+
+    function filterDrivers() {
+      const term = document.getElementById("search").value.trim().toLowerCase();
+      const filtered = driversData.filter(d => d.name.toLowerCase().includes(term));
+      renderDrivers(filtered);
+    }
+
+    function autoFocusDriver() {
+      const params = new URLSearchParams(window.location.search);
+      let focusName = params.get("focus");
+      if (!focusName) return;
+
+      focusName = focusName.replace(/\W+/g, '-');
+      const targetId = "driver-" + focusName;
+
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.classList.add("highlight");
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        setTimeout(() => el.classList.remove("highlight"), 3500);
+      }
+    }
+
+    loadDrivers();
+  </script>
+</body>
+</html>

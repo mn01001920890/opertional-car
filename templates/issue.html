@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📝 إصدار تفويض جديد</title>
+  <style>
+    body{
+      font-family:"Tajawal",sans-serif;
+      background:linear-gradient(135deg,#0d6efd,#6c63ff);
+      display:flex;justify-content:center;align-items:center;
+      min-height:100vh;margin:0;padding:12px;color:#333;
+    }
+    .card{
+      background:#fff;color:#333;width:100%;max-width:480px;
+      border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.25);
+      padding:20px;animation:fadeIn .5s ease-in-out;
+    }
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+    h2{margin:0 0 14px;text-align:center;color:#0d6efd}
+    label{display:block;font-weight:bold;margin-top:10px}
+    input,select,textarea{
+      width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;
+      margin-top:6px;font-size:15px;box-sizing:border-box
+    }
+    textarea{resize:vertical;min-height:60px}
+    .row-inline{display:flex;gap:10px}
+    .row-inline > *{flex:1}
+    .hint{font-size:13px;color:#555;margin-top:6px;background:#f6f8ff;border-radius:8px;padding:8px}
+    .info{font-size:13px;color:#222;margin-top:6px;background:#eef9ff;border-radius:8px;padding:8px;display:none}
+    .kv{display:flex;justify-content:space-between;margin:2px 0}
+    .kv b{color:#0d6efd}
+    .buttons{display:flex;gap:10px;margin-top:18px}
+    button{
+      flex:1;padding:12px;font-size:16px;border:none;border-radius:10px;
+      cursor:pointer;transition:.25s;font-weight:bold
+    }
+    .save{background:#0d6efd;color:#fff}
+    .cancel{background:#dc3545;color:#fff}
+    button:hover{opacity:.92;transform:scale(1.02)}
+    .alert{margin-top:12px;text-align:center;font-weight:bold;display:none;border-radius:8px;padding:10px}
+    .alert.success{background:#d1e7dd;color:#0f5132}
+    .alert.error{background:#f8d7da;color:#842029}
+    .top-actions{display:flex;gap:8px;margin-bottom:8px}
+    .ghost{background:#fff;border:1px solid #0d6efd;color:#0d6efd}
+    @media (max-width:480px){.row-inline{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>📝 إصدار تفويض جديد</h2>
+
+    <div class="top-actions">
+      <button class="ghost" id="refreshBtn" type="button">🔄 تحديث قائمتَي السائقين والسيارات</button>
+      <button class="ghost" type="button" onclick="location.href='/'">🏠 الرئيسية</button>
+    </div>
+
+    <form id="issueForm" autocomplete="off">
+      <!-- السائق -->
+      <label>اسم السائق</label>
+      <select name="driver_name" id="driverSelect" required></select>
+      <div id="driverInfo" class="info"></div>
+
+      <!-- السيارة -->
+      <label>رقم السيارة</label>
+      <select name="car_number" id="carSelect" required></select>
+
+      <div class="hint" id="carHint" style="display:none;"></div>
+
+      <div class="row-inline">
+        <div>
+          <label>موديل السيارة</label>
+          <input type="text" name="car_model" id="carModel" required />
+        </div>
+        <div>
+          <label>نوع السيارة</label>
+          <input type="text" name="car_type" id="carType" required />
+        </div>
+      </div>
+
+      <div>
+        <label>الإيجار اليومي (ريال)</label>
+        <input type="number" name="daily_rent" id="dailyRent" min="0" step="0.01" required />
+      </div>
+
+      <label>تاريخ بداية التشغيل</label>
+      <input type="datetime-local" name="start_date" required />
+
+      <label>البيان</label>
+      <textarea name="details" placeholder="مثلاً: تفويض أسبوعي للسائق محمد..."></textarea>
+
+      <!-- حالة التفويض (ليست حالة السيارة) -->
+      <label>حالة السيارة أثناء التفويض</label>
+      <select name="status" required>
+        <option value="">اختر الحالة...</option>
+        <option value="متاحة">متاحة</option>
+        <option value="تحت الصيانة">تحت الصيانة</option>
+        <option value="مؤجرة">مؤجرة</option>
+      </select>
+
+      <div class="buttons">
+        <button type="button" class="cancel" onclick="window.location.href='/'">إلغاء</button>
+        <button type="submit" class="save">💾 حفظ</button>
+      </div>
+    </form>
+
+    <div id="alertBox" class="alert"></div>
+  </div>
+
+  <script>
+    // مخازن مؤقتة للقوائم
+    let CARS = [];
+    let DRIVERS = [];
+
+    const driverSelect = document.getElementById("driverSelect");
+    const carSelect    = document.getElementById("carSelect");
+    const carModel     = document.getElementById("carModel");
+    const carType      = document.getElementById("carType");
+    const dailyRent    = document.getElementById("dailyRent");
+    const alertBox     = document.getElementById("alertBox");
+    const driverInfo   = document.getElementById("driverInfo");
+    const carHint      = document.getElementById("carHint");
+
+    function showAlert(msg, kind="error"){
+      alertBox.textContent = msg;
+      alertBox.className = "alert " + (kind === "success" ? "success" : "error");
+      alertBox.style.display = "block";
+    }
+    function hideAlert(){ alertBox.style.display = "none"; }
+
+    async function fetchDrivers(){
+      const res = await fetch("/api/drivers");
+      if(!res.ok) throw new Error("تعذر تحميل السائقين");
+      return await res.json();
+    }
+    async function fetchCars(){
+      const res = await fetch("/api/cars");
+      if(!res.ok) throw new Error("تعذر تحميل السيارات");
+      return await res.json();
+    }
+
+    function fillDriverSelect(){
+      driverSelect.innerHTML = "";
+      const ph = document.createElement("option");
+      ph.value = ""; ph.textContent = "اختر السائق...";
+      driverSelect.appendChild(ph);
+
+      DRIVERS.forEach(d=>{
+        const opt = document.createElement("option");
+        // API الإضافة تحتاج اسم السائق نصّاً
+        opt.value = d.name;
+        opt.textContent = d.name;
+        opt.dataset.phone = d.phone || "";
+        opt.dataset.license = d.license_no || "";
+        driverSelect.appendChild(opt);
+      });
+    }
+
+    function fillCarSelect(){
+      carSelect.innerHTML = "";
+      const ph = document.createElement("option");
+      ph.value=""; ph.textContent="اختر السيارة...";
+      carSelect.appendChild(ph);
+
+      // API الإضافة تحتاج car_number = plate
+      CARS.forEach(c=>{
+        const opt = document.createElement("option");
+        opt.value = c.plate;
+        opt.textContent = c.plate;
+        opt.dataset.model = c.model || "";
+        opt.dataset.type = c.car_type || "";
+        opt.dataset.status = c.status || "";
+        opt.dataset.rent = (c.daily_rent ?? "");
+        carSelect.appendChild(opt);
+      });
+    }
+
+    function onDriverChange(){
+      const opt = driverSelect.selectedOptions[0];
+      if(!opt || !opt.value){ driverInfo.style.display="none"; return; }
+      const phone = opt.dataset.phone || "—";
+      const lic   = opt.dataset.license || "—";
+      driverInfo.innerHTML =
+        `<div class="kv"><b>الجوال:</b> <span>${phone}</span></div>
+         <div class="kv"><b>الرخصة:</b> <span>${lic}</span></div>`;
+      driverInfo.style.display = "block";
+    }
+
+    function onCarChange(){
+      const opt = carSelect.selectedOptions[0];
+      if(!opt || !opt.value){
+        carModel.value = ""; carType.value = ""; dailyRent.value = "";
+        carHint.style.display="none";
+        return;
+      }
+      const status = opt.dataset.status || "";
+      const model  = opt.dataset.model || "";
+      const type   = opt.dataset.type  || "";
+      const rent   = opt.dataset.rent  || "";
+
+      // تعبئة تلقائية
+      if(model) carModel.value = model;
+      if(type)  carType.value  = type;
+      if(rent !== "") dailyRent.value = rent;
+
+      // تلميح حالة السيارة
+      carHint.innerHTML = `🔎 حالة السيارة الحالية: <b>${status || "غير محدد"}</b>`;
+      carHint.style.display = "block";
+      carHint.style.background = (status === "متاحة") ? "#e8f7e9" : "#fff4e5";
+    }
+
+    async function bootstrap(){
+      try{
+        hideAlert();
+        [DRIVERS, CARS] = await Promise.all([fetchDrivers(), fetchCars()]);
+        fillDriverSelect();
+        fillCarSelect();
+      }catch(err){
+        showAlert("⚠️ خطأ في تحميل القوائم: " + err.message);
+      }
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", bootstrap);
+    driverSelect.addEventListener("change", onDriverChange);
+    carSelect.addEventListener("change", onCarChange);
+
+    document.getElementById("issueForm").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      hideAlert();
+
+      // تحقق تاحيّة السيارة
+      const carOpt = carSelect.selectedOptions[0];
+      if(!carOpt || !carOpt.value){
+        showAlert("⚠️ اختر السيارة أولاً.");
+        return;
+      }
+      const carStatus = (carOpt.dataset.status || "").trim();
+      if(carStatus !== "متاحة"){
+        showAlert("🚫 لا يمكن الحفظ: السيارة ليست «متاحة».");
+        return;
+      }
+
+      const formData = new FormData(e.target);
+      const payload = Object.fromEntries(formData.entries());
+
+      // تأكيد تعبئة الحقول المولدة تلقائياً (لو المستخدم عدّل الاختيار بعدين)
+      if(!payload.car_model && carOpt.dataset.model) payload.car_model = carOpt.dataset.model;
+      if(!payload.car_type  && carOpt.dataset.type)  payload.car_type  = carOpt.dataset.type;
+      if((!payload.daily_rent || Number(payload.daily_rent)===0) && carOpt.dataset.rent!==""){
+        payload.daily_rent = carOpt.dataset.rent;
+      }
+
+      try{
+        const res = await fetch("/api/issue",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if(res.ok){
+          showAlert("✅ تم حفظ التفويض بنجاح!", "success");
+          e.target.reset();
+          driverInfo.style.display="none";
+          carHint.style.display="none";
+        }else{
+          showAlert("❌ فشل الحفظ: " + (data.error || "حدث خطأ"));
+        }
+      }catch(err){
+        showAlert("⚠️ خطأ في الاتصال بالخادم");
+      }
+    });
+
+    // تحميل أولي
+    bootstrap();
+  </script>
+</body>
+</html>

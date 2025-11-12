@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🚗 السيارات المؤجرة الآن</title>
+
+  <style>
+    body {
+      font-family: "Tajawal", sans-serif;
+      background: linear-gradient(135deg, #0d6efd, #6c63ff);
+      margin: 0;
+      padding: 20px;
+      color: #fff;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 26px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: #fff;
+      color: #333;
+      padding: 15px;
+      border-radius: 14px;
+      margin-bottom: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+      animation: fadeIn .4s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .row { margin: 6px 0; font-size: 15px; }
+    .label { font-weight: bold; color: #0d6efd; }
+
+    .link {
+      color: #0d6efd;
+      font-weight: bold;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      margin-top: 15px;
+      background: #fff;
+      color: #0d6efd;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: .3s;
+    }
+
+    button:hover { background:#0d6efd; color:#fff; transform: scale(1.04); }
+
+  </style>
+</head>
+
+<body>
+
+  <h2>🚗 قائمة السيارات المؤجرة الآن</h2>
+  <div id="list"></div>
+
+  <button onclick="location.href='/'">🏠 الرجوع للصفحة الرئيسية</button>
+
+  <script>
+    async function loadData() {
+      const box = document.getElementById("list");
+      box.innerHTML = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
+
+      const res = await fetch("/api/authorizations");
+      const data = await res.json();
+
+      // فقط التفويضات المفتوحة
+      const active = data.filter(item => !item.end_date);
+
+      if (active.length === 0) {
+        box.innerHTML = "<p style='text-align:center;font-size:18px'>✅ لا توجد سيارات مؤجرة الآن</p>";
+        return;
+      }
+
+      box.innerHTML = active.map(item => {
+        const start = new Date(item.start_date);
+        const now   = new Date();
+
+        // حساب المدة
+        let diffMs = now - start;
+        let totalMinutes = Math.floor(diffMs / 60000);
+        let hours = Math.floor(totalMinutes / 60);
+        let days = Math.floor(hours / 24);
+        let minutes = totalMinutes % 60;
+
+        let duration = `${days} يوم / ${hours % 24} ساعة / ${minutes} دقيقة`;
+
+        // حساب التكلفة
+        let cost = 0;
+        if (item.daily_rent) {
+          const rentPerMinute = item.daily_rent / (24 * 60);
+          cost = (rentPerMinute * totalMinutes).toFixed(2);
+        }
+
+        return `
+          <div class="card">
+            <div class="row"><span class="label">السائق:</span> 
+              <span class="link" onclick="goDriver('${item.driver_name}')">${item.driver_name}</span></div>
+
+            <div class="row"><span class="label">رقم السيارة:</span> 
+              <span class="link" onclick="goCar('${item.car_number}')">${item.car_number}</span></div>
+
+            <div class="row"><span class="label">الموديل:</span> ${item.car_model}</div>
+            <div class="row"><span class="label">النوع:</span> ${item.car_type}</div>
+
+            <div class="row"><span class="label">وقت البداية:</span> ${item.start_date}</div>
+
+            <div class="row"><span class="label">المدة:</span> ${duration}</div>
+
+            <div class="row"><span class="label">التكلفة حتى الآن:</span> 
+              <b style="color:#28a745">${cost} ريال</b></div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function goDriver(name) {
+      location.href = `/drivers?focus=${encodeURIComponent(name)}`;
+    }
+
+    function goCar(plate) {
+      location.href = `/cars?focus=${encodeURIComponent(plate)}`;
+    }
+
+    loadData();
+  </script>
+
+</body>
+</html>

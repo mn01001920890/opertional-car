@@ -2,153 +2,160 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>📝 إصدار تفويض جديد</title>
   <style>
+    :root{
+      --bg1:#0d6efd; --bg2:#6c63ff; --ok:#0abf53; --err:#e03131; --ink:#222;
+      --card:#fff; --muted:#6b7280;
+    }
+    *{box-sizing:border-box}
     body{
-      font-family:"Tajawal",sans-serif;
-      background:linear-gradient(135deg,#0d6efd,#6c63ff);
-      display:flex;justify-content:center;align-items:center;
-      min-height:100vh;margin:0;padding:12px;color:#333;
+      font-family:"Tajawal",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+      min-height:100vh;margin:0;display:flex;justify-content:center;align-items:center;
+      background:linear-gradient(135deg,var(--bg1),var(--bg2));
+      color:var(--ink); padding:16px;
     }
     .card{
-      background:#fff;color:#333;width:100%;max-width:480px;
-      border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.25);
-      padding:20px;animation:fadeIn .5s ease-in-out;
+      width:100%;max-width:520px;background:var(--card);border-radius:18px;
+      box-shadow:0 12px 30px rgba(0,0,0,.22); padding:18px 18px 8px;
     }
-    @keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-    h2{margin:0 0 14px;text-align:center;color:#0d6efd}
-    label{display:block;font-weight:bold;margin-top:10px}
-    input,select,textarea{
-      width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;
-      margin-top:6px;font-size:15px;box-sizing:border-box
+    h1{font-size:22px;margin:0 0 6px}
+    p.sub{margin:0 0 16px;color:var(--muted);font-size:14px}
+    .row{display:flex;gap:10px}
+    .row>.col{flex:1}
+    label{display:block;font-size:13px;margin:10px 4px 6px}
+    select,input,textarea{
+      width:100%;padding:12px 12px;border:1px solid #e5e7eb;border-radius:12px;
+      font-size:15px; outline:none;
     }
-    textarea{resize:vertical;min-height:60px}
-    .row-inline{display:flex;gap:10px}
-    .row-inline > *{flex:1}
-    .hint{font-size:13px;color:#555;margin-top:6px;background:#f6f8ff;border-radius:8px;padding:8px}
-    .info{font-size:13px;color:#222;margin-top:6px;background:#eef9ff;border-radius:8px;padding:8px;display:none}
-    .kv{display:flex;justify-content:space-between;margin:2px 0}
-    .kv b{color:#0d6efd}
-    .buttons{display:flex;gap:10px;margin-top:18px}
+    textarea{min-height:100px;resize:vertical}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:999px;background:#f3f4f6;color:#374151;font-size:13px}
+    .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
     button{
-      flex:1;padding:12px;font-size:16px;border:none;border-radius:10px;
-      cursor:pointer;transition:.25s;font-weight:bold
+      padding:12px 16px;border:none;border-radius:12px;font-size:15px;cursor:pointer;
+      background:var(--bg1);color:#fff
     }
-    .save{background:#0d6efd;color:#fff}
-    .cancel{background:#dc3545;color:#fff}
-    button:hover{opacity:.92;transform:scale(1.02)}
-    .alert{margin-top:12px;text-align:center;font-weight:bold;display:none;border-radius:8px;padding:10px}
-    .alert.success{background:#d1e7dd;color:#0f5132}
-    .alert.error{background:#f8d7da;color:#842029}
-    .top-actions{display:flex;gap:8px;margin-bottom:8px}
-    .ghost{background:#fff;border:1px solid #0d6efd;color:#0d6efd}
-    @media (max-width:480px){.row-inline{flex-direction:column}}
+    button.ghost{background:#f3f4f6;color:#111}
+    .alert{
+      margin:10px 0 2px;border-radius:12px;padding:12px 14px;font-size:14px;display:none
+    }
+    .alert.ok{display:block;background:#e9f8f0;color:#055e33;border:1px solid #b6f0d1}
+    .alert.err{display:block;background:#fdeceb;color:#7a1d1b;border:1px solid #f5c2c0}
+    .fade{animation:fade .25s ease}
+    @keyframes fade{from{opacity:.2;transform:translateY(-3px)}to{opacity:1;transform:none}}
+    .muted{color:var(--muted)}
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>📝 إصدار تفويض جديد</h2>
+    <h1>📝 إصدار تفويض جديد</h1>
+    <p class="sub">اختَر السائق والسيارة، وبعدين احفظ التفويض.</p>
 
-    <div class="top-actions">
-      <button class="ghost" id="refreshBtn" type="button">🔄 تحديث قائمتَي السائقين والسيارات</button>
-      <button class="ghost" type="button" onclick="location.href='/'">🏠 الرئيسية</button>
-    </div>
+    <div id="alertBox" class="alert"></div>
 
-    <form id="issueForm" autocomplete="off">
+    <form id="issueForm">
       <!-- السائق -->
-      <label>اسم السائق</label>
-      <select name="driver_name" id="driverSelect" required></select>
-      <div id="driverInfo" class="info"></div>
+      <label for="driverSelect">السائق</label>
+      <select id="driverSelect" required>
+        <option value="">اختر السائق...</option>
+      </select>
+      <div id="driverInfo" class="hint" style="display:none"></div>
 
       <!-- السيارة -->
-      <label>رقم السيارة</label>
-      <select name="car_number" id="carSelect" required></select>
-
-      <div class="hint" id="carHint" style="display:none;"></div>
-
-      <div class="row-inline">
-        <div>
-          <label>موديل السيارة</label>
-          <input type="text" name="car_model" id="carModel" required />
-        </div>
-        <div>
-          <label>نوع السيارة</label>
-          <input type="text" name="car_type" id="carType" required />
-        </div>
-      </div>
-
-      <div>
-        <label>الإيجار اليومي (ريال)</label>
-        <input type="number" name="daily_rent" id="dailyRent" min="0" step="0.01" required />
-      </div>
-
-      <label>تاريخ بداية التشغيل</label>
-      <input type="datetime-local" name="start_date" required />
-
-      <label>البيان</label>
-      <textarea name="details" placeholder="مثلاً: تفويض أسبوعي للسائق محمد..."></textarea>
-
-      <!-- حالة التفويض (ليست حالة السيارة) -->
-      <label>حالة السيارة أثناء التفويض</label>
-      <select name="status" required>
-        <option value="">اختر الحالة...</option>
-        <option value="متاحة">متاحة</option>
-        <option value="تحت الصيانة">تحت الصيانة</option>
-        <option value="مؤجرة">مؤجرة</option>
+      <label for="carSelect">السيارة</label>
+      <select id="carSelect" required>
+        <option value="">اختر السيارة...</option>
       </select>
 
-      <div class="buttons">
-        <button type="button" class="cancel" onclick="window.location.href='/'">إلغاء</button>
-        <button type="submit" class="save">💾 حفظ</button>
+      <!-- تفاصيل السيارة تُملأ تلقائيًا -->
+      <div class="row">
+        <div class="col">
+          <label for="carModel">الموديل</label>
+          <input id="carModel" type="text" placeholder="يُملأ تلقائيًا عند اختيار السيارة"/>
+        </div>
+        <div class="col">
+          <label for="carType">النوع</label>
+          <input id="carType" type="text" placeholder="يُملأ تلقائيًا عند اختيار السيارة"/>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label for="dailyRent">الإيجار اليومي (ريال)</label>
+          <input id="dailyRent" type="number" step="0.01" inputmode="decimal" placeholder="مثال: 150.00"/>
+          <div id="carHint" class="hint" style="display:none"></div>
+        </div>
+        <div class="col">
+          <label for="startDate">تاريخ بدء التفويض</label>
+          <input id="startDate" type="datetime-local" />
+          <div class="hint">صيغة ISO، مثال: 2025-11-12 10:30</div>
+        </div>
+      </div>
+
+      <label for="details">ملاحظات</label>
+      <textarea id="details" placeholder="أي تفاصيل إضافية..."></textarea>
+
+      <div class="actions">
+        <button type="button" class="ghost" id="resetBtn">تفريغ</button>
+        <button type="submit">حفظ التفويض</button>
       </div>
     </form>
 
-    <div id="alertBox" class="alert"></div>
+    <div style="margin:14px 4px 10px" class="muted">
+      تلميح: لو سيبت خانة الإيجار فاضية، هياخد قيمة إيجار العربية تلقائيًا.
+    </div>
+
+    <div class="badge" aria-hidden="true">🚗 حالة السيارة تتغيّر تلقائيًا إلى «مؤجرة» بعد الحفظ</div>
   </div>
 
   <script>
-    // مخازن مؤقتة للقوائم
-    let CARS = [];
-    let DRIVERS = [];
-
+    // ================== عناصر DOM ==================
+    const alertBox     = document.getElementById("alertBox");
+    const form         = document.getElementById("issueForm");
     const driverSelect = document.getElementById("driverSelect");
     const carSelect    = document.getElementById("carSelect");
     const carModel     = document.getElementById("carModel");
     const carType      = document.getElementById("carType");
     const dailyRent    = document.getElementById("dailyRent");
-    const alertBox     = document.getElementById("alertBox");
+    const startDate    = document.getElementById("startDate");
+    const details      = document.getElementById("details");
     const driverInfo   = document.getElementById("driverInfo");
     const carHint      = document.getElementById("carHint");
+    const resetBtn     = document.getElementById("resetBtn");
 
-    function showAlert(msg, kind="error"){
+    let CARS = [];
+    let DRIVERS = [];
+
+    // ================== أدوات واجهة ==================
+    function showAlert(msg, kind="err"){
+      alertBox.className = "alert fade " + (kind === "ok" ? "ok" : "err");
       alertBox.textContent = msg;
-      alertBox.className = "alert " + (kind === "success" ? "success" : "error");
       alertBox.style.display = "block";
     }
-    function hideAlert(){ alertBox.style.display = "none"; }
+    function clearAlert(){ alertBox.style.display="none"; }
 
-    async function fetchDrivers(){
-      const res = await fetch("/api/drivers");
-      if(!res.ok) throw new Error("تعذر تحميل السائقين");
-      return await res.json();
-    }
-    async function fetchCars(){
-      const res = await fetch("/api/cars");
-      if(!res.ok) throw new Error("تعذر تحميل السيارات");
-      return await res.json();
+    function fmtMoney(n){
+      const v = Number(n);
+      if (Number.isNaN(v)) return "";
+      return v.toFixed(2);
     }
 
-    function fillDriverSelect(){
-      driverSelect.innerHTML = "";
-      const ph = document.createElement("option");
-      ph.value = ""; ph.textContent = "اختر السائق...";
-      driverSelect.appendChild(ph);
+    // ================== تحميل البيانات ==================
+    async function fetchJSON(url){
+      const r = await fetch(url);
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }
 
+    async function loadDrivers(){
+      const data = await fetchJSON("/api/drivers");
+      DRIVERS = Array.isArray(data) ? data : [];
+      driverSelect.innerHTML = '<option value="">اختر السائق...</option>';
       DRIVERS.forEach(d=>{
         const opt = document.createElement("option");
-        // API الإضافة تحتاج اسم السائق نصّاً
-        opt.value = d.name;
+        opt.value = d.name;                // الباك إند يحتاج الاسم نصًا
         opt.textContent = d.name;
         opt.dataset.phone = d.phone || "";
         opt.dataset.license = d.license_no || "";
@@ -156,126 +163,147 @@
       });
     }
 
-    function fillCarSelect(){
-      carSelect.innerHTML = "";
-      const ph = document.createElement("option");
-      ph.value=""; ph.textContent="اختر السيارة...";
-      carSelect.appendChild(ph);
-
-      // API الإضافة تحتاج car_number = plate
+    async function loadCars(){
+      const data = await fetchJSON("/api/cars");
+      CARS = Array.isArray(data) ? data : [];
+      carSelect.innerHTML = '<option value="">اختر السيارة...</option>';
       CARS.forEach(c=>{
         const opt = document.createElement("option");
-        opt.value = c.plate;
+        opt.value = c.plate;               // الباك إند يحتاج car_number = plate
         opt.textContent = c.plate;
         opt.dataset.model = c.model || "";
-        opt.dataset.type = c.car_type || "";
+        opt.dataset.type  = c.car_type || "";
         opt.dataset.status = c.status || "";
-        opt.dataset.rent = (c.daily_rent ?? "");
+        opt.dataset.rent   = (c.daily_rent ?? "");
         carSelect.appendChild(opt);
       });
     }
 
-    function onDriverChange(){
+    // ================== تفاعلات المستخدم ==================
+    driverSelect.addEventListener("change", ()=>{
       const opt = driverSelect.selectedOptions[0];
-      if(!opt || !opt.value){ driverInfo.style.display="none"; return; }
-      const phone = opt.dataset.phone || "—";
-      const lic   = opt.dataset.license || "—";
-      driverInfo.innerHTML =
-        `<div class="kv"><b>الجوال:</b> <span>${phone}</span></div>
-         <div class="kv"><b>الرخصة:</b> <span>${lic}</span></div>`;
-      driverInfo.style.display = "block";
-    }
+      if(opt && opt.value){
+        const phone = opt.dataset.phone || "بدون رقم";
+        const lic   = opt.dataset.license || "بدون رقم رخصة";
+        driverInfo.style.display = "block";
+        driverInfo.textContent = `📞 ${phone} • رخصة: ${lic}`;
+      }else{
+        driverInfo.style.display = "none";
+        driverInfo.textContent = "";
+      }
+      clearAlert();
+    });
 
-    function onCarChange(){
+    carSelect.addEventListener("change", ()=>{
       const opt = carSelect.selectedOptions[0];
-      if(!opt || !opt.value){
-        carModel.value = ""; carType.value = ""; dailyRent.value = "";
+      if(opt && opt.value){
+        carModel.value = opt.dataset.model || "";
+        carType.value  = opt.dataset.type  || "";
+        const rent = opt.dataset.rent;
+        const status = (opt.dataset.status || "").trim();
+
+        // نعرض تنبيه لو العربية مش متاحة
+        if(status && status !== "متاحة"){
+          carHint.style.display="block";
+          carHint.textContent = `⚠️ حالة السيارة الآن: ${status}. يجب اختيار سيارة «متاحة».`;
+        }else{
+          carHint.style.display="block";
+          const m = fmtMoney(rent);
+          carHint.textContent = m ? `إيجار السيارة الافتراضي: ${m} ريال/يوم.` : "لا توجد قيمة إيجار مخزنة لهذه السيارة.";
+        }
+
+        // نملأ خانة الإيجار من العربية تلقائيًا (ممكن تسيبها فاضي)
+        dailyRent.value = (rent !== null && rent !== undefined && rent !== "") ? rent : "";
+      }else{
+        carModel.value = "";
+        carType.value  = "";
+        dailyRent.value = "";
         carHint.style.display="none";
-        return;
+        carHint.textContent="";
       }
-      const status = opt.dataset.status || "";
-      const model  = opt.dataset.model || "";
-      const type   = opt.dataset.type  || "";
-      const rent   = opt.dataset.rent  || "";
+      clearAlert();
+    });
 
-      // تعبئة تلقائية
-      if(model) carModel.value = model;
-      if(type)  carType.value  = type;
-      if(rent !== "") dailyRent.value = rent;
+    resetBtn.addEventListener("click", ()=>{
+      form.reset();
+      driverInfo.style.display="none";
+      carHint.style.display="none";
+      carModel.value = "";
+      carType.value  = "";
+      clearAlert();
+    });
 
-      // تلميح حالة السيارة
-      carHint.innerHTML = `🔎 حالة السيارة الحالية: <b>${status || "غير محدد"}</b>`;
-      carHint.style.display = "block";
-      carHint.style.background = (status === "متاحة") ? "#e8f7e9" : "#fff4e5";
-    }
-
-    async function bootstrap(){
-      try{
-        hideAlert();
-        [DRIVERS, CARS] = await Promise.all([fetchDrivers(), fetchCars()]);
-        fillDriverSelect();
-        fillCarSelect();
-      }catch(err){
-        showAlert("⚠️ خطأ في تحميل القوائم: " + err.message);
-      }
-    }
-
-    document.getElementById("refreshBtn").addEventListener("click", bootstrap);
-    driverSelect.addEventListener("change", onDriverChange);
-    carSelect.addEventListener("change", onCarChange);
-
-    document.getElementById("issueForm").addEventListener("submit", async (e)=>{
+    // ================== إرسال النموذج ==================
+    form.addEventListener("submit", async (e)=>{
       e.preventDefault();
-      hideAlert();
+      clearAlert();
 
-      // تحقق تاحيّة السيارة
-      const carOpt = carSelect.selectedOptions[0];
-      if(!carOpt || !carOpt.value){
-        showAlert("⚠️ اختر السيارة أولاً.");
+      // تحقق مبكّر (عشان ما نوصلش لرسائل 500)
+      if(!driverSelect.value){
+        showAlert("من فضلك اختر السائق.");
         return;
       }
-      const carStatus = (carOpt.dataset.status || "").trim();
-      if(carStatus !== "متاحة"){
-        showAlert("🚫 لا يمكن الحفظ: السيارة ليست «متاحة». ");
+      if(!carSelect.value){
+        showAlert("من فضلك اختر السيارة.");
         return;
       }
 
-      const formData = new FormData(e.target);
-      const payload = Object.fromEntries(formData.entries());
+      // بناء الحمولة
+      const payload = {
+        driver_name: driverSelect.value,
+        car_number:  carSelect.value,
+        start_date:  (startDate.value || "").trim(),
+        details:     (details.value || "").trim()
+      };
 
-      // تأكيد تعبئة الحقول المولدة تلقائياً (لو المستخدم عدّل الاختيار بعدين)
-      if(!payload.car_model && carOpt.dataset.model) payload.car_model = carOpt.dataset.model;
-      if(!payload.car_type  && carOpt.dataset.type)  payload.car_type  = carOpt.dataset.type;
-      if((!payload.daily_rent || Number(payload.daily_rent)===0) && carOpt.dataset.rent!==''){
-        payload.daily_rent = carOpt.dataset.rent;
-      }
+      // نرسل car_model / car_type لو موجودين (غير إلزاميين)
+      if (carModel.value) payload.car_model = carModel.value;
+      if (carType.value)  payload.car_type  = carType.value;
 
-      // 🧮 مهم: تحويل الإيجار لرقم فعلي قبل الإرسال (منع 500 في السيرفر)
-      if (payload.daily_rent !== undefined && payload.daily_rent !== "") {
-        payload.daily_rent = Number(payload.daily_rent);
+      // الإيجار اليومي: لو فاضي سيبه (السيرفر هيستخدم إيجار العربية)
+      const rentVal = (dailyRent.value || "").trim();
+      if (rentVal !== "") {
+        const n = Number(rentVal);
+        if (Number.isNaN(n)) {
+          showAlert("قيمة الإيجار اليومي غير صحيحة.");
+          return;
+        }
+        payload.daily_rent = n; // السيرفر هيحوّله Decimal بأمان
       }
 
       try{
-        const res = await fetch("/api/issue",{
+        const res = await fetch("/api/issue", {
           method:"POST",
           headers:{"Content-Type":"application/json"},
           body:JSON.stringify(payload)
         });
-        const data = await res.json();
-        if(res.ok){
-          showAlert("✅ تم حفظ التفويض بنجاح!", "success");
-          e.target.reset();
+
+        const data = await res.json().catch(()=> ({}));
+
+        if (res.ok) {
+          showAlert("✅ تم حفظ التفويض بنجاح!", "ok");
+          form.reset();
           driverInfo.style.display="none";
           carHint.style.display="none";
-        }else{
-          showAlert("❌ فشل الحفظ: " + (data.error || "حدث خطأ"));
+          carModel.value = "";
+          carType.value  = "";
+        } else {
+          // رسائل 400 منسّقة من الباك إند (زي: السائق مطلوب/السيارة غير متاحة...)
+          showAlert(data.error || "تعذّر حفظ التفويض.");
         }
       }catch(err){
-        showAlert("⚠️ خطأ في الاتصال بالخادم");
+        showAlert("⚠️ خطأ في الاتصال بالخادم.");
       }
     });
 
-    // تحميل أولي
+    // ================== إقلاع الصفحة ==================
+    async function bootstrap(){
+      try{
+        await Promise.all([loadDrivers(), loadCars()]);
+      }catch(e){
+        showAlert("⚠️ تعذّر تحميل القوائم من الخادم.");
+      }
+    }
     bootstrap();
   </script>
 </body>

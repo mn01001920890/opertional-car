@@ -236,7 +236,7 @@
       }
       const carStatus = (carOpt.dataset.status || "").trim();
       if(carStatus !== "متاحة"){
-        showAlert("🚫 لا يمكن الحفظ: السيارة ليست «متاحة».");
+        showAlert("🚫 لا يمكن الحفظ: السيارة ليست «متاحة». ");
         return;
       }
 
@@ -246,8 +246,13 @@
       // تأكيد تعبئة الحقول المولدة تلقائياً (لو المستخدم عدّل الاختيار بعدين)
       if(!payload.car_model && carOpt.dataset.model) payload.car_model = carOpt.dataset.model;
       if(!payload.car_type  && carOpt.dataset.type)  payload.car_type  = carOpt.dataset.type;
-      if((!payload.daily_rent || Number(payload.daily_rent)===0) && carOpt.dataset.rent!==""){
+      if((!payload.daily_rent || Number(payload.daily_rent)===0) && carOpt.dataset.rent!==''){
         payload.daily_rent = carOpt.dataset.rent;
+      }
+
+      // 🧮 مهم: تحويل الإيجار لرقم فعلي قبل الإرسال (منع 500 في السيرفر)
+      if (payload.daily_rent !== undefined && payload.daily_rent !== "") {
+        payload.daily_rent = Number(payload.daily_rent);
       }
 
       try{

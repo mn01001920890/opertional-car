@@ -6,8 +6,8 @@
   <title>📝 إصدار تفويض جديد</title>
   <style>
     :root{
-      --bg1:#0d6efd; --bg2:#6c63ff; --ok:#0abf53; --err:#e03131; --ink:#222;
-      --card:#fff; --muted:#6b7280;
+      --bg1:#0d6efd; --bg2:#6c63ff; --ok:#0abf53; --err:#e03131; --ink:#111827;
+      --card:#ffffff; --muted:#6b7280; --border:#e5e7eb;
     }
 
     *{box-sizing:border-box}
@@ -78,16 +78,16 @@
 
     .card{
       width:100%;
-      max-width:520px;
+      max-width:620px;
       background:var(--card);
-      border-radius:18px;
-      box-shadow:0 12px 30px rgba(0,0,0,.22);
-      padding:18px 18px 8px;
+      border-radius:20px;
+      box-shadow:0 16px 40px rgba(0,0,0,.22);
+      padding:20px 20px 14px;
     }
 
     h1{
       font-size:22px;
-      margin:0 0 6px;
+      margin:0 0 4px;
     }
 
     p.sub{
@@ -103,38 +103,46 @@
       display:block;
       font-size:13px;
       margin:10px 4px 6px;
+      font-weight:600;
+      color:#111827;
     }
 
     select,input,textarea{
       width:100%;
-      padding:12px 12px;
-      border:1px solid #e5e7eb;
+      padding:10px 12px;
+      border:1px solid var(--border);
       border-radius:12px;
-      font-size:15px;
+      font-size:14px;
       outline:none;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+
+    select:focus,input:focus,textarea:focus{
+      border-color:var(--bg1);
+      box-shadow:0 0 0 1px rgba(13,110,253,0.1);
     }
 
     textarea{
-      min-height:100px;
+      min-height:90px;
       resize:vertical;
     }
 
     .hint{
       font-size:12px;
       color:var(--muted);
-      margin-top:6px;
+      margin-top:4px;
     }
 
     .badge{
       display:inline-flex;
       align-items:center;
       gap:6px;
-      padding:8px 10px;
+      padding:6px 10px;
       border-radius:999px;
       background:#f3f4f6;
       color:#374151;
-      font-size:13px;
-      margin-bottom:10px;
+      font-size:12px;
+      margin:4px 2px 10px;
     }
 
     .actions{
@@ -145,25 +153,34 @@
     }
 
     button{
-      padding:12px 16px;
+      padding:11px 16px;
       border:none;
       border-radius:12px;
-      font-size:15px;
+      font-size:14px;
       cursor:pointer;
       background:var(--bg1);
       color:#fff;
+      font-weight:600;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
     }
 
     button.ghost{
       background:#f3f4f6;
-      color:#111;
+      color:#111827;
+    }
+
+    button:hover{
+      filter:brightness(0.97);
+      transform:translateY(-1px);
     }
 
     .alert{
-      margin:10px 0 2px;
+      margin:8px 0 4px;
       border-radius:12px;
-      padding:12px 14px;
-      font-size:14px;
+      padding:10px 12px;
+      font-size:13px;
       display:none;
     }
 
@@ -190,11 +207,53 @@
       to{opacity:1;transform:none}
     }
 
-    .muted{color:var(--muted)}
+    .muted{color:var(--muted);font-size:13px;}
+
+    /* ملخص التفويض المحاسبي */
+    .calc-panel{
+      margin-top:18px;
+      padding:12px 12px 10px;
+      border-radius:14px;
+      background:#f9fafb;
+      border:1px dashed #d1d5db;
+      font-size:13px;
+    }
+
+    .calc-title{
+      font-weight:700;
+      margin-bottom:6px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      color:#111827;
+    }
+
+    .calc-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:6px 14px;
+      margin-top:4px;
+    }
+
+    .calc-item-label{
+      color:#6b7280;
+      font-size:12px;
+    }
+
+    .calc-item-value{
+      font-weight:600;
+      color:#111827;
+      margin-top:1px;
+    }
+
+    .calc-item-value.cost{
+      color:#0b8a3c;
+    }
 
     @media (max-width:600px){
       .page-title{font-size:16px;}
-      .card{padding:16px 14px 8px;}
+      .card{padding:16px 14px 12px;}
+      .row{flex-direction:column;}
     }
   </style>
 </head>
@@ -211,7 +270,7 @@
   <main class="page-content">
     <div class="card">
       <h1>📝 إصدار تفويض جديد</h1>
-      <p class="sub">اختَر السائق والسيارة، وبعدين احفظ التفويض.</p>
+      <p class="sub">اختَر السائق والسيارة، وحدِّد بداية التفويض، ثم احفظ.</p>
 
       <div id="alertBox" class="alert"></div>
 
@@ -250,26 +309,60 @@
           <div class="col">
             <label for="startDate">تاريخ بدء التفويض</label>
             <input id="startDate" type="datetime-local" />
-            <div class="hint">صيغة ISO، مثال: 2025-11-12 10:30</div>
+            <div class="hint">يمكن تركها كما هي (الوقت الحالي) أو اختيار وقت آخر.</div>
           </div>
         </div>
 
         <label for="details">ملاحظات</label>
-        <textarea id="details" placeholder="أي تفاصيل إضافية..."></textarea>
+        <textarea id="details" placeholder="أي تفاصيل إضافية عن التفويض (اختياري)..."></textarea>
 
         <div class="actions">
           <button type="button" class="ghost" id="resetBtn">تفريغ</button>
-          <button type="submit">حفظ التفويض</button>
+          <button type="submit">💾 حفظ التفويض</button>
         </div>
       </form>
 
-      <div style="margin:14px 4px 10px" class="muted">
-        تلميح: لو سيبت خانة الإيجار فاضية، هياخد قيمة إيجار العربية تلقائيًا.
+      <div style="margin:10px 4px 6px" class="muted">
+        تلميح: لو سيبت خانة الإيجار فاضية، هياخد قيمة إيجار العربية المخزنة تلقائيًا.
       </div>
 
       <div class="badge" aria-hidden="true">
-        🚗 حالة السيارة تتغيّر تلقائيًا إلى «مؤجرة» بعد الحفظ
+        🚗 حالة السيارة تتحوّل تلقائيًا إلى «مؤجرة» بعد حفظ التفويض
       </div>
+
+      <!-- ملخص الجمعة والتكلفة بعد الحفظ -->
+      <div id="calcPanel" class="calc-panel" style="display:none">
+        <div class="calc-title">
+          📅 ملخص التفويض المحاسبي
+        </div>
+        <div class="calc-grid">
+          <div>
+            <div class="calc-item-label">تاريخ الإصدار (issue_date)</div>
+            <div id="sumIssueDate" class="calc-item-value">—</div>
+          </div>
+          <div>
+            <div class="calc-item-label">بداية التفويض (start_date)</div>
+            <div id="sumStartDate" class="calc-item-value">—</div>
+          </div>
+          <div>
+            <div class="calc-item-label">نهاية الجمعة المحاسبية (planned_end)</div>
+            <div id="sumPlannedEnd" class="calc-item-value">—</div>
+          </div>
+          <div>
+            <div class="calc-item-label">عدد الأيام المحاسبية</div>
+            <div id="sumDays" class="calc-item-value">—</div>
+          </div>
+          <div>
+            <div class="calc-item-label">الإيجار اليومي</div>
+            <div id="sumDailyRent" class="calc-item-value">—</div>
+          </div>
+          <div>
+            <div class="calc-item-label">التكلفة المتوقعة (أيام × إيجار)</div>
+            <div id="sumTotal" class="calc-item-value cost">—</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -288,6 +381,14 @@
     const carHint      = document.getElementById("carHint");
     const resetBtn     = document.getElementById("resetBtn");
 
+    const calcPanel    = document.getElementById("calcPanel");
+    const sumIssueDate = document.getElementById("sumIssueDate");
+    const sumStartDate = document.getElementById("sumStartDate");
+    const sumPlannedEnd= document.getElementById("sumPlannedEnd");
+    const sumDays      = document.getElementById("sumDays");
+    const sumDailyRent = document.getElementById("sumDailyRent");
+    const sumTotal     = document.getElementById("sumTotal");
+
     let CARS = [];
     let DRIVERS = [];
 
@@ -301,8 +402,25 @@
 
     function fmtMoney(n){
       const v = Number(n);
-      if (Number.isNaN(v)) return "";
+      if (!isFinite(v)) return "";
       return v.toFixed(2);
+    }
+
+    function formatDT(value){
+      if (!value) return "—";
+      const d = new Date(value);
+      if (isNaN(d)) return value;
+      const pad = n => String(n).padStart(2,"0");
+      const y=d.getFullYear(), m=pad(d.getMonth()+1), da=pad(d.getDate());
+      const h=pad(d.getHours()), mi=pad(d.getMinutes()), s=pad(d.getSeconds());
+      return `${y}-${m}-${da} ${h}:${mi}:${s}`;
+    }
+
+    // datetime-local default = الآن
+    function setDefaultStart(){
+      const now = new Date();
+      const local = new Date(now.getTime() - now.getTimezoneOffset()*60000);
+      startDate.value = local.toISOString().slice(0,16); // YYYY-MM-DDTHH:MM
     }
 
     // ================== تحميل البيانات ==================
@@ -318,7 +436,7 @@
       driverSelect.innerHTML = '<option value="">اختر السائق...</option>';
       DRIVERS.forEach(d=>{
         const opt = document.createElement("option");
-        opt.value = d.name;                // الباك إند يحتاج الاسم نصًا
+        opt.value = d.name;
         opt.textContent = d.name;
         opt.dataset.phone = d.phone || "";
         opt.dataset.license = d.license_no || "";
@@ -332,10 +450,10 @@
       carSelect.innerHTML = '<option value="">اختر السيارة...</option>';
       CARS.forEach(c=>{
         const opt = document.createElement("option");
-        opt.value = c.plate;               // الباك إند يحتاج car_number = plate
+        opt.value = c.plate;
         opt.textContent = c.plate;
-        opt.dataset.model = c.model || "";
-        opt.dataset.type  = c.car_type || "";
+        opt.dataset.model  = c.model || "";
+        opt.dataset.type   = c.car_type || "";
         opt.dataset.status = c.status || "";
         opt.dataset.rent   = (c.daily_rent ?? "");
         carSelect.appendChild(opt);
@@ -362,20 +480,20 @@
       if(opt && opt.value){
         carModel.value = opt.dataset.model || "";
         carType.value  = opt.dataset.type  || "";
-        const rent = opt.dataset.rent;
+        const rent   = opt.dataset.rent;
         const status = (opt.dataset.status || "").trim();
 
-        // نعرض تنبيه لو العربية مش متاحة
         if(status && status !== "متاحة"){
           carHint.style.display="block";
-          carHint.textContent = `⚠️ حالة السيارة الآن: ${status}. يجب اختيار سيارة «متاحة».`;
+          carHint.textContent = `⚠️ حالة السيارة الآن: ${status}. يفضَّل اختيار سيارة «متاحة».`;
         }else{
           carHint.style.display="block";
           const m = fmtMoney(rent);
-          carHint.textContent = m ? `إيجار السيارة الافتراضي: ${m} ريال/يوم.` : "لا توجد قيمة إيجار مخزنة لهذه السيارة.";
+          carHint.textContent = m
+            ? `إيجار السيارة الافتراضي: ${m} ريال/يوم. يمكنك تغييره يدويًا.`
+            : "لا توجد قيمة إيجار مخزنة لهذه السيارة.";
         }
 
-        // نملأ خانة الإيجار من العربية تلقائيًا (ممكن تسيبها فاضي)
         dailyRent.value = (rent !== null && rent !== undefined && rent !== "") ? rent : "";
       }else{
         carModel.value = "";
@@ -393,15 +511,40 @@
       carHint.style.display="none";
       carModel.value = "";
       carType.value  = "";
+      calcPanel.style.display="none";
       clearAlert();
+      setDefaultStart();
     });
+
+    // ================== عرض ملخص الجمعة + التكلفة ==================
+    function showCalcSummary(auth){
+      if (!auth) {
+        calcPanel.style.display = "none";
+        return;
+      }
+      const issue   = auth.issue_date;
+      const start   = auth.start_date;
+      const planned = auth.planned_end_date || auth.end_date;
+      const days    = auth.rental_days;
+      const total   = auth.planned_amount;
+      const rent    = auth.daily_rent;
+
+      sumIssueDate.textContent = formatDT(issue);
+      sumStartDate.textContent = formatDT(start);
+      sumPlannedEnd.textContent= formatDT(planned);
+      sumDays.textContent      = (typeof days === "number") ? `${days} يوم` : "—";
+      sumDailyRent.textContent = (rent != null) ? `${rent} ريال` : "—";
+      sumTotal.textContent     = (typeof total === "number") ? `${total.toFixed(2)} ريال` : "—";
+
+      calcPanel.style.display = "block";
+    }
 
     // ================== إرسال النموذج ==================
     form.addEventListener("submit", async (e)=>{
       e.preventDefault();
       clearAlert();
+      calcPanel.style.display="none";
 
-      // تحقق مبكّر
       if(!driverSelect.value){
         showAlert("من فضلك اختر السائق.");
         return;
@@ -411,7 +554,6 @@
         return;
       }
 
-      // بناء الحمولة
       const payload = {
         driver_name: driverSelect.value,
         car_number:  carSelect.value,
@@ -442,12 +584,14 @@
         const data = await res.json().catch(()=> ({}));
 
         if (res.ok) {
-          showAlert("✅ تم حفظ التفويض بنجاح!", "ok");
-          form.reset();
-          driverInfo.style.display="none";
-          carHint.style.display="none";
-          carModel.value = "";
-          carType.value  = "";
+          showAlert("✅ تم حفظ التفويض بنجاح، وتم احتساب نهاية الجمعة المحاسبية.", "ok");
+
+          // عرض ملخص الجمعة والتكلفة بناء على رد الباك إند
+          const auth = data.authorization || null;
+          showCalcSummary(auth);
+
+          // نسيب الاختيارات كما هي لو حابب يطلع منها قيد محاسبي على طول
+          // ولو حابب يبدأ تفويض جديد من الصفر ممكن يضغط "تفريغ"
         } else {
           showAlert(data.error || "تعذّر حفظ التفويض.");
         }
@@ -459,9 +603,10 @@
     // ================== إقلاع الصفحة ==================
     async function bootstrap(){
       try{
+        setDefaultStart();
         await Promise.all([loadDrivers(), loadCars()]);
       }catch(e){
-        showAlert("⚠️ تعذّر تحميل القوائم من الخادم.");
+        showAlert("⚠️ تعذّر تحميل قوائم السائقين والسيارات من الخادم.");
       }
     }
     bootstrap();

@@ -6,96 +6,171 @@
   <title>🚘 نظام التفويضات</title>
 
   <style>
+    :root {
+      --main-blue: #0d6efd;
+      --main-purple: #6c63ff;
+      --card-radius: 14px;
+      --shadow: 0 4px 10px rgba(0,0,0,0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: "Tajawal", sans-serif;
-      background: linear-gradient(135deg, #0d6efd, #6c63ff);
-      color: #fff;
-      text-align: center;
+      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
-      padding: 0;
-      height: 100vh;
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
+      color: #fff;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
+    }
+
+    /* 🔝 شريط علوي ثابت */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
       justify-content: center;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    /* محتوى الصفحة */
+    .page-content {
+      flex: 1;
+      padding: 80px 16px 60px; /* مساحة للهيدر والفوتر */
+      display: flex;
+      flex-direction: column;
       align-items: center;
     }
 
     h1 {
-      font-size: 30px;
-      margin-bottom: 25px;
+      font-size: 26px;
+      margin: 0 0 24px;
       letter-spacing: 1px;
+      text-align: center;
     }
 
     .container {
-      display: flex;
-      flex-wrap: wrap;
+      width: 100%;
+      max-width: 900px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
       justify-content: center;
-      gap: 15px;
-      padding: 20px;
     }
 
-    button {
+    .menu-btn {
       background-color: #fff;
-      color: #0d6efd;
+      color: var(--main-blue);
       border: none;
-      border-radius: 12px;
-      padding: 15px 25px;
-      font-size: 18px;
+      border-radius: var(--card-radius);
+      padding: 14px 18px;
+      font-size: 16px;
       cursor: pointer;
       font-weight: bold;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      transition: all 0.3s ease;
-      min-width: 220px;
+      box-shadow: var(--shadow);
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 60px;
     }
 
-    button:hover {
-      background-color: #0d6efd;
+    .menu-btn:hover {
+      background-color: var(--main-blue);
       color: #fff;
-      transform: scale(1.05);
+      transform: translateY(-2px);
     }
 
     footer {
-      margin-top: 40px;
-      font-size: 14px;
-      opacity: 0.8;
-      position: fixed;
-      bottom: 15px;
+      font-size: 13px;
+      opacity: 0.85;
+      text-align: center;
+      padding: 8px 12px 12px;
+    }
+
+    /* 📱 موبايل / تابلت */
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
 
     @media (max-width: 600px) {
-      h1 {
-        font-size: 24px;
+      .page-title {
+        font-size: 18px;
       }
-      button {
-        width: 90%;
+
+      h1 {
+        font-size: 22px;
+      }
+
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .menu-btn {
+        width: 100%;
       }
     }
   </style>
 </head>
 <body>
 
-  <h1>📋 نظام إدارة التفويضات</h1>
+  <!-- 🔝 الهيدر الثابت -->
+  <header class="top-bar">
+    <h1 class="page-title">🚘 نظام إدارة التفويضات</h1>
+  </header>
 
-  <div class="container">
-    <button onclick="goTo('/issue')">📝 إصدار تفويض جديد</button>
-    
-    <button onclick="goTo('/view')">📜 عرض جميع التفويضات</button>
+  <main class="page-content">
+    <h1>اختر العملية المطلوبة</h1>
 
-    <button onclick="goTo('/drivers')">👤 إدارة السائقين</button>  
+    <div class="container">
+      <button class="menu-btn" onclick="goTo('/issue')">
+        📝 إصدار تفويض جديد
+      </button>
 
-    <button onclick="goTo('/cars')">🚗 إدارة السيارات</button>
+      <button class="menu-btn" onclick="goTo('/view')">
+        📜 عرض جميع التفويضات
+      </button>
 
-    <button onclick="location.href='/rented'">🚗 السيارات المؤجرة الآن</button>
+      <button class="menu-btn" onclick="goTo('/drivers')">
+        👤 إدارة السائقين
+      </button>
 
-    <button onclick="location.href='/cars-status'">📊 حالة السيارات</button>
+      <button class="menu-btn" onclick="goTo('/cars')">
+        🚗 إدارة السيارات
+      </button>
 
+      <button class="menu-btn" onclick="goTo('/rented')">
+        🚗 السيارات المؤجرة الآن
+      </button>
 
+      <button class="menu-btn" onclick="goTo('/cars-status')">
+        📊 حالة السيارات
+      </button>
+    </div>
+  </main>
 
-
-
-  </div>
-
-  <footer>© 2025 جميع الحقوق محفوظة لنظام التفويضات</footer>
+  <footer>
+    © 2025 جميع الحقوق محفوظة لنظام التفويضات
+  </footer>
 
   <script>
     function goTo(page) {

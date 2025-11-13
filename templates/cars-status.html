@@ -11,6 +11,7 @@
       --main-purple: #6c63ff;
       --card-radius: 14px;
       --shadow: 0 4px 12px rgba(0,0,0,0.25);
+      --muted: #6b7280;
     }
 
     * {
@@ -36,7 +37,7 @@
       padding: 10px 16px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 10px;
     }
 
     .back-btn {
@@ -68,6 +69,7 @@
       font-weight: 700;
       text-align: center;
       flex: 1;
+      color: #fff;
     }
 
     /* 🔹 محتوى الصفحة */
@@ -78,38 +80,63 @@
     }
 
     h2 {
-      margin: 0 0 16px;
+      margin: 0 0 6px;
       text-align: center;
       font-size: 24px;
     }
 
+    .subtitle {
+      text-align: center;
+      font-size: 13px;
+      margin-bottom: 18px;
+      color: var(--muted);
+    }
+
+    .last-update {
+      text-align: center;
+      font-size: 12px;
+      margin-bottom: 14px;
+      opacity: 0.9;
+    }
+
     .status-box {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 10px;
       margin-bottom: 20px;
-      flex-wrap: wrap;
     }
 
     .stat {
-      flex: 1;
-      min-width: 30%;
-      background: rgba(255,255,255,0.95);
-      color: #333;
-      padding: 14px;
+      background: rgba(255,255,255,0.96);
+      color: #111827;
+      padding: 12px 14px;
       border-radius: var(--card-radius);
-      text-align: center;
-      font-size: 16px;
-      font-weight: bold;
       box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat::before {
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(circle at top left, rgba(13,110,253,0.08), transparent 55%);
+      pointer-events:none;
     }
 
     .stat-main-number {
-      margin-bottom: 8px;
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--muted);
     }
 
     .goto-btn {
-      margin-top: 6px;
+      margin-top: 8px;
       padding: 6px 10px;
       border-radius: 999px;
       border: none;
@@ -130,9 +157,18 @@
 
     .section-title {
       color: #fff;
-      font-size: 20px;
-      margin: 24px 0 10px;
-      font-weight: bold;
+      font-size: 18px;
+      margin: 22px 0 10px;
+      font-weight: 700;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .section-title span.sub {
+      font-size: 12px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.85);
     }
 
     /* 🖥️ جدول للّاب / الشاشات الكبيرة */
@@ -162,6 +198,7 @@
       font-size: 14px;
       border-bottom: 1px solid #eee;
       color: #333;
+      white-space: nowrap;
     }
 
     .cars-table th {
@@ -172,6 +209,12 @@
       border-bottom: none;
     }
 
+    .empty-row {
+      text-align:center;
+      color:#777;
+      font-size: 13px;
+    }
+
     /* 📱 كروت للموبايل */
     .card-list {
       display: none; /* هتظهر بس في الموبايل */
@@ -179,11 +222,12 @@
 
     .card {
       background: #fff;
-      color: #333;
+      color: #111827;
       padding: 12px;
       border-radius: var(--card-radius);
       margin-bottom: 10px;
       box-shadow: var(--shadow);
+      font-size: 14px;
     }
 
     .row {
@@ -197,14 +241,21 @@
       margin-left: 4px;
     }
 
+    .badge-status {
+      display:inline-flex;
+      align-items:center;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:11px;
+      background:#e5e7eb;
+      color:#374151;
+      margin-top:4px;
+    }
+
     /* 🔁 Responsive: موبايل vs لاب */
     @media (max-width: 768px) {
-      .status-box {
-        flex-direction: column;
-      }
-
-      .stat {
-        min-width: 100%;
+      .page-title {
+        font-size: 16px;
       }
 
       .table-wrapper {
@@ -213,10 +264,6 @@
 
       .card-list {
         display: block;  /* نظهر الكروت في الموبايل */
-      }
-
-      .page-title {
-        font-size: 16px;
       }
     }
 
@@ -243,19 +290,27 @@
   </header>
 
   <main class="page-content">
-    <!-- عنوان داخلي اختياري -->
     <h2>ملخص حالة السيارات</h2>
+    <div id="lastUpdate" class="last-update"></div>
 
     <!-- إحصائيات -->
     <div class="status-box">
-      <!-- المتاحة -->
-      <div class="stat" id="availableCount">
-        <div class="stat-main-number">✅ عدد السيارات المتاحة: 0</div>
+      <!-- إجمالي -->
+      <div class="stat" id="totalCount">
+        <div class="stat-main-number">0</div>
+        <div class="stat-label">إجمالي عدد السيارات في الأسطول</div>
       </div>
 
-      <!-- المؤجرة (عدد + زر فقط) -->
+      <!-- المتاحة -->
+      <div class="stat" id="availableCount">
+        <div class="stat-main-number">0</div>
+        <div class="stat-label">سيارات متاحة للحجز فورًا</div>
+      </div>
+
+      <!-- المؤجرة -->
       <div class="stat" id="rentedCount">
-        <div class="stat-main-number">🚗 عدد السيارات المؤجرة: 0</div>
+        <div class="stat-main-number">0</div>
+        <div class="stat-label">سيارات مؤجرة حاليًا</div>
         <button class="goto-btn" onclick="location.href='/rented'">
           عرض السيارات المؤجرة
         </button>
@@ -263,12 +318,16 @@
 
       <!-- الصيانة -->
       <div class="stat" id="maintenanceCount">
-        <div class="stat-main-number">🔧 عدد سيارات الصيانة: 0</div>
+        <div class="stat-main-number">0</div>
+        <div class="stat-label">سيارات تحت الصيانة أو خارج الخدمة</div>
       </div>
     </div>
 
     <!-- ✅ السيارات المتاحة -->
-    <div class="section-title">✅ السيارات المتاحة</div>
+    <div class="section-title">
+      ✅ السيارات المتاحة
+      <span class="sub">— تظهر هنا فقط التي حالتها «متاحة» من /api/cars</span>
+    </div>
 
     <!-- جدول لاب -->
     <div class="table-wrapper">
@@ -282,7 +341,7 @@
           </tr>
         </thead>
         <tbody id="availableTableBody">
-          <!-- يتم الملء من JavaScript -->
+          <!-- JS -->
         </tbody>
       </table>
     </div>
@@ -291,7 +350,10 @@
     <div class="card-list" id="availableCards"></div>
 
     <!-- 🔧 سيارات تحت الصيانة -->
-    <div class="section-title">🔧 سيارات تحت الصيانة</div>
+    <div class="section-title">
+      🔧 سيارات تحت الصيانة
+      <span class="sub">— سيارات غير متاحة للحجز حاليًا</span>
+    </div>
 
     <div class="table-wrapper">
       <table class="cars-table">
@@ -312,29 +374,78 @@
   </main>
 
   <script>
+    function setLastUpdate(){
+      const el = document.getElementById("lastUpdate");
+      const now = new Date();
+      const pad = n => String(n).padStart(2,"0");
+      const y = now.getFullYear();
+      const m = pad(now.getMonth()+1);
+      const d = pad(now.getDate());
+      const h = pad(now.getHours());
+      const mi = pad(now.getMinutes());
+      el.textContent = `آخر تحديث: ${y}-${m}-${d} ${h}:${mi}`;
+    }
+
     async function loadCars() {
-      const res  = await fetch("/api/cars");
-      const data = await res.json();
+      setLastUpdate();
+      try{
+        const res  = await fetch("/api/cars");
+        const data = await res.json();
 
-      const available   = data.filter(c => c.status === "متاحة");
-      const rented      = data.filter(c => c.status === "مؤجرة");
-      const maintenance = data.filter(c => c.status === "تحت الصيانة");
+        if (!Array.isArray(data)) {
+          throw new Error("invalid data");
+        }
 
-      // عدّاد الإحصائيات (أرقام فقط)
-      document.getElementById("availableCount").querySelector(".stat-main-number").textContent =
-        `✅ عدد السيارات المتاحة: ${available.length}`;
+        const all         = data;
+        const available   = data.filter(c => c.status === "متاحة");
+        const rented      = data.filter(c => c.status === "مؤجرة");
+        const maintenance = data.filter(c => c.status === "تحت الصيانة");
 
-      document.getElementById("rentedCount").querySelector(".stat-main-number").textContent =
-        `🚗 عدد السيارات المؤجرة: ${rented.length}`;
+        // عدّاد الإحصائيات
+        document.getElementById("totalCount").querySelector(".stat-main-number").textContent =
+          all.length.toString();
 
-      document.getElementById("maintenanceCount").querySelector(".stat-main-number").textContent =
-        `🔧 عدد سيارات الصيانة: ${maintenance.length}`;
+        document.getElementById("availableCount").querySelector(".stat-main-number").textContent =
+          available.length.toString();
 
-      // ✅ المتاحة: جدول + كروت
-      renderTableAndCards("availableTableBody", "availableCards", available);
+        document.getElementById("rentedCount").querySelector(".stat-main-number").textContent =
+          rented.length.toString();
 
-      // 🔧 الصيانة: جدول + كروت
-      renderTableAndCards("maintenanceTableBody", "maintenanceCards", maintenance);
+        document.getElementById("maintenanceCount").querySelector(".stat-main-number").textContent =
+          maintenance.length.toString();
+
+        // ✅ المتاحة: جدول + كروت
+        renderTableAndCards("availableTableBody", "availableCards", available);
+
+        // 🔧 الصيانة: جدول + كروت
+        renderTableAndCards("maintenanceTableBody", "maintenanceCards", maintenance);
+
+      }catch(e){
+        console.error(e);
+        // في حالة الخطأ نعرض رسالة في الجداول
+        const ids = ["availableTableBody","maintenanceTableBody"];
+        ids.forEach(id=>{
+          const tbody = document.getElementById(id);
+          if (tbody){
+            tbody.innerHTML = `
+              <tr>
+                <td class="empty-row" colspan="4">❌ تعذر تحميل البيانات من الخادم.</td>
+              </tr>
+            `;
+          }
+        });
+        const cardIds = ["availableCards","maintenanceCards"];
+        cardIds.forEach(id=>{
+          const box = document.getElementById(id);
+          if (box){
+            box.innerHTML = `
+              <div class="card" style="text-align:center;color:#b91c1c">
+                ❌ تعذر تحميل البيانات من الخادم.
+              </div>
+            `;
+          }
+        });
+      }
     }
 
     function renderTableAndCards(tbodyId, cardsId, arr) {
@@ -342,10 +453,10 @@
       const cardsBox = document.getElementById(cardsId);
 
       // جدول (للاب)
-      if (arr.length === 0) {
+      if (!arr || arr.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="4" style="text-align:center;color:#777">لا توجد بيانات.</td>
+            <td colspan="4" class="empty-row">لا توجد بيانات.</td>
           </tr>
         `;
       } else {
@@ -360,7 +471,7 @@
       }
 
       // كروت (للموبايل)
-      if (arr.length === 0) {
+      if (!arr || arr.length === 0) {
         cardsBox.innerHTML = `
           <div class="card" style="text-align:center;color:#777">
             لا توجد بيانات.
@@ -369,10 +480,23 @@
       } else {
         cardsBox.innerHTML = arr.map(c => `
           <div class="card">
-            <div class="row"><span class="label">رقم اللوحة:</span> ${c.plate}</div>
-            <div class="row"><span class="label">الموديل:</span> ${c.model || "—"}</div>
-            <div class="row"><span class="label">النوع:</span> ${c.car_type || "—"}</div>
-            <div class="row"><span class="label">الإيجار اليومي:</span> ${c.daily_rent != null ? c.daily_rent + " ريال" : "—"}</div>
+            <div class="row">
+              <span class="label">رقم اللوحة:</span> ${c.plate}
+            </div>
+            <div class="row">
+              <span class="label">الموديل:</span> ${c.model || "—"}
+            </div>
+            <div class="row">
+              <span class="label">النوع:</span> ${c.car_type || "—"}
+            </div>
+            <div class="row">
+              <span class="label">الإيجار اليومي:</span>
+              ${c.daily_rent != null ? c.daily_rent + " ريال" : "—"}
+            </div>
+            <div class="row">
+              <span class="label">الحالة:</span>
+              <span class="badge-status">${c.status || "غير معروف"}</span>
+            </div>
           </div>
         `).join("");
       }

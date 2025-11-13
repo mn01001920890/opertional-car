@@ -1,10 +1,10 @@
 # ======================================================
-# 🚗 Flask Authorization System — Final (with fixes)
+# 🚗 Flask Authorization System — Weekly Authorizations (Friday Logic)
 # ======================================================
 
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 import os
 import traceback
@@ -34,35 +34,77 @@ app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
+
+# ---------------- Helpers ----------------
+def get_friday_end(base_dt: datetime) -> datetime:
+    """
+    تحسب نهاية يوم الجمعة الأولى بعد التاريخ المعطى (تشمل نفس اليوم لو هو جمعة).
+    """
+    weekday = base_dt.weekday()  # Monday=0 ... Friday=4 ... Sunday=6
+    if weekday <= 4:  # قبل الجمعة أو نفس اليوم
+        days_to_friday = 4 - weekday
+    else:  # بعد الجمعة (سبت أو أحد)
+        days_to_friday = 7 - (weekday - 4)
+
+    friday = base_dt + timedelta(days=days_to_friday)
+    friday_end = friday.replace(hour=23, minute=59, second=59, microsecond=0)
+    return friday_end
+
+
 # ---------------- Models ----------------
 class Authorization(db.Model):
     __tablename__ = "authorizations"
     id          = db.Column(db.Integer, primary_key=True)
-    issue_date  = db.Column(db.DateTime, default=datetime.utcnow)
+    issue_date  = db.Column(db.DateTime, default=datetime.utcnow)  # تاريخ إصدار التفويض
     driver_name = db.Column(db.String(100), nullable=False)
+    driver_license_no = db.Column(db.String(60))  # رقم رخصة السائق (للبحث السريع)
     car_number  = db.Column(db.String(50),  nullable=False)
     car_model   = db.Column(db.String(50))
     car_type    = db.Column(db.String(50))
-    start_date  = db.Column(db.DateTime)
+    start_date  = db.Column(db.DateTime)          # تاريخ بداية التفويض (فعلي)
     daily_rent  = db.Column(db.Numeric(10, 2))
     details     = db.Column(db.Text)
-    status      = db.Column(db.String(50))  # مؤجرة / منتهية
-    end_date    = db.Column(db.DateTime, nullable=True)  # تاريخ إنهاء التفويض
+    status      = db.Column(db.String(50))        # مؤجرة / منتهية
+    # ⚠️ مهم: نستخدم end_date كتاريخ نهاية التفويض (الجمعة) وليس تاريخ الإقفال
+    end_date    = db.Column(db.DateTime, nullable=True)   # تاريخ نهاية التفويض (الجمعة)
+    close_date  = db.Column(db.DateTime, nullable=True)   # تاريخ الإقفال الفعلي (زر الإنهاء)
 
     def to_dict(self):
+        # حساب عدد الأيام والمبلغ (محسوبين على أساس issue_date → end_date)
+        rental_days = None
+        planned_amount = None
+        if self.issue_date and self.end_date and self.daily_rent is not None:
+            try:
+                days = (self.end_date.date() - self.issue_date.date()).days + 1
+                days = max(days, 0)
+                rental_days = days
+                planned_amount = float(self.daily_rent) * days
+            except Exception:
+                pass
+
         return {
             "id": self.id,
+            # 4 تواريخ أساسية
             "issue_date": self.issue_date.strftime("%Y-%m-%d %H:%M:%S") if self.issue_date else "",
-            "driver_name": self.driver_name,
-            "car_number": self.car_number,
-            "car_model": self.car_model,
-            "car_type": self.car_type,
             "start_date": self.start_date.isoformat() if self.start_date else None,
+            "end_date":   self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else "",
+            "close_date": self.close_date.strftime("%Y-%m-%d %H:%M:%S") if self.close_date else "",
+            # بيانات السائق
+            "driver_name": self.driver_name,
+            "driver_license_no": self.driver_license_no,
+            # بيانات السيارة
+            "car_number": self.car_number,
+            "car_model":  self.car_model,
+            "car_type":   self.car_type,
+            # مالية
             "daily_rent": float(self.daily_rent or 0),
             "details": self.details,
-            "status": self.status,
-            "end_date": self.end_date.isoformat() if self.end_date else None
+            "status":  self.status,
+            # معلومات مساعدة للحسابات
+            "rental_days": rental_days,
+            "planned_amount": planned_amount
         }
+
 
 class Car(db.Model):
     __tablename__ = "cars"
@@ -83,6 +125,7 @@ class Car(db.Model):
             "daily_rent": float(self.daily_rent or 0)
         }
 
+
 class Driver(db.Model):
     __tablename__ = "drivers"
     id          = db.Column(db.Integer, primary_key=True)
@@ -91,10 +134,17 @@ class Driver(db.Model):
     license_no  = db.Column(db.String(60))
 
     def to_dict(self):
-        return {"id": self.id, "name": self.name, "phone": self.phone, "license_no": self.license_no}
+        return {
+            "id": self.id,
+            "name": self.name,
+            "phone": self.phone,
+            "license_no": self.license_no
+        }
+
 
 with app.app_context():
     db.create_all()
+
 
 # ---------------- Pages ----------------
 @app.route("/")
@@ -124,6 +174,7 @@ def rented_cars_page():
 @app.route("/cars-status")
 def cars_status_page():
     return render_template("cars-status.html")
+
 
 @app.route("/api/health")
 def api_health():
@@ -157,15 +208,23 @@ def add_authorization():
         if (car.status or "").strip() != "متاحة":
             return jsonify({"error": f"السيارة غير متاحة حالياً (الحالة: {car.status})"}), 400
 
-        # 2) منع ازدواج التفويض المفتوح
-        open_auth = (Authorization.query
-                     .filter_by(car_number=car_plate)
-                     .filter(Authorization.end_date.is_(None))
-                     .first())
+        # 2) منع ازدواج التفويض المفتوح (بناء على close_date)
+        open_auth = (
+            Authorization.query
+            .filter_by(car_number=car_plate)
+            .filter(Authorization.close_date.is_(None))
+            .first()
+        )
         if open_auth:
             return jsonify({"error": "هناك تفويض مفتوح لهذه السيارة بالفعل"}), 400
 
-        # 3) تجهيز التاريخ (اختياري)
+        # 3) جلب رقم رخصة السائق (اختياري)
+        driver_obj = Driver.query.filter_by(name=driver_name).first()
+        driver_license_no = driver_obj.license_no if driver_obj and driver_obj.license_no else None
+
+        # 4) تجهيز التاريخ
+        issue_date = datetime.utcnow()
+
         start_date = None
         sd = (data.get("start_date") or "").strip()
         if sd:
@@ -173,8 +232,14 @@ def add_authorization():
                 start_date = datetime.fromisoformat(sd)
             except Exception:
                 return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601 مثل 2025-11-12T10:30"}), 400
+        # لو ما فيش start_date نستخدم issue_date
+        if not start_date:
+            start_date = issue_date
 
-        # 4) الموديل/النوع/الإيجار
+        # 5) حساب نهاية التفويض: أول جمعة بعد issue_date (نهاية اليوم)
+        planned_end = get_friday_end(issue_date)
+
+        # 6) الموديل/النوع/الإيجار
         car_model = data.get("car_model") or car.model
         car_type  = data.get("car_type") or car.car_type
 
@@ -188,14 +253,17 @@ def add_authorization():
 
         new_auth = Authorization(
             driver_name=driver_name,
+            driver_license_no=driver_license_no,
             car_number=car_plate,
             car_model=car_model,
             car_type=car_type,
+            issue_date=issue_date,
             start_date=start_date,
             daily_rent=daily_rent,
             details=data.get("details"),
-            status=data.get("status") or "مؤجرة",
-            end_date=None
+            status="مؤجرة",
+            end_date=planned_end,   # تاريخ الجمعة
+            close_date=None
         )
 
         try:
@@ -211,31 +279,90 @@ def add_authorization():
     except Exception as outer:
         traceback.print_exc()
         return jsonify({"error": f"Server error: {str(outer)}"}), 500
+
+
 # جلب كل التفويضات
 @app.route("/api/authorizations", methods=["GET"])
 def get_authorizations():
     auths = Authorization.query.order_by(Authorization.id.desc()).all()
     return jsonify([a.to_dict() for a in auths])
 
-# إنهاء تفويض (يرجع السيارة متاحة + يسجل end_date)
+
+# إنهاء تفويض (يستخدم من زر الإنهاء)
 @app.route("/api/authorizations/<int:auth_id>/end", methods=["PATCH"])
 def end_authorization(auth_id):
     auth = Authorization.query.get(auth_id)
     if not auth:
         return jsonify({"error": "التفويض غير موجود"}), 404
-    if auth.end_date:
+    if auth.close_date:
         return jsonify({"error": "التفويض منتهي بالفعل"}), 400
 
     car = Car.query.filter_by(plate=auth.car_number).first()
+
     try:
-        auth.end_date = datetime.utcnow()
+        # تاريخ الإقفال الفعلي
+        close_dt = datetime.utcnow()
+        auth.close_date = close_dt
+        auth.status = "منتهية"
+
+        # لو end_date (نهاية الجمعة) مش متخزّن لأي سبب، نحسبه الآن من issue_date
+        if not auth.end_date and auth.issue_date:
+            auth.end_date = get_friday_end(auth.issue_date)
+
+        # حساب عدد الأيام والمبلغ (للتقارير / دفتر اليومية)
+        rental_days = None
+        total_amount = None
+        if auth.issue_date and auth.end_date and auth.daily_rent is not None:
+            days = (auth.end_date.date() - auth.issue_date.date()).days + 1
+            days = max(days, 0)
+            rental_days = days
+            total_amount = float(auth.daily_rent) * days
+
+        # 📌 إنشاء تفويض جديد تلقائيًا لنفس السيارة والسائق من السبت التالي
+        if auth.end_date:
+            new_issue = auth.end_date + timedelta(days=1)  # السبت التالي
+        else:
+            new_issue = close_dt + timedelta(days=1)
+
+        # نخلي الساعة 09:00 (تقديرية)
+        new_issue = new_issue.replace(hour=9, minute=0, second=0, microsecond=0)
+        new_end = get_friday_end(new_issue)
+
+        new_auth = Authorization(
+            driver_name=auth.driver_name,
+            driver_license_no=auth.driver_license_no,
+            car_number=auth.car_number,
+            car_model=auth.car_model,
+            car_type=auth.car_type,
+            issue_date=new_issue,
+            start_date=new_issue,
+            daily_rent=auth.daily_rent,
+            details=auth.details,
+            status="مؤجرة",
+            end_date=new_end,
+            close_date=None
+        )
+        db.session.add(new_auth)
+
+        # السيارة تظل "مؤجرة" لأن التفويض يتجدد أسبوعيًا تلقائيًا
         if car:
-            car.status = "متاحة"
+            car.status = "مؤجرة"
+
         db.session.commit()
-        return jsonify({"message": "✅ تم إنهاء التفويض"}), 200
+
+        return jsonify({
+            "message": "✅ تم إنهاء التفويض وإنشاء تفويض جديد للأسبوع التالي",
+            "closed_authorization": auth.to_dict(),
+            "new_authorization": new_auth.to_dict(),
+            "rental_days": rental_days,
+            "total_amount": total_amount
+        }), 200
+
     except Exception as e:
         db.session.rollback()
+        traceback.print_exc()
         return jsonify({"error": f"DB error: {str(e)}"}), 500
+
 
 # ----- Cars APIs -----
 @app.route("/api/cars", methods=["GET"])
@@ -274,6 +401,7 @@ def add_car():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+
 # ----- Drivers APIs -----
 @app.route("/api/drivers", methods=["GET"])
 def list_drivers():
@@ -299,7 +427,7 @@ def add_driver():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-

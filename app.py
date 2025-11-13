@@ -87,7 +87,9 @@ class Authorization(db.Model):
             # 4 تواريخ أساسية
             "issue_date": self.issue_date.strftime("%Y-%m-%d %H:%M:%S") if self.issue_date else "",
             "start_date": self.start_date.isoformat() if self.start_date else None,
+            # نستخدم end_date كتاريخ نهاية الجمعة (planned_end_date)
             "end_date":   self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else "",
+            "planned_end_date": self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else "",
             "close_date": self.close_date.strftime("%Y-%m-%d %H:%M:%S") if self.close_date else "",
             # بيانات السائق
             "driver_name": self.driver_name,
@@ -128,10 +130,10 @@ class Car(db.Model):
 
 class Driver(db.Model):
     __tablename__ = "drivers"
-    id          = db.Column(db.Integer, primary_key=True)
-    name        = db.Column(db.String(100), nullable=False)
-    phone       = db.Column(db.String(30))
-    license_no  = db.Column(db.String(60))
+    id         = db.Column(db.Integer, primary_key=True)
+    name       = db.Column(db.String(100), nullable=False)
+    phone      = db.Column(db.String(50))
+    license_no = db.Column(db.String(60))
 
     def to_dict(self):
         return {
@@ -142,34 +144,31 @@ class Driver(db.Model):
         }
 
 
-with app.app_context():
-    db.create_all()
-
-
-# ---------------- Pages ----------------
+# ---------------- Routes (Pages) ----------------
 @app.route("/")
-def index():
+def index_page():
     return render_template("index.html")
+
 
 @app.route("/issue")
 def issue_page():
     return render_template("issue.html")
 
+
 @app.route("/view")
 def view_page():
     return render_template("view.html")
 
-@app.route("/drivers")
-def drivers_page():
-    return render_template("drivers.html")
 
 @app.route("/cars")
 def cars_page():
     return render_template("cars.html")
 
+
 @app.route("/rented")
 def rented_cars_page():
     return render_template("rented.html")
+
 
 @app.route("/cars-status")
 def cars_status_page():
@@ -178,7 +177,8 @@ def cars_status_page():
 
 @app.route("/api/health")
 def api_health():
-    return jsonify({"ok": True})
+    return jsonify({"status": "ok"})
+
 
 @app.route("/api/debug/dburl")
 def api_debug_dburl():
@@ -236,8 +236,8 @@ def add_authorization():
         if not start_date:
             start_date = issue_date
 
-        # 5) حساب نهاية التفويض: أول جمعة بعد issue_date (نهاية اليوم)
-        planned_end = get_friday_end(issue_date)
+        # 5) حساب نهاية التفويض: أول جمعة بعد تاريخ بداية التفويض (start_date)
+        planned_end = get_friday_end(start_date)
 
         # 6) الموديل/النوع/الإيجار
         car_model = data.get("car_model") or car.model
@@ -262,7 +262,7 @@ def add_authorization():
             daily_rent=daily_rent,
             details=data.get("details"),
             status="مؤجرة",
-            end_date=planned_end,   # تاريخ الجمعة
+            end_date=planned_end,   # تاريخ الجمعة (planned_end_date)
             close_date=None
         )
 
@@ -270,7 +270,10 @@ def add_authorization():
             db.session.add(new_auth)
             car.status = "مؤجرة"
             db.session.commit()
-            return jsonify({"message": "✅ Authorization added successfully"}), 201
+            return jsonify({
+                "message": "✅ Authorization added successfully",
+                "authorization": new_auth.to_dict()
+            }), 201
         except Exception as e:
             db.session.rollback()
             traceback.print_exc()
@@ -281,10 +284,59 @@ def add_authorization():
         return jsonify({"error": f"Server error: {str(outer)}"}), 500
 
 
-# جلب كل التفويضات
+# جلب كل التفويضات (مع فلترة اختيارية)
 @app.route("/api/authorizations", methods=["GET"])
 def get_authorizations():
-    auths = Authorization.query.order_by(Authorization.id.desc()).all()
+    """
+    إرجاع قائمة التفويضات مع دعم فلترة اختيارية:
+    - ?status=active  → تفويضات مفتوحة (close_date IS NULL)
+    - ?status=closed  → تفويضات مغلقة (close_date IS NOT NULL)
+    - ?car_number=123 → البحث برقم السيارة (contains)
+    - ?license_no=ABC → البحث برقم رخصة السائق (contains)
+    """
+    query = Authorization.query
+
+    status_param = (request.args.get("status") or "").strip().lower()
+    if status_param == "active":
+        query = query.filter(Authorization.close_date.is_(None))
+    elif status_param == "closed":
+        query = query.filter(Authorization.close_date.is_not(None))
+
+    car_number = (request.args.get("car_number") or "").strip()
+    if car_number:
+        like = f"%{car_number}%"
+        query = query.filter(Authorization.car_number.ilike(like))
+
+    license_no = (request.args.get("license_no") or "").strip()
+    if license_no:
+        like = f"%{license_no}%"
+        query = query.filter(Authorization.driver_license_no.ilike(like))
+
+    auths = query.order_by(Authorization.id.desc()).all()
+    return jsonify([a.to_dict() for a in auths])
+
+
+@app.route("/api/authorizations/closed", methods=["GET"])
+def get_closed_authorizations():
+    """تفويضات مغلقة فقط (close_date IS NOT NULL)."""
+    auths = (
+        Authorization.query
+        .filter(Authorization.close_date.is_not(None))
+        .order_by(Authorization.id.desc())
+        .all()
+    )
+    return jsonify([a.to_dict() for a in auths])
+
+
+@app.route("/api/authorizations/active", methods=["GET"])
+def get_active_authorizations():
+    """تفويضات مفتوحة فقط (close_date IS NULL)."""
+    auths = (
+        Authorization.query
+        .filter(Authorization.close_date.is_(None))
+        .order_by(Authorization.id.desc())
+        .all()
+    )
     return jsonify([a.to_dict() for a in auths])
 
 
@@ -370,36 +422,44 @@ def list_cars():
     cars = Car.query.order_by(Car.id.desc()).all()
     return jsonify([c.to_dict() for c in cars])
 
+
 @app.route("/api/cars", methods=["POST"])
 def add_car():
-    data = request.get_json() or {}
-    plate = (data.get("plate") or "").strip()
-    if not plate:
-        return jsonify({"error": "رقم اللوحة مطلوب"}), 400
-
-    # تحويل الإيجار لرقم Decimal
-    rent_in = data.get("daily_rent")
-    daily_rent = None
-    if rent_in not in (None, "", " "):
-        try:
-            daily_rent = Decimal(str(rent_in))
-        except (InvalidOperation, ValueError, TypeError):
-            return jsonify({"error": "قيمة الإيجار اليومي غير صحيحة"}), 400
-
     try:
-        new_car = Car(
+        data = request.get_json() or {}
+        plate = (data.get("plate") or "").strip()
+        if not plate:
+            return jsonify({"error": "رقم اللوحة مطلوب"}), 400
+
+        car = Car(
             plate=plate,
             model=data.get("model"),
             car_type=data.get("car_type"),
-            status=(data.get("status") or "متاحة"),
-            daily_rent=daily_rent
+            daily_rent=Decimal(str(data.get("daily_rent"))) if data.get("daily_rent") else None,
+            status=data.get("status") or "متاحة"
         )
-        db.session.add(new_car)
+        db.session.add(car)
         db.session.commit()
-        return jsonify({"message": "✅ Car added", "car": new_car.to_dict()}), 201
+        return jsonify({"message": "✅ Car added", "car": car.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/cars/status", methods=["GET"])
+def cars_status():
+    cars = Car.query.all()
+    total = len(cars)
+    available = len([c for c in cars if (c.status or "").strip() == "متاحة"])
+    rented   = len([c for c in cars if (c.status or "").strip() == "مؤجرة"])
+    repair   = len([c for c in cars if (c.status or "").strip() == "تحت الصيانة"])
+
+    return jsonify({
+        "total": total,
+        "available": available,
+        "rented": rented,
+        "repair": repair
+    })
 
 
 # ----- Drivers APIs -----
@@ -408,13 +468,19 @@ def list_drivers():
     drivers = Driver.query.order_by(Driver.id.desc()).all()
     return jsonify([d.to_dict() for d in drivers])
 
+
 @app.route("/api/drivers", methods=["POST"])
 def add_driver():
-    data = request.get_json() or {}
-    name = (data.get("name") or "").strip()
-    if not name:
-        return jsonify({"error": "اسم السائق مطلوب"}), 400
     try:
+        data = request.get_json() or {}
+        name = (data.get("name") or "").strip()
+        if not name:
+            return jsonify({"error": "اسم السائق مطلوب"}), 400
+
+        existing = Driver.query.filter_by(name=name).first()
+        if existing:
+            return jsonify({"error": "هذا السائق مسجَّل بالفعل"}), 400
+
         new_driver = Driver(
             name=name,
             phone=data.get("phone"),

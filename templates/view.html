@@ -5,67 +5,403 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>📜 عرض التفويضات</title>
   <style>
-    body{font-family:"Tajawal",sans-serif;background:linear-gradient(135deg,#0d6efd,#6c63ff);margin:0;padding:20px;color:#fff}
-    h2{text-align:center;margin-bottom:20px;color:#fff;font-size:26px}
-    .card{background:#fff;color:#333;padding:15px;margin-bottom:15px;border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,.25);animation:fadeIn .4s ease-in-out}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    .row{margin:5px 0;font-size:15px}
+    :root {
+      --main-blue: #0d6efd;
+      --main-purple: #6c63ff;
+      --card-radius: 12px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
+      color: #fff;
+    }
+
+    /* 🔝 شريط علوي ثابت + زر رجوع */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .back-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      color: var(--main-blue);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .back-btn:hover {
+      background: var(--main-blue);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+      color: #fff;
+    }
+
+    /* محتوى الصفحة */
+    .page-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 16px 24px; /* مساحة للهيدر */
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #fff;
+      font-size: 24px;
+    }
+
+    .summary {
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 16px;
+      opacity: 0.9;
+    }
+
+    /* 🖥 جدول للتفويضات */
+    .table-wrapper {
+      background: #fff;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .auth-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .auth-table thead {
+      background: var(--main-blue);
+      color: #fff;
+    }
+
+    .auth-table th,
+    .auth-table td {
+      padding: 8px 6px;
+      text-align: center;
+      font-size: 12px;
+      border-bottom: 1px solid #eee;
+      color: #333;
+    }
+
+    .auth-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .status-open {
+      color: #fff;
+      background: #198754;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+
+    .status-closed {
+      color: #fff;
+      background: #6c757d;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+
+    .end-btn-table {
+      padding: 5px 8px;
+      font-size: 11px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #dc3545;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .end-btn-table:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .link {
+      color: #0d6efd;
+      font-weight: 600;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    /* 📱 كروت للموبايل */
+    .card-list {
+      display: none; /* موبايل فقط */
+    }
+
+    .card {
+      background:#fff;
+      color:#333;
+      padding:15px;
+      margin-bottom:15px;
+      border-radius:14px;
+      box-shadow:0 4px 15px rgba(0,0,0,.25);
+      animation:fadeIn .4s ease-in-out;
+    }
+
+    @keyframes fadeIn{
+      from{opacity:0;transform:translateY(10px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+
+    .row{margin:5px 0;font-size:14px}
     .label{font-weight:bold;color:#0d6efd}
-    .btn{width:100%;padding:12px;border:none;border-radius:10px;background:#fff;color:#0d6efd;font-size:16px;font-weight:bold;margin-top:10px;box-shadow:0 4px 10px rgba(0,0,0,.3);transition:.3s;cursor:pointer}
-    .btn:hover{background:#0d6efd;color:#fff;transform:scale(1.05)}
-    .btn.end{background:#dc3545;color:#fff}
-    .btn.end:hover{opacity:.9}
-    a.link{color:#0d6efd;text-decoration:underline}
+
+    .btn-end-card{
+      width:100%;
+      padding:10px;
+      border:none;
+      border-radius:10px;
+      background:#dc3545;
+      color:#fff;
+      font-size:14px;
+      font-weight:bold;
+      margin-top:10px;
+      box-shadow:0 4px 10px rgba(0,0,0,.3);
+      transition:.3s;
+      cursor:pointer;
+    }
+
+    .btn-end-card:hover{
+      opacity:.9;
+      transform:scale(1.02);
+    }
+
+    @media (max-width: 768px) {
+      .page-title{font-size:16px;}
+      .table-wrapper {
+        display: none;   /* إخفاء الجدول في الموبايل */
+      }
+      .card-list {
+        display: block;  /* إظهار الكروت في الموبايل */
+      }
+    }
+
+    @media (min-width: 769px) {
+      .table-wrapper {
+        display: block;  /* إظهار الجدول على اللاب */
+      }
+      .card-list {
+        display: none;   /* إخفاء الكروت على اللاب */
+      }
+    }
   </style>
 </head>
 <body>
-  <h2>📜 عرض جميع التفويضات</h2>
-  <div id="list"></div>
-  <button class="btn" onclick="location.href='/'">🏠 الرجوع للصفحة الرئيسية</button>
+
+  <!-- 🔝 الهيدر الثابت -->
+  <header class="top-bar">
+    <button class="back-btn" onclick="location.href='/'">
+      🏠 رجوع
+    </button>
+    <h1 class="page-title">📜 عرض التفويضات</h1>
+  </header>
+
+  <main class="page-content">
+    <h2>قائمة التفويضات</h2>
+    <div id="summary" class="summary"></div>
+
+    <!-- 🖥 جدول (للّاب) -->
+    <div class="table-wrapper">
+      <table class="auth-table">
+        <thead>
+          <tr>
+            <th>السائق</th>
+            <th>رقم السيارة</th>
+            <th>الموديل</th>
+            <th>النوع</th>
+            <th>البداية</th>
+            <th>الإيجار/يوم</th>
+            <th>الحالة</th>
+            <th>تاريخ الإصدار</th>
+            <th>تاريخ الانتهاء</th>
+            <th>إجراء</th>
+          </tr>
+        </thead>
+        <tbody id="authTableBody">
+          <!-- JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 📱 كروت (للموبايل) -->
+    <div class="card-list" id="authCards"></div>
+  </main>
 
   <script>
     async function loadData(){
-      const container=document.getElementById("list");
-      container.innerHTML="<p style='text-align:center'>⏳ جاري التحميل...</p>";
+      const tableBody = document.getElementById("authTableBody");
+      const cardsBox  = document.getElementById("authCards");
+      const summary   = document.getElementById("summary");
+
+      tableBody.innerHTML = "<tr><td colspan='10' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+      cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
+      summary.textContent = "";
+
       try{
-        const res=await fetch("/api/authorizations");
-        const data=await res.json();
-        if(!Array.isArray(data)){container.innerHTML="<p>⚠️ لم يتم العثور على بيانات.</p>";return;}
-        container.innerHTML=data.map(item=>{
-          const open=!item.end_date; // تفويض مفتوح
-          const driverLink=`/drivers#q=${encodeURIComponent(item.driver_name||"")}`;
-          const carLink=`/cars#q=${encodeURIComponent(item.car_number||"")}`;
+        const res = await fetch("/api/authorizations");
+        const data = await res.json();
+
+        if (!Array.isArray(data)) {
+          tableBody.innerHTML = "<tr><td colspan='10' style='text-align:center'>⚠️ لم يتم العثور على بيانات.</td></tr>";
+          cardsBox.innerHTML  = "<p style='text-align:center'>⚠️ لم يتم العثور على بيانات.</p>";
+          return;
+        }
+
+        const total = data.length;
+        const open  = data.filter(it => !it.end_date).length;
+        const closed= total - open;
+
+        summary.textContent = `إجمالي التفويضات: ${total} — المفتوحة: ${open} — المغلقة: ${closed}`;
+
+        // لو مفيش بيانات
+        if (total === 0) {
+          tableBody.innerHTML = "<tr><td colspan='10' style='text-align:center'>لا توجد تفويضات مسجلة.</td></tr>";
+          cardsBox.innerHTML  = "<p style='text-align:center'>لا توجد تفويضات مسجلة.</p>";
+          return;
+        }
+
+        // جدول (للّاب)
+        tableBody.innerHTML = data.map(item => {
+          const isOpen = !item.end_date;
+          const statusLabel = isOpen
+            ? `<span class="status-open">مفتوح</span>`
+            : `<span class="status-closed">مغلق</span>`;
+
+          const driverLink = `javascript:goDriver('${encodeURIComponent(item.driver_name || "")}')`;
+          const carLink    = `javascript:goCar('${encodeURIComponent(item.car_number || "")}')`;
+
+          return `
+            <tr>
+              <td><span class="link" onclick="goDriver('${encodeURIComponent(item.driver_name || "")}')">${item.driver_name || "—"}</span></td>
+              <td><span class="link" onclick="goCar('${encodeURIComponent(item.car_number || "")}')">${item.car_number || "—"}</span></td>
+              <td>${item.car_model || "—"}</td>
+              <td>${item.car_type  || "—"}</td>
+              <td>${item.start_date || "—"}</td>
+              <td>${item.daily_rent != null ? item.daily_rent + " ريال" : "—"}</td>
+              <td>${statusLabel}</td>
+              <td>${item.issue_date || "—"}</td>
+              <td>${item.end_date   || "—"}</td>
+              <td>
+                ${
+                  isOpen
+                  ? `<button class="end-btn-table" onclick="endAuth(${item.id})">🛑 إنهاء</button>`
+                  : `—`
+                }
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+        // كروت (للموبايل)
+        cardsBox.innerHTML = data.map(item => {
+          const isOpen = !item.end_date;
+          const statusText = isOpen ? "مفتوح" : "مغلق";
+          const statusClass = isOpen ? "status-open" : "status-closed";
+
           return `
             <div class="card">
-              <div class="row"><span class="label">السائق:</span> <a class="link" href="${driverLink}">${item.driver_name}</a></div>
-              <div class="row"><span class="label">رقم السيارة:</span> <a class="link" href="${carLink}">${item.car_number}</a></div>
-              <div class="row"><span class="label">الموديل:</span> ${item.car_model||"—"}</div>
-              <div class="row"><span class="label">النوع:</span> ${item.car_type||"—"}</div>
-              <div class="row"><span class="label">البداية:</span> ${item.start_date||"—"}</div>
-              <div class="row"><span class="label">الإيجار اليومي:</span> ${item.daily_rent} ريال</div>
-              <div class="row"><span class="label">الحالة:</span> ${item.status||"—"}</div>
-              <div class="row"><span class="label">البيان:</span> ${item.details||"—"}</div>
-              <div class="row"><span class="label">تاريخ الإصدار:</span> ${item.issue_date||"—"}</div>
-              <div class="row"><span class="label">تاريخ الانتهاء:</span> ${item.end_date||"—"}</div>
-              ${open ? `<button class="btn end" onclick="endAuth(${item.id})">🛑 إنهاء التفويض</button>` : ``}
+              <div class="row">
+                <span class="label">السائق:</span>
+                <span class="link" onclick="goDriver('${item.driver_name ? encodeURIComponent(item.driver_name) : ""}')">
+                  ${item.driver_name || "—"}
+                </span>
+              </div>
+
+              <div class="row">
+                <span class="label">رقم السيارة:</span>
+                <span class="link" onclick="goCar('${item.car_number ? encodeURIComponent(item.car_number) : ""}')">
+                  ${item.car_number || "—"}
+                </span>
+              </div>
+
+              <div class="row"><span class="label">الموديل:</span> ${item.car_model || "—"}</div>
+              <div class="row"><span class="label">النوع:</span> ${item.car_type  || "—"}</div>
+              <div class="row"><span class="label">البداية:</span> ${item.start_date || "—"}</div>
+              <div class="row"><span class="label">الإيجار اليومي:</span> ${item.daily_rent != null ? item.daily_rent + " ريال" : "—"}</div>
+              <div class="row"><span class="label">الحالة:</span> <span class="${statusClass}">${statusText}</span></div>
+              <div class="row"><span class="label">البيان:</span> ${item.details || "—"}</div>
+              <div class="row"><span class="label">تاريخ الإصدار:</span> ${item.issue_date || "—"}</div>
+              <div class="row"><span class="label">تاريخ الانتهاء:</span> ${item.end_date   || "—"}</div>
+
+              ${
+                isOpen
+                ? `<button class="btn-end-card" onclick="endAuth(${item.id})">🛑 إنهاء التفويض</button>`
+                : ``
+              }
             </div>
           `;
         }).join("");
-        // تمرير الهاش للبحث السريع بالصفحات الأخرى (سيُفعّل لاحقاً داخل drivers.html / cars.html)
+
       }catch(err){
         console.error(err);
-        container.innerHTML="<p>❌ حدث خطأ أثناء التحميل.</p>";
+        tableBody.innerHTML = "<tr><td colspan='10' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
+        cardsBox.innerHTML  = "<p style='text-align:center'>❌ حدث خطأ أثناء التحميل.</p>";
       }
     }
 
     async function endAuth(id){
       if(!confirm("تأكيد إنهاء التفويض؟")) return;
-      const res = await fetch(`/api/authorizations/${id}/end`, {method:"PATCH"});
-      if(res.ok){ loadData(); }
-      else{
-        const data = await res.json().catch(()=>({}));
-        alert("❌ لم يتم الإنهاء: " + (data.error || "خطأ غير معروف"));
+      try {
+        const res = await fetch(`/api/authorizations/${id}/end`, {method:"PATCH"});
+        if(res.ok){
+          loadData();
+        } else {
+          const data = await res.json().catch(()=>({}));
+          alert("❌ لم يتم الإنهاء: " + (data.error || "خطأ غير معروف"));
+        }
+      } catch(e) {
+        alert("⚠️ تعذر الاتصال بالخادم.");
       }
+    }
+
+    function goDriver(nameEnc) {
+      // nameEnc بيكون encodeURIComponent بالفعل
+      location.href = `/drivers?focus=${nameEnc}`;
+    }
+
+    function goCar(plateEnc) {
+      location.href = `/cars?focus=${plateEnc}`;
     }
 
     loadData();

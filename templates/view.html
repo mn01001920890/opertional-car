@@ -12,9 +12,7 @@
       --shadow: 0 4px 12px rgba(0,0,0,0.25);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -139,9 +137,7 @@
     }
 
     /* 📱 كروت للموبايل */
-    .card-list {
-      display: none; /* موبايل فقط */
-    }
+    .card-list { display: none; }
 
     .card {
       background:#fff;
@@ -163,21 +159,13 @@
 
     @media (max-width: 768px) {
       .page-title{font-size:16px;}
-      .table-wrapper {
-        display: none;   /* إخفاء الجدول في الموبايل */
-      }
-      .card-list {
-        display: block;  /* إظهار الكروت في الموبايل */
-      }
+      .table-wrapper { display: none; }
+      .card-list { display: block; }
     }
 
     @media (min-width: 769px) {
-      .table-wrapper {
-        display: block;  /* إظهار الجدول على اللاب */
-      }
-      .card-list {
-        display: none;   /* إخفاء الكروت على اللاب */
-      }
+      .table-wrapper { display: block; }
+      .card-list { display: none; }
     }
   </style>
 </head>
@@ -205,6 +193,7 @@
             <th>الموديل</th>
             <th>النوع</th>
             <th>البداية</th>
+            <th>المدة</th>
             <th>الإيجار/يوم</th>
             <th>تاريخ الإصدار</th>
             <th>تاريخ الانتهاء</th>
@@ -221,12 +210,44 @@
   </main>
 
   <script>
+    // تنسيق التاريخ: 2025-11-13 13:17:37
+    function formatDateTime(value){
+      if(!value) return "—";
+      const d = new Date(value);
+      if (isNaN(d)) return value; // لو جالك نص جاهز من الباك إند
+      const pad = n => String(n).padStart(2, "0");
+      const year  = d.getFullYear();
+      const month = pad(d.getMonth() + 1);
+      const day   = pad(d.getDate());
+      const hrs   = pad(d.getHours());
+      const mins  = pad(d.getMinutes());
+      const secs  = pad(d.getSeconds());
+      return `${year}-${month}-${day} ${hrs}:${mins}:${secs}`;
+    }
+
+    // حساب المدة بين البداية والنهاية
+    function calcDuration(startStr, endStr){
+      if(!startStr || !endStr) return "—";
+      const start = new Date(startStr);
+      const end   = new Date(endStr);
+      if (isNaN(start) || isNaN(end)) return "—";
+
+      let diffMs = end - start;
+      if(diffMs < 0) diffMs = 0;
+      let totalMinutes = Math.floor(diffMs / 60000);
+      let hours = Math.floor(totalMinutes / 60);
+      let days  = Math.floor(hours / 24);
+      let minutes = totalMinutes % 60;
+
+      return `${days} يوم / ${hours % 24} ساعة / ${minutes} دقيقة`;
+    }
+
     async function loadData(){
       const tableBody = document.getElementById("authTableBody");
       const cardsBox  = document.getElementById("authCards");
       const summary   = document.getElementById("summary");
 
-      tableBody.innerHTML = "<tr><td colspan='8' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+      tableBody.innerHTML = "<tr><td colspan='9' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
       cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
       summary.textContent = "";
 
@@ -235,12 +256,12 @@
         const data = await res.json();
 
         if (!Array.isArray(data)) {
-          tableBody.innerHTML = "<tr><td colspan='8' style='text-align:center'>⚠️ لم يتم العثور على بيانات.</td></tr>";
+          tableBody.innerHTML = "<tr><td colspan='9' style='text-align:center'>⚠️ لم يتم العثور على بيانات.</td></tr>";
           cardsBox.innerHTML  = "<p style='text-align:center'>⚠️ لم يتم العثور على بيانات.</p>";
           return;
         }
 
-        // 🎯 الخطوة 2: نعرض فقط التفويضات المقفلة
+        // 🎯 نعرض فقط التفويضات المقفلة
         const closed = data.filter(it =>
           (it.end_date && it.end_date !== null && it.end_date !== "") ||
           (it.status && it.status === "مقفلة")
@@ -250,64 +271,80 @@
         summary.textContent = `إجمالي التفويضات المقفلة: ${closedCount}`;
 
         if (closedCount === 0) {
-          tableBody.innerHTML = "<tr><td colspan='8' style='text-align:center'>لا توجد تفويضات مقفلة حتى الآن.</td></tr>";
+          tableBody.innerHTML = "<tr><td colspan='9' style='text-align:center'>لا توجد تفويضات مقفلة حتى الآن.</td></tr>";
           cardsBox.innerHTML  = "<p style='text-align:center'>لا توجد تفويضات مقفلة حتى الآن.</p>";
           return;
         }
 
         // جدول (للّاب)
-        tableBody.innerHTML = closed.map(item => `
-          <tr>
-            <td>
-              <span class="link" onclick="goDriver('${encodeURIComponent(item.driver_name || "")}')">
-                ${item.driver_name || "—"}
-              </span>
-            </td>
-            <td>
-              <span class="link" onclick="goCar('${encodeURIComponent(item.car_number || "")}')">
-                ${item.car_number || "—"}
-              </span>
-            </td>
-            <td>${item.car_model || "—"}</td>
-            <td>${item.car_type  || "—"}</td>
-            <td>${item.start_date || "—"}</td>
-            <td>${item.daily_rent != null ? item.daily_rent + " ريال" : "—"}</td>
-            <td>${item.issue_date || "—"}</td>
-            <td>${item.end_date   || "—"}</td>
-          </tr>
-        `).join("");
+        tableBody.innerHTML = closed.map(item => {
+          const startFmt = formatDateTime(item.start_date);
+          const issueFmt = formatDateTime(item.issue_date);
+          const endFmt   = formatDateTime(item.end_date);
+          const duration = calcDuration(item.start_date, item.end_date);
+
+          return `
+            <tr>
+              <td>
+                <span class="link" onclick="goDriver('${encodeURIComponent(item.driver_name || "")}')">
+                  ${item.driver_name || "—"}
+                </span>
+              </td>
+              <td>
+                <span class="link" onclick="goCar('${encodeURIComponent(item.car_number || "")}')">
+                  ${item.car_number || "—"}
+                </span>
+              </td>
+              <td>${item.car_model || "—"}</td>
+              <td>${item.car_type  || "—"}</td>
+              <td>${startFmt}</td>
+              <td>${duration}</td>
+              <td>${item.daily_rent != null ? item.daily_rent + " ريال" : "—"}</td>
+              <td>${issueFmt}</td>
+              <td>${endFmt}</td>
+            </tr>
+          `;
+        }).join("");
 
         // كروت (للموبايل)
-        cardsBox.innerHTML = closed.map(item => `
-          <div class="card">
-            <div class="row">
-              <span class="label">السائق:</span>
-              <span class="link" onclick="goDriver('${item.driver_name ? encodeURIComponent(item.driver_name) : ""}')">
-                ${item.driver_name || "—"}
-              </span>
-            </div>
+        cardsBox.innerHTML = closed.map(item => {
+          const startFmt = formatDateTime(item.start_date);
+          const issueFmt = formatDateTime(item.issue_date);
+          const endFmt   = formatDateTime(item.end_date);
+          const duration = calcDuration(item.start_date, item.end_date);
 
-            <div class="row">
-              <span class="label">رقم السيارة:</span>
-              <span class="link" onclick="goCar('${item.car_number ? encodeURIComponent(item.car_number) : ""}')">
-                ${item.car_number || "—"}
-              </span>
-            </div>
+          return `
+            <div class="card">
+              <div class="row">
+                <span class="label">السائق:</span>
+                <span class="link" onclick="goDriver('${item.driver_name ? encodeURIComponent(item.driver_name) : ""}')">
+                  ${item.driver_name || "—"}
+                </span>
+              </div>
 
-            <div class="row"><span class="label">الموديل:</span> ${item.car_model || "—"}</div>
-            <div class="row"><span class="label">النوع:</span> ${item.car_type  || "—"}</div>
-            <div class="row"><span class="label">البداية:</span> ${item.start_date || "—"}</div>
-            <div class="row"><span class="label">الإيجار اليومي:</span> ${item.daily_rent != null ? item.daily_rent + " ريال" : "—"}</div>
-            <div class="row"><span class="label">البيان:</span> ${item.details || "—"}</div>
-            <div class="row"><span class="label">تاريخ الإصدار:</span> ${item.issue_date || "—"}</div>
-            <div class="row"><span class="label">تاريخ الانتهاء:</span> ${item.end_date   || "—"}</div>
-            <div class="row"><span class="label">الحالة:</span> <span class="status-closed">مقفلة</span></div>
-          </div>
-        `).join("");
+              <div class="row">
+                <span class="label">رقم السيارة:</span>
+                <span class="link" onclick="goCar('${item.car_number ? encodeURIComponent(item.car_number) : ""}')">
+                  ${item.car_number || "—"}
+                </span>
+              </div>
+
+              <div class="row"><span class="label">الموديل:</span> ${item.car_model || "—"}</div>
+              <div class="row"><span class="label">النوع:</span> ${item.car_type  || "—"}</div>
+              <div class="row"><span class="label">البداية:</span> ${startFmt}</div>
+              <div class="row"><span class="label">المدة:</span> ${duration}</div>
+              <div class="row"><span class="label">الإيجار اليومي:</span> ${item.daily_rent != null ? item.daily_rent + " ريال" : "—"}</div>
+              <div class="row"><span class="label">البيان:</span> ${item.details || "—"}</div>
+              <div class="row"><span class="label">تاريخ الإصدار:</span> ${issueFmt}</div>
+              <div class="row"><span class="label">تاريخ الانتهاء:</span> ${endFmt}</div>
+              <div class="row"><span class="label">الحالة:</span> <span class="status-closed">مقفلة</span></div>
+            </div>
+          `;
+        }).join("");
 
       }catch(err){
         console.error(err);
-        tableBody.innerHTML = "<tr><td colspan='8' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='9' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>❌ حدث خطأ أثناء التحميل.</p>";
       }
     }

@@ -6,19 +6,87 @@
   <title>🚗 إدارة السيارات</title>
 
   <style>
+    :root {
+      --main-blue: #0d6efd;
+      --main-purple: #6c63ff;
+      --card-radius: 12px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: "Tajawal", sans-serif;
-      background: linear-gradient(135deg, #0d6efd, #6c63ff);
+      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
-      padding: 15px;
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
       color: #fff;
+    }
+
+    /* 🔝 شريط علوي ثابت + زر رجوع */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .back-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      color: var(--main-blue);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .back-btn:hover {
+      background: var(--main-blue);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+    }
+
+    /* 🔹 محتوى الصفحة */
+    .page-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 16px 24px; /* space علشان الشريط الثابت */
     }
 
     h2 {
       text-align: center;
       margin-bottom: 20px;
-      font-size: 26px;
+      font-size: 24px;
       color: #fff;
+    }
+
+    /* 🔍 صندوق البحث */
+    .search-box {
+      margin-bottom: 14px;
     }
 
     .search-box input {
@@ -26,18 +94,114 @@
       padding: 12px;
       border-radius: 10px;
       border: 1px solid #ccc;
-      margin-bottom: 15px;
       font-size: 16px;
     }
 
-    .car-item {
+    /* ➕ إضافة سيارة */
+    .add-car-card {
+      background: #ffffff;
+      color: #333;
+      padding: 12px;
+      border-radius: var(--card-radius);
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .add-car-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .add-car-row input {
+      flex: 1 1 150px;
+      min-width: 120px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    #addCarBtn {
+      background: var(--main-blue);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: 0.2s ease;
+    }
+
+    #addCarBtn:hover {
+      background: #004499;
+      transform: translateY(-1px);
+    }
+
+    #carAddMsg {
+      margin-top: 6px;
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    /* 🖥️ جدول للّاب / الشاشات الكبيرة */
+    .table-wrapper {
+      background: #fff;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .cars-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .cars-table thead {
+      background: var(--main-blue);
+      color: #fff;
+    }
+
+    .cars-table th,
+    .cars-table td {
+      padding: 10px 12px;
+      text-align: center;
+      font-size: 14px;
+      border-bottom: 1px solid #eee;
+      color: #333;
+    }
+
+    .cars-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* 📱 كروت للموبايل */
+    .card-list {
+      display: none; /* تظهر فقط في الموبايل */
+    }
+
+    .car-card {
       background: #fff;
       color: #333;
       padding: 13px;
-      border-radius: 12px;
+      border-radius: var(--card-radius);
       margin-bottom: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      transition: .3s;
+      box-shadow: var(--shadow);
+      transition: 0.3s;
+    }
+
+    .row {
+      margin: 4px 0;
+      font-size: 14px;
+    }
+
+    .label {
+      font-weight: bold;
+      color: var(--main-blue);
+      margin-left: 4px;
     }
 
     .highlight {
@@ -45,64 +209,144 @@
       background: #fff6d1;
       transform: scale(1.04);
     }
+
+    /* 🔁 Responsive */
+    @media (max-width: 768px) {
+      .page-title {
+        font-size: 16px;
+      }
+
+      .add-car-row {
+        flex-direction: column;
+      }
+
+      .table-wrapper {
+        display: none;   /* نخفي الجدول على الموبايل */
+      }
+
+      .card-list {
+        display: block;  /* نظهر الكروت على الموبايل */
+      }
+    }
+
+    @media (min-width: 769px) {
+      .table-wrapper {
+        display: block;  /* نظهر الجدول على اللاب */
+      }
+
+      .card-list {
+        display: none;   /* نخفي الكروت على اللاب */
+      }
+    }
   </style>
 </head>
 
 <body>
 
-  <h2>🚗 إدارة السيارات</h2>
+  <!-- 🔝 شريط علوي ثابت -->
+  <header class="top-bar">
+    <button class="back-btn" onclick="location.href='/'">
+      🏠 رجوع
+    </button>
+    <h1 class="page-title">🚗 إدارة السيارات</h1>
+  </header>
 
-  <!-- بحث -->
-  <div class="search-box">
-    <input id="search" type="text" placeholder="🔍 ابحث برقم اللوحة..." oninput="filterCars()">
-  </div>
-              <div class="car-item" style="margin-bottom:12px">
-            <div class="row-inline" style="display:flex;gap:8px">
-              <input id="new_plate" placeholder="رقم اللوحة" />
-              <input id="new_model" placeholder="الموديل" />
-              <input id="new_type"  placeholder="النوع" />
-              <input id="new_rent"  type="number" step="0.01" placeholder="الإيجار/يوم" />
-              <button id="addCarBtn" style="background:#0d6efd;color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer">➕ إضافة سيارة</button>
-            </div>
-            <div id="carAddMsg" style="margin-top:6px;font-weight:bold"></div>
-          </div>
-          
-          <script>
-          document.getElementById("addCarBtn").addEventListener("click", async () => {
-            const payload = {
-              plate:     document.getElementById("new_plate").value.trim(),
-              model:     document.getElementById("new_model").value.trim(),
-              car_type:  document.getElementById("new_type").value.trim(),
-              daily_rent: Number(document.getElementById("new_rent").value || 0),
-              status: "متاحة"
-            };
-            const box = document.getElementById("carAddMsg");
-            box.textContent = "⏳ جاري الإضافة...";
-            try {
-              const res = await fetch("/api/cars", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
-              const data = await res.json();
-              if (res.ok) {
-                box.style.color = "#0f5132"; box.textContent = "✅ تمت إضافة السيارة";
-                loadCars(); // موجودة أصلاً في الصفحة
-              } else {
-                box.style.color = "#842029"; box.textContent = "❌ فشل: " + (data.error || "خطأ");
-              }
-            } catch (e) {
-              box.style.color = "#842029"; box.textContent = "⚠️ مشكلة اتصال";
-            }
-          });
-          </script>
+  <main class="page-content">
+    <h2>قائمة السيارات</h2>
 
-  <div id="carList"></div>
+    <!-- بحث -->
+    <div class="search-box">
+      <input id="search" type="text" placeholder="🔍 ابحث برقم اللوحة..." oninput="filterCars()">
+    </div>
 
-  <button onclick="location.href='/'" style="width:100%;padding:12px;border:none;border-radius:10px;background:#fff;color:#0d6efd;margin-top:15px;font-weight:bold;font-size:16px">🏠 الرجوع للصفحة الرئيسية</button>
+    <!-- ➕ إضافة سيارة جديدة -->
+    <div class="add-car-card">
+      <div class="add-car-row">
+        <input id="new_plate" placeholder="رقم اللوحة" />
+        <input id="new_model" placeholder="الموديل" />
+        <input id="new_type"  placeholder="النوع" />
+        <input id="new_rent"  type="number" step="0.01" placeholder="الإيجار/يوم" />
+        <button id="addCarBtn">➕ إضافة سيارة</button>
+      </div>
+      <div id="carAddMsg"></div>
+    </div>
+
+    <!-- 🖥️ جدول (للّاب) -->
+    <div class="table-wrapper">
+      <table class="cars-table">
+        <thead>
+          <tr>
+            <th>رقم اللوحة</th>
+            <th>الموديل</th>
+            <th>النوع</th>
+            <th>الحالة</th>
+            <th>الإيجار/يوم (ريال)</th>
+          </tr>
+        </thead>
+        <tbody id="carsTableBody">
+          <!-- يتم تعبئتها بالـ JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 📱 كروت (للموبايل) -->
+    <div class="card-list" id="carsCards"></div>
+
+  </main>
 
   <script>
+    // ➕ إضافة سيارة جديدة
+    document.getElementById("addCarBtn").addEventListener("click", async () => {
+      const payload = {
+        plate:     document.getElementById("new_plate").value.trim(),
+        model:     document.getElementById("new_model").value.trim(),
+        car_type:  document.getElementById("new_type").value.trim(),
+        daily_rent: Number(document.getElementById("new_rent").value || 0),
+        status: "متاحة"
+      };
+
+      const box = document.getElementById("carAddMsg");
+      box.style.color = "#000";
+      box.textContent = "⏳ جاري الإضافة...";
+
+      try {
+        const res = await fetch("/api/cars", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          box.style.color = "#0f5132";
+          box.textContent = "✅ تمت إضافة السيارة بنجاح";
+
+          // إعادة تحميل القائمة
+          loadCars();
+
+          // تفريغ الحقول
+          document.getElementById("new_plate").value = "";
+          document.getElementById("new_model").value = "";
+          document.getElementById("new_type").value  = "";
+          document.getElementById("new_rent").value  = "";
+        } else {
+          box.style.color = "#842029";
+          box.textContent = "❌ فشل: " + (data.error || "حدث خطأ أثناء الإضافة");
+        }
+      } catch (e) {
+        box.style.color = "#842029";
+        box.textContent = "⚠️ مشكلة اتصال بالخادم";
+      }
+    });
+
     let carsData = [];
 
     async function loadCars() {
-      const list = document.getElementById("carList");
-      list.innerHTML = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
+      const tableBody = document.getElementById("carsTableBody");
+      const cardsBox  = document.getElementById("carsCards");
+
+      tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+      cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
 
       const res = await fetch("/api/cars");
       const data = await res.json();
@@ -113,48 +357,72 @@
     }
 
     function renderCars(data) {
-      const list = document.getElementById("carList");
-      list.innerHTML = "";
+      const tableBody = document.getElementById("carsTableBody");
+      const cardsBox  = document.getElementById("carsCards");
+
+      tableBody.innerHTML = "";
+      cardsBox.innerHTML  = "";
 
       data.forEach(c => {
-        const id = "car-" + c.plate.replace(/\s+/g,'-').replace(/\W+/g,'-');
+        const safeId = c.plate.replace(/\s+/g,'-').replace(/\W+/g,'-');
+        const rowId  = "car-row-"  + safeId;
+        const cardId = "car-card-" + safeId;
 
-        const item = document.createElement("div");
-        item.className = "car-item";
-        item.id = id;
-
-        item.innerHTML = `
-          <div><b>رقم اللوحة:</b> ${c.plate}</div>
-          <div><b>الموديل:</b> ${c.model || "—"}</div>
-          <div><b>النوع:</b> ${c.car_type || "—"}</div>
-          <div><b>الحالة:</b> ${c.status || "—"}</div>
-          <div><b>الإيجار:</b> ${c.daily_rent} ريال</div>
+        // 🖥️ صف في الجدول
+        const tr = document.createElement("tr");
+        tr.id = rowId;
+        tr.innerHTML = `
+          <td>${c.plate}</td>
+          <td>${c.model || "—"}</td>
+          <td>${c.car_type || "—"}</td>
+          <td>${c.status || "—"}</td>
+          <td>${c.daily_rent} ريال</td>
         `;
+        tableBody.appendChild(tr);
 
-        list.appendChild(item);
+        // 📱 كارت للموبايل
+        const card = document.createElement("div");
+        card.className = "car-card";
+        card.id = cardId;
+        card.innerHTML = `
+          <div class="row"><span class="label">رقم اللوحة:</span> ${c.plate}</div>
+          <div class="row"><span class="label">الموديل:</span> ${c.model || "—"}</div>
+          <div class="row"><span class="label">النوع:</span> ${c.car_type || "—"}</div>
+          <div class="row"><span class="label">الحالة:</span> ${c.status || "—"}</div>
+          <div class="row"><span class="label">الإيجار:</span> ${c.daily_rent} ريال</div>
+        `;
+        cardsBox.appendChild(card);
       });
     }
 
     function filterCars() {
       const term = document.getElementById("search").value.trim().toLowerCase();
-      const filtered = carsData.filter(c => c.plate.toLowerCase().includes(term));
+      const filtered = carsData.filter(c =>
+        c.plate.toLowerCase().includes(term)
+      );
       renderCars(filtered);
     }
 
+    // تظليل سيارة محددة حسب ?focus=plate
     function autoFocusCar() {
       const params = new URLSearchParams(window.location.search);
       let focusPlate = params.get("focus");
       if (!focusPlate) return;
 
-      focusPlate = focusPlate.replace(/\W+/g,'-');
-      const targetId = "car-" + focusPlate;
+      const safeId = focusPlate.replace(/\W+/g,'-');
+      const rowId  = "car-row-"  + safeId;
+      const cardId = "car-card-" + safeId;
 
-      const el = document.getElementById(targetId);
-      if (el) {
-        el.classList.add("highlight");
-        el.scrollIntoView({ behavior: "smooth", block:"center" });
+      const rowEl  = document.getElementById(rowId);
+      const cardEl = document.getElementById(cardId);
 
-        setTimeout(() => el.classList.remove("highlight"), 3500);
+      // نحاول نعمل focus في الجدول أو الكارت حسب اللي ظاهر
+      const targetEl = rowEl || cardEl;
+      if (targetEl) {
+        targetEl.classList.add("highlight");
+        targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        setTimeout(() => targetEl.classList.remove("highlight"), 3500);
       }
     }
 
@@ -163,4 +431,3 @@
 
 </body>
 </html>
-

@@ -104,6 +104,30 @@
       box-shadow: var(--shadow);
     }
 
+    .stat-main-number {
+      margin-bottom: 8px;
+    }
+
+    .goto-btn {
+      margin-top: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: none;
+      background: var(--main-blue);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .goto-btn:hover {
+      background: #0b5ed7;
+      transform: translateY(-1px);
+    }
+
     .section-title {
       color: #fff;
       font-size: 20px;
@@ -224,9 +248,23 @@
 
     <!-- إحصائيات -->
     <div class="status-box">
-      <div class="stat" id="availableCount">✅ المتاحة: 0</div>
-      <div class="stat" id="rentedCount">🚗 المؤجرة: 0</div>
-      <div class="stat" id="maintenanceCount">🔧 تحت الصيانة: 0</div>
+      <!-- المتاحة -->
+      <div class="stat" id="availableCount">
+        <div class="stat-main-number">✅ عدد السيارات المتاحة: 0</div>
+      </div>
+
+      <!-- المؤجرة (عدد + زر فقط) -->
+      <div class="stat" id="rentedCount">
+        <div class="stat-main-number">🚗 عدد السيارات المؤجرة: 0</div>
+        <button class="goto-btn" onclick="location.href='/rented'">
+          عرض السيارات المؤجرة
+        </button>
+      </div>
+
+      <!-- الصيانة -->
+      <div class="stat" id="maintenanceCount">
+        <div class="stat-main-number">🔧 عدد سيارات الصيانة: 0</div>
+      </div>
     </div>
 
     <!-- ✅ السيارات المتاحة -->
@@ -252,25 +290,6 @@
     <!-- كروت موبايل -->
     <div class="card-list" id="availableCards"></div>
 
-    <!-- 🚗 السيارات المؤجرة -->
-    <div class="section-title">🚗 السيارات المؤجرة</div>
-
-    <div class="table-wrapper">
-      <table class="cars-table">
-        <thead>
-          <tr>
-            <th>رقم اللوحة</th>
-            <th>الموديل</th>
-            <th>النوع</th>
-            <th>الإيجار اليومي (ريال)</th>
-          </tr>
-        </thead>
-        <tbody id="rentedTableBody"></tbody>
-      </table>
-    </div>
-
-    <div class="card-list" id="rentedCards"></div>
-
     <!-- 🔧 سيارات تحت الصيانة -->
     <div class="section-title">🔧 سيارات تحت الصيانة</div>
 
@@ -294,47 +313,69 @@
 
   <script>
     async function loadCars() {
-      const res = await fetch("/api/cars");
+      const res  = await fetch("/api/cars");
       const data = await res.json();
 
-      const available = data.filter(c => c.status === "متاحة");
-      const rented = data.filter(c => c.status === "مؤجرة");
+      const available   = data.filter(c => c.status === "متاحة");
+      const rented      = data.filter(c => c.status === "مؤجرة");
       const maintenance = data.filter(c => c.status === "تحت الصيانة");
 
-      // عدّاد الإحصائيات
-      document.getElementById("availableCount").textContent = `✅ المتاحة: ${available.length}`;
-      document.getElementById("rentedCount").textContent = `🚗 المؤجرة: ${rented.length}`;
-      document.getElementById("maintenanceCount").textContent = `🔧 تحت الصيانة: ${maintenance.length}`;
+      // عدّاد الإحصائيات (أرقام فقط)
+      document.getElementById("availableCount").querySelector(".stat-main-number").textContent =
+        `✅ عدد السيارات المتاحة: ${available.length}`;
 
-      // طباعة الجداول + الكروت
+      document.getElementById("rentedCount").querySelector(".stat-main-number").textContent =
+        `🚗 عدد السيارات المؤجرة: ${rented.length}`;
+
+      document.getElementById("maintenanceCount").querySelector(".stat-main-number").textContent =
+        `🔧 عدد سيارات الصيانة: ${maintenance.length}`;
+
+      // ✅ المتاحة: جدول + كروت
       renderTableAndCards("availableTableBody", "availableCards", available);
-      renderTableAndCards("rentedTableBody", "rentedCards", rented);
+
+      // 🔧 الصيانة: جدول + كروت
       renderTableAndCards("maintenanceTableBody", "maintenanceCards", maintenance);
     }
 
     function renderTableAndCards(tbodyId, cardsId, arr) {
-      const tbody = document.getElementById(tbodyId);
+      const tbody    = document.getElementById(tbodyId);
       const cardsBox = document.getElementById(cardsId);
 
       // جدول (للاب)
-      tbody.innerHTML = arr.map(c => `
-        <tr>
-          <td>${c.plate}</td>
-          <td>${c.model || "—"}</td>
-          <td>${c.car_type || "—"}</td>
-          <td>${c.daily_rent} ريال</td>
-        </tr>
-      `).join("");
+      if (arr.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align:center;color:#777">لا توجد بيانات.</td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = arr.map(c => `
+          <tr>
+            <td>${c.plate}</td>
+            <td>${c.model || "—"}</td>
+            <td>${c.car_type || "—"}</td>
+            <td>${c.daily_rent != null ? c.daily_rent + " ريال" : "—"}</td>
+          </tr>
+        `).join("");
+      }
 
       // كروت (للموبايل)
-      cardsBox.innerHTML = arr.map(c => `
-        <div class="card">
-          <div class="row"><span class="label">رقم اللوحة:</span> ${c.plate}</div>
-          <div class="row"><span class="label">الموديل:</span> ${c.model || "—"}</div>
-          <div class="row"><span class="label">النوع:</span> ${c.car_type || "—"}</div>
-          <div class="row"><span class="label">الإيجار اليومي:</span> ${c.daily_rent} ريال</div>
-        </div>
-      `).join("");
+      if (arr.length === 0) {
+        cardsBox.innerHTML = `
+          <div class="card" style="text-align:center;color:#777">
+            لا توجد بيانات.
+          </div>
+        `;
+      } else {
+        cardsBox.innerHTML = arr.map(c => `
+          <div class="card">
+            <div class="row"><span class="label">رقم اللوحة:</span> ${c.plate}</div>
+            <div class="row"><span class="label">الموديل:</span> ${c.model || "—"}</div>
+            <div class="row"><span class="label">النوع:</span> ${c.car_type || "—"}</div>
+            <div class="row"><span class="label">الإيجار اليومي:</span> ${c.daily_rent != null ? c.daily_rent + " ريال" : "—"}</div>
+          </div>
+        `).join("");
+      }
     }
 
     loadCars();

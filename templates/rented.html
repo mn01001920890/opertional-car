@@ -73,7 +73,7 @@
 
     /* محتوى الصفحة */
     .page-content {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 80px 16px 24px; /* مساحة للهيدر الثابت */
     }
@@ -81,7 +81,7 @@
     h2 {
       text-align: center;
       font-size: 24px;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
 
     .summary-text {
@@ -91,18 +91,49 @@
       opacity: 0.9;
     }
 
+    /* 🔍 صندوق البحث */
+    .search-box {
+      max-width: 400px;
+      margin: 0 auto 16px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: center;
+    }
+
+    .search-label {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .search-input {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      text-align: center;
+      color: #333;
+    }
+
+    .search-input::placeholder {
+      color: #888;
+    }
+
     /* 🖥️ جدول للّاب */
     .table-wrapper {
       background: #fff;
       border-radius: var(--card-radius);
       box-shadow: var(--shadow);
-      overflow: hidden;
+      overflow: auto;
       margin-bottom: 16px;
     }
 
     .rented-table {
       width: 100%;
       border-collapse: collapse;
+      min-width: 900px;
     }
 
     .rented-table thead {
@@ -112,11 +143,12 @@
 
     .rented-table th,
     .rented-table td {
-      padding: 10px 8px;
+      padding: 8px 6px;
       text-align: center;
       font-size: 13px;
       border-bottom: 1px solid #eee;
       color: #333;
+      white-space: nowrap;
     }
 
     .rented-table tr:last-child td {
@@ -151,6 +183,21 @@
     .end-btn-table:hover {
       opacity: 0.9;
       transform: translateY(-1px);
+    }
+
+    .manual-cost-input {
+      width: 90px;
+      padding: 4px 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .manual-cost-note {
+      font-size: 11px;
+      color: #555;
+      margin-top: 2px;
     }
 
     /* 📱 كروت للموبايل */
@@ -237,6 +284,20 @@
     <h2>قائمة السيارات المؤجرة الآن</h2>
     <p class="summary-text" id="summaryText"></p>
 
+    <!-- 🔍 البحث -->
+    <div class="search-box">
+      <span class="search-label">
+        ابحث برقم السيارة أو رقم رخصة السائق
+      </span>
+      <input
+        id="searchInput"
+        class="search-input"
+        type="text"
+        placeholder="مثال: 123ABC أو رقم الرخصة"
+        oninput="applyFilter()"
+      />
+    </div>
+
     <!-- 🖥️ جدول (للّاب) -->
     <div class="table-wrapper">
       <table class="rented-table">
@@ -246,10 +307,13 @@
             <th>رقم السيارة</th>
             <th>الموديل</th>
             <th>النوع</th>
-            <th>وقت البداية</th>
-            <th>المدة</th>
+            <th>تاريخ الإصدار</th>
+            <th>بداية التفويض</th>
+            <th>نهاية الجمعة (المحاسبية)</th>
+            <th>تاريخ الإقفال</th>
+            <th>عدد الأيام حتى اليوم</th>
             <th>الإيجار اليومي</th>
-            <th>التكلفة حتى الآن</th>
+            <th>التكلفة (قابلة للتعديل)</th>
             <th>إقفال التفويض</th>
           </tr>
         </thead>
@@ -264,7 +328,9 @@
   </main>
 
   <script>
-    // 🔹 تنسيق التاريخ زي 2025-11-13 13:17:37
+    let activeAuthorizations = [];
+
+    // 🔹 تنسيق التاريخ
     function formatDateTime(value){
       if(!value) return "—";
       const d = new Date(value);
@@ -279,43 +345,36 @@
       return `${year}-${month}-${day} ${hrs}:${mins}:${secs}`;
     }
 
-    // 🔹 حساب المدة من البداية حتى الآن
-    function computeDuration(startStr){
-      if(!startStr) return "—";
+    // 🔹 حساب عدد الأيام والتكلفة (باليوم)
+    function calcDaysAndCost(startStr, dailyRent){
+      if(!startStr || dailyRent == null) {
+        return {days: null, total: null};
+      }
       const start = new Date(startStr);
       const now   = new Date();
-      if (isNaN(start)) return "—";
+      if (isNaN(start)) {
+        return {days: null, total: null};
+      }
 
-      let diffMs = now - start;
-      if(diffMs < 0) diffMs = 0;
+      // نشتغل على اليوم فقط بدون وقت
+      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const endDay   = new Date(now.getFullYear(),   now.getMonth(),   now.getDate());
+      const dayMs    = 24 * 60 * 60 * 1000;
 
-      let totalMinutes = Math.floor(diffMs / 60000);
-      let hours = Math.floor(totalMinutes / 60);
-      let days  = Math.floor(hours / 24);
-      let minutes = totalMinutes % 60;
-
-      return `${days} يوم / ${hours % 24} ساعة / ${minutes} دقيقة`;
-    }
-
-    // 🔹 حساب التكلفة = عدد أيام الإيجار × الإيجار اليومي
-    function calcCost(startStr, dailyRent){
-      if(dailyRent == null) return "—";
-      const start = new Date(startStr);
-      const now   = new Date();
-      if (isNaN(start)) return "—";
-
-      let diffMs = now - start;
-      if(diffMs < 0) diffMs = 0;
-
-      const dayMs = 24 * 60 * 60 * 1000;
-      // أي جزء من اليوم يتحسب يوم كامل، والحد الأدنى يوم واحد
-      let days = Math.ceil(diffMs / dayMs);
-      if (days < 1) days = 1;
+      let diffDays = Math.floor((endDay - startDay) / dayMs) + 1;
+      if (diffDays < 1) diffDays = 1; // أي جزء من اليوم = يوم كامل
 
       const rentNum = Number(dailyRent);
-      if (!isFinite(rentNum)) return "—";
+      if (!isFinite(rentNum)) {
+        return {days: diffDays, total: null};
+      }
 
-      const total = days * rentNum;
+      const total = diffDays * rentNum;
+      return {days: diffDays, total};
+    }
+
+    function formatCost(total){
+      if (total == null) return "—";
       return `${total.toFixed(2)} ريال`;
     }
 
@@ -324,31 +383,71 @@
       const cardsBox  = document.getElementById("rentedCards");
       const summary   = document.getElementById("summaryText");
 
-      tableBody.innerHTML = "<tr><td colspan='9' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+      tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
       cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
       summary.textContent = "";
 
-      const res = await fetch("/api/authorizations");
-      const data = await res.json();
+      try {
+        // ✅ نستخدم /api/authorizations/active لإرجاع التفويضات المفتوحة فقط
+        const res = await fetch("/api/authorizations/active");
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+        const data = await res.json();
+        activeAuthorizations = Array.isArray(data) ? data : [];
 
-      // ✅ فقط التفويضات المفتوحة (لا يوجد end_date) = سيارات مؤجرة حاليًا
-      const active = data.filter(item => !item.end_date);
+        applyFilter();
+      } catch (e) {
+        console.error(e);
+        tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>⚠️ تعذر تحميل البيانات من الخادم</td></tr>";
+        cardsBox.innerHTML  = "<p style='text-align:center'>⚠️ تعذر تحميل البيانات من الخادم</p>";
+        summary.textContent = "حدث خطأ أثناء تحميل بيانات التفويضات.";
+      }
+    }
 
-      if (active.length === 0) {
-        tableBody.innerHTML = "<tr><td colspan='9' style='text-align:center'>✅ لا توجد سيارات مؤجرة الآن</td></tr>";
-        cardsBox.innerHTML  = "<p style='text-align:center;font-size:16px'>✅ لا توجد سيارات مؤجرة الآن</p>";
-        summary.textContent = "لا توجد تفويضات نشطة حاليًا.";
+    function applyFilter(){
+      const input = document.getElementById("searchInput");
+      const term  = (input.value || "").trim().toLowerCase();
+
+      let filtered = activeAuthorizations;
+      if (term) {
+        filtered = activeAuthorizations.filter(auth => {
+          const car  = (auth.car_number || "").toLowerCase();
+          const lic  = (auth.driver_license_no || "").toLowerCase();
+          return car.includes(term) || lic.includes(term);
+        });
+      }
+
+      renderLists(filtered);
+    }
+
+    function renderLists(list){
+      const tableBody = document.getElementById("rentedTableBody");
+      const cardsBox  = document.getElementById("rentedCards");
+      const summary   = document.getElementById("summaryText");
+
+      if (!list || list.length === 0) {
+        tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>⚪ لا توجد سيارات مؤجرة مطابقة لنتيجة البحث</td></tr>";
+        cardsBox.innerHTML  = "<p style='text-align:center;font-size:15px'>⚪ لا توجد سيارات مؤجرة مطابقة لنتيجة البحث</p>";
+        summary.textContent = `عدد التفويضات النشطة الكلي: ${activeAuthorizations.length}`;
         return;
       }
 
-      summary.textContent = `عدد السيارات المؤجرة الآن: ${active.length}`;
+      summary.textContent = `عدد السيارات المؤجرة الآن: ${list.length} (من إجمالي ${activeAuthorizations.length})`;
 
-      // 🖥️ جدول (للّاب)
-      tableBody.innerHTML = active.map(item => {
-        const startFmt  = formatDateTime(item.start_date);
-        const duration  = computeDuration(item.start_date);
+      // 🖥️ جدول
+      tableBody.innerHTML = list.map(item => {
+        const issueFmt   = formatDateTime(item.issue_date);
+        const startFmt   = formatDateTime(item.start_date);
+        const plannedFmt = formatDateTime(item.planned_end_date || item.end_date);
+        const closeFmt   = formatDateTime(item.close_date);
+
+        const {days, total} = calcDaysAndCost(item.start_date, item.daily_rent);
+        const daysText      = days != null ? `${days} يوم` : "—";
+        const autoCostText  = formatCost(total);
+        const costInputVal  = total != null ? total.toFixed(2) : "";
+
         const dailyRentText = item.daily_rent != null ? `${item.daily_rent} ريال` : "—";
-        const costText  = calcCost(item.start_date, item.daily_rent);
 
         const driverSafe = (item.driver_name || "").replace(/'/g, "\\'");
         const carSafe    = (item.car_number || "").replace(/'/g, "\\'");
@@ -367,10 +466,24 @@
             </td>
             <td>${item.car_model || "—"}</td>
             <td>${item.car_type  || "—"}</td>
+            <td>${issueFmt}</td>
             <td>${startFmt}</td>
-            <td>${duration}</td>
+            <td>${plannedFmt}</td>
+            <td>${closeFmt}</td>
+            <td>${daysText}</td>
             <td>${dailyRentText}</td>
-            <td><span class="cost-now">${costText}</span></td>
+            <td>
+              <div>
+                <div class="cost-now">محسوبة: ${autoCostText}</div>
+                <input
+                  type="number"
+                  class="manual-cost-input"
+                  value="${costInputVal}"
+                  step="0.01"
+                />
+                <div class="manual-cost-note">يمكن تعديلها يدويًا قبل الترحيل للدفاتر</div>
+              </div>
+            </td>
             <td>
               <button class="end-btn-table" onclick="endAuth(${item.id})">🛑 إقفال</button>
             </td>
@@ -378,25 +491,35 @@
         `;
       }).join("");
 
-      // 📱 كروت (موبايل)
-      cardsBox.innerHTML = active.map(item => {
-        const startFmt  = formatDateTime(item.start_date);
-        const duration  = computeDuration(item.start_date);
+      // 📱 كروت
+      cardsBox.innerHTML = list.map(item => {
+        const issueFmt   = formatDateTime(item.issue_date);
+        const startFmt   = formatDateTime(item.start_date);
+        const plannedFmt = formatDateTime(item.planned_end_date || item.end_date);
+        const closeFmt   = formatDateTime(item.close_date);
+
+        const {days, total} = calcDaysAndCost(item.start_date, item.daily_rent);
+        const daysText      = days != null ? `${days} يوم` : "—";
+        const autoCostText  = formatCost(total);
+        const costInputVal  = total != null ? total.toFixed(2) : "";
+
         const dailyRentText = item.daily_rent != null ? `${item.daily_rent} ريال` : "—";
-        const costText  = calcCost(item.start_date, item.daily_rent);
+
+        const driverSafe = (item.driver_name || "").replace(/'/g, "\\'");
+        const carSafe    = (item.car_number || "").replace(/'/g, "\\'");
 
         return `
           <div class="card">
             <div class="row">
               <span class="label">السائق:</span>
-              <span class="link" onclick="goDriver('${item.driver_name}')">
+              <span class="link" onclick="goDriver('${driverSafe}')">
                 ${item.driver_name || "—"}
               </span>
             </div>
 
             <div class="row">
               <span class="label">رقم السيارة:</span>
-              <span class="link" onclick="goCar('${item.car_number}')">
+              <span class="link" onclick="goCar('${carSafe}')">
                 ${item.car_number || "—"}
               </span>
             </div>
@@ -404,17 +527,27 @@
             <div class="row"><span class="label">الموديل:</span> ${item.car_model || "—"}</div>
             <div class="row"><span class="label">النوع:</span> ${item.car_type || "—"}</div>
 
-            <div class="row"><span class="label">وقت البداية:</span> ${startFmt}</div>
-            <div class="row"><span class="label">المدة:</span> ${duration}</div>
+            <div class="row"><span class="label">تاريخ الإصدار:</span> ${issueFmt}</div>
+            <div class="row"><span class="label">بداية التفويض:</span> ${startFmt}</div>
+            <div class="row"><span class="label">نهاية الجمعة (المحاسبية):</span> ${plannedFmt}</div>
+            <div class="row"><span class="label">تاريخ الإقفال:</span> ${closeFmt}</div>
+
+            <div class="row"><span class="label">عدد الأيام حتى اليوم:</span> ${daysText}</div>
+            <div class="row"><span class="label">الإيجار اليومي:</span> ${dailyRentText}</div>
 
             <div class="row">
-              <span class="label">الإيجار اليومي:</span>
-              ${dailyRentText}
+              <span class="label">التكلفة (محسوبة):</span>
+              <span class="cost-now">${autoCostText}</span>
             </div>
 
             <div class="row">
-              <span class="label">التكلفة حتى الآن:</span>
-              <span class="cost-now">${costText}</span>
+              <span class="label">تعديل يدوي:</span>
+              <input
+                type="number"
+                class="manual-cost-input"
+                value="${costInputVal}"
+                step="0.01"
+              />
             </div>
 
             <button class="btn-end-card" onclick="endAuth(${item.id})">
@@ -429,10 +562,11 @@
       if(!confirm("تأكيد إقفال التفويض لهذه السيارة؟")) return;
       try{
         const res = await fetch(`/api/authorizations/${id}/end`, {method:"PATCH"});
+        const data = await res.json().catch(()=> ({}));
         if(res.ok){
+          alert("✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي (حسب منطق الباك إند).");
           loadData();
         }else{
-          const data = await res.json().catch(()=>({}));
           alert("❌ لم يتم الإقفال: " + (data.error || "خطأ غير معروف"));
         }
       }catch(e){

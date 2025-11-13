@@ -123,6 +123,36 @@
       border-bottom: none;
     }
 
+    .link {
+      color: #0d6efd;
+      font-weight: bold;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .cost-now {
+      color: #28a745;
+      font-weight: 700;
+    }
+
+    .end-btn-table {
+      padding: 6px 10px;
+      font-size: 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #dc3545;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .end-btn-table:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
     /* 📱 كروت للموبايل */
     .card-list {
       display: none; /* تظهر في الموبايل فقط */
@@ -141,16 +171,24 @@
     .row { margin: 6px 0; font-size: 14px; }
     .label { font-weight: bold; color: #0d6efd; }
 
-    .link {
-      color: #0d6efd;
-      font-weight: bold;
-      text-decoration: underline;
-      cursor: pointer;
+    .btn-end-card{
+      width:100%;
+      padding:10px;
+      border:none;
+      border-radius:10px;
+      background:#dc3545;
+      color:#fff;
+      font-size:14px;
+      font-weight:bold;
+      margin-top:10px;
+      box-shadow:0 4px 10px rgba(0,0,0,.3);
+      transition:.3s;
+      cursor:pointer;
     }
 
-    .cost-now {
-      color: #28a745;
-      font-weight: 700;
+    .btn-end-card:hover{
+      opacity:.9;
+      transform:scale(1.02);
     }
 
     @keyframes fadeIn {
@@ -158,7 +196,6 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* زر الرجوع القديم مش هنحتاجه */
     /* Responsive */
     @media (max-width: 768px) {
       .page-title {
@@ -211,7 +248,9 @@
             <th>النوع</th>
             <th>وقت البداية</th>
             <th>المدة</th>
+            <th>الإيجار اليومي</th>
             <th>التكلفة حتى الآن</th>
+            <th>إقفال التفويض</th>
           </tr>
         </thead>
         <tbody id="rentedTableBody">
@@ -225,23 +264,78 @@
   </main>
 
   <script>
+    // 🔹 تنسيق التاريخ زي 2025-11-13 13:17:37
+    function formatDateTime(value){
+      if(!value) return "—";
+      const d = new Date(value);
+      if (isNaN(d)) return value;
+      const pad = n => String(n).padStart(2, "0");
+      const year  = d.getFullYear();
+      const month = pad(d.getMonth() + 1);
+      const day   = pad(d.getDate());
+      const hrs   = pad(d.getHours());
+      const mins  = pad(d.getMinutes());
+      const secs  = pad(d.getSeconds());
+      return `${year}-${month}-${day} ${hrs}:${mins}:${secs}`;
+    }
+
+    // 🔹 حساب المدة من البداية حتى الآن
+    function computeDuration(startStr){
+      if(!startStr) return "—";
+      const start = new Date(startStr);
+      const now   = new Date();
+      if (isNaN(start)) return "—";
+
+      let diffMs = now - start;
+      if(diffMs < 0) diffMs = 0;
+
+      let totalMinutes = Math.floor(diffMs / 60000);
+      let hours = Math.floor(totalMinutes / 60);
+      let days  = Math.floor(hours / 24);
+      let minutes = totalMinutes % 60;
+
+      return `${days} يوم / ${hours % 24} ساعة / ${minutes} دقيقة`;
+    }
+
+    // 🔹 حساب التكلفة = عدد أيام الإيجار × الإيجار اليومي
+    function calcCost(startStr, dailyRent){
+      if(dailyRent == null) return "—";
+      const start = new Date(startStr);
+      const now   = new Date();
+      if (isNaN(start)) return "—";
+
+      let diffMs = now - start;
+      if(diffMs < 0) diffMs = 0;
+
+      const dayMs = 24 * 60 * 60 * 1000;
+      // أي جزء من اليوم يتحسب يوم كامل، والحد الأدنى يوم واحد
+      let days = Math.ceil(diffMs / dayMs);
+      if (days < 1) days = 1;
+
+      const rentNum = Number(dailyRent);
+      if (!isFinite(rentNum)) return "—";
+
+      const total = days * rentNum;
+      return `${total.toFixed(2)} ريال`;
+    }
+
     async function loadData() {
       const tableBody = document.getElementById("rentedTableBody");
       const cardsBox  = document.getElementById("rentedCards");
       const summary   = document.getElementById("summaryText");
 
-      tableBody.innerHTML = "<tr><td colspan='7' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+      tableBody.innerHTML = "<tr><td colspan='9' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
       cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
       summary.textContent = "";
 
       const res = await fetch("/api/authorizations");
       const data = await res.json();
 
-      // فقط التفويضات المفتوحة (لا يوجد end_date)
+      // ✅ فقط التفويضات المفتوحة (لا يوجد end_date) = سيارات مؤجرة حاليًا
       const active = data.filter(item => !item.end_date);
 
       if (active.length === 0) {
-        tableBody.innerHTML = "<tr><td colspan='7' style='text-align:center'>✅ لا توجد سيارات مؤجرة الآن</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='9' style='text-align:center'>✅ لا توجد سيارات مؤجرة الآن</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center;font-size:16px'>✅ لا توجد سيارات مؤجرة الآن</p>";
         summary.textContent = "لا توجد تفويضات نشطة حاليًا.";
         return;
@@ -249,85 +343,101 @@
 
       summary.textContent = `عدد السيارات المؤجرة الآن: ${active.length}`;
 
-      // دالة مساعدة لحساب المدة والتكلفة
-      function computeInfo(item) {
-        const start = new Date(item.start_date);
-        const now   = new Date();
-
-        let diffMs = now - start;
-        let totalMinutes = Math.floor(diffMs / 60000);
-        let hours = Math.floor(totalMinutes / 60);
-        let days = Math.floor(hours / 24);
-        let minutes = totalMinutes % 60;
-
-        let duration = `${days} يوم / ${hours % 24} ساعة / ${minutes} دقيقة`;
-
-        let cost = 0;
-        if (item.daily_rent) {
-          const rentPerMinute = item.daily_rent / (24 * 60);
-          cost = (rentPerMinute * totalMinutes).toFixed(2);
-        }
-        return { duration, cost };
-      }
-
-      // جدول
+      // 🖥️ جدول (للّاب)
       tableBody.innerHTML = active.map(item => {
-        const info = computeInfo(item);
-        const driverSafe = item.driver_name.replace(/'/g, "\\'");
-        const carSafe    = item.car_number.replace(/'/g, "\\'");
+        const startFmt  = formatDateTime(item.start_date);
+        const duration  = computeDuration(item.start_date);
+        const dailyRentText = item.daily_rent != null ? `${item.daily_rent} ريال` : "—";
+        const costText  = calcCost(item.start_date, item.daily_rent);
+
+        const driverSafe = (item.driver_name || "").replace(/'/g, "\\'");
+        const carSafe    = (item.car_number || "").replace(/'/g, "\\'");
+
         return `
           <tr>
             <td>
               <span class="link" onclick="goDriver('${driverSafe}')">
-                ${item.driver_name}
+                ${item.driver_name || "—"}
               </span>
             </td>
             <td>
               <span class="link" onclick="goCar('${carSafe}')">
-                ${item.car_number}
+                ${item.car_number || "—"}
               </span>
             </td>
             <td>${item.car_model || "—"}</td>
             <td>${item.car_type  || "—"}</td>
-            <td>${item.start_date}</td>
-            <td>${info.duration}</td>
-            <td><span class="cost-now">${info.cost} ريال</span></td>
+            <td>${startFmt}</td>
+            <td>${duration}</td>
+            <td>${dailyRentText}</td>
+            <td><span class="cost-now">${costText}</span></td>
+            <td>
+              <button class="end-btn-table" onclick="endAuth(${item.id})">🛑 إقفال</button>
+            </td>
           </tr>
         `;
       }).join("");
 
-      // كروت (موبايل)
+      // 📱 كروت (موبايل)
       cardsBox.innerHTML = active.map(item => {
-        const info = computeInfo(item);
+        const startFmt  = formatDateTime(item.start_date);
+        const duration  = computeDuration(item.start_date);
+        const dailyRentText = item.daily_rent != null ? `${item.daily_rent} ريال` : "—";
+        const costText  = calcCost(item.start_date, item.daily_rent);
+
         return `
           <div class="card">
             <div class="row">
               <span class="label">السائق:</span>
               <span class="link" onclick="goDriver('${item.driver_name}')">
-                ${item.driver_name}
+                ${item.driver_name || "—"}
               </span>
             </div>
 
             <div class="row">
               <span class="label">رقم السيارة:</span>
               <span class="link" onclick="goCar('${item.car_number}')">
-                ${item.car_number}
+                ${item.car_number || "—"}
               </span>
             </div>
 
             <div class="row"><span class="label">الموديل:</span> ${item.car_model || "—"}</div>
             <div class="row"><span class="label">النوع:</span> ${item.car_type || "—"}</div>
 
-            <div class="row"><span class="label">وقت البداية:</span> ${item.start_date}</div>
-            <div class="row"><span class="label">المدة:</span> ${info.duration}</div>
+            <div class="row"><span class="label">وقت البداية:</span> ${startFmt}</div>
+            <div class="row"><span class="label">المدة:</span> ${duration}</div>
+
+            <div class="row">
+              <span class="label">الإيجار اليومي:</span>
+              ${dailyRentText}
+            </div>
 
             <div class="row">
               <span class="label">التكلفة حتى الآن:</span>
-              <span class="cost-now">${info.cost} ريال</span>
+              <span class="cost-now">${costText}</span>
             </div>
+
+            <button class="btn-end-card" onclick="endAuth(${item.id})">
+              🛑 إقفال التفويض
+            </button>
           </div>
         `;
       }).join("");
+    }
+
+    async function endAuth(id){
+      if(!confirm("تأكيد إقفال التفويض لهذه السيارة؟")) return;
+      try{
+        const res = await fetch(`/api/authorizations/${id}/end`, {method:"PATCH"});
+        if(res.ok){
+          loadData();
+        }else{
+          const data = await res.json().catch(()=>({}));
+          alert("❌ لم يتم الإقفال: " + (data.error || "خطأ غير معروف"));
+        }
+      }catch(e){
+        alert("⚠️ تعذر الاتصال بالخادم.");
+      }
     }
 
     function goDriver(name) {

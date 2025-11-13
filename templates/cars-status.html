@@ -6,16 +6,81 @@
   <title>📊 حالة السيارات</title>
 
   <style>
+    :root {
+      --main-blue: #0d6efd;
+      --main-purple: #6c63ff;
+      --card-radius: 14px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: "Tajawal", sans-serif;
-      background: linear-gradient(135deg, #0d6efd, #6c63ff);
-      margin: 0; padding: 20px; color: #fff;
+      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
+      color: #fff;
+    }
+
+    /* 🔝 شريط علوي ثابت فيه زر الرجوع */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .back-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      color: var(--main-blue);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .back-btn:hover {
+      background: var(--main-blue);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      flex: 1;
+    }
+
+    /* 🔹 محتوى الصفحة */
+    .page-content {
+      padding: 80px 16px 24px; /* padding-top عشان الشريط الثابت */
+      max-width: 1100px;
+      margin: 0 auto;
     }
 
     h2 {
+      margin: 0 0 16px;
       text-align: center;
-      font-size: 26px;
-      margin-bottom: 20px;
+      font-size: 24px;
     }
 
     .status-box {
@@ -29,77 +94,203 @@
     .stat {
       flex: 1;
       min-width: 30%;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.95);
       color: #333;
-      padding: 15px;
-      border-radius: 14px;
+      padding: 14px;
+      border-radius: var(--card-radius);
       text-align: center;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      box-shadow: var(--shadow);
+    }
+
+    .section-title {
+      color: #fff;
+      font-size: 20px;
+      margin: 24px 0 10px;
+      font-weight: bold;
+    }
+
+    /* 🖥️ جدول للّاب / الشاشات الكبيرة */
+    .table-wrapper {
+      background: #fff;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .cars-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 100%;
+    }
+
+    .cars-table thead {
+      background: var(--main-blue);
+      color: #fff;
+    }
+
+    .cars-table th,
+    .cars-table td {
+      padding: 10px 12px;
+      text-align: center;
+      font-size: 14px;
+      border-bottom: 1px solid #eee;
+      color: #333;
+    }
+
+    .cars-table th {
+      font-size: 15px;
+    }
+
+    .cars-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* 📱 كروت للموبايل */
+    .card-list {
+      display: none; /* هتظهر بس في الموبايل */
     }
 
     .card {
       background: #fff;
       color: #333;
-      padding: 15px;
-      border-radius: 14px;
-      margin-bottom: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.25);
-    }
-
-    .row { margin: 6px 0; font-size: 15px; }
-    .label { font-weight: bold; color: #0d6efd; }
-
-    .section-title {
-      color: #fff;
-      font-size: 22px;
-      margin: 20px 0 10px;
-      font-weight: bold;
-    }
-
-    button {
-      width: 100%;
       padding: 12px;
-      border: none;
-      border-radius: 10px;
-      margin-top: 15px;
-      background: #fff;
-      color: #0d6efd;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: .3s;
+      border-radius: var(--card-radius);
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
     }
 
-    button:hover { background:#0d6efd; color:#fff; transform: scale(1.03); }
+    .row {
+      margin: 4px 0;
+      font-size: 14px;
+    }
+
+    .label {
+      font-weight: bold;
+      color: var(--main-blue);
+      margin-left: 4px;
+    }
+
+    /* 🔁 Responsive: موبايل vs لاب */
+    @media (max-width: 768px) {
+      .status-box {
+        flex-direction: column;
+      }
+
+      .stat {
+        min-width: 100%;
+      }
+
+      .table-wrapper {
+        display: none;   /* نخفي الجداول في الموبايل */
+      }
+
+      .card-list {
+        display: block;  /* نظهر الكروت في الموبايل */
+      }
+
+      .page-title {
+        font-size: 16px;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .table-wrapper {
+        display: block;  /* نظهر الجداول في الشاشات الكبيرة */
+      }
+
+      .card-list {
+        display: none;   /* نخفي الكروت على اللاب */
+      }
+    }
   </style>
 </head>
 
 <body>
 
-  <h2>📊 حالة أسطول السيارات</h2>
+  <!-- 🔝 شريط علوي ثابت فيه زر رجوع -->
+  <header class="top-bar">
+    <button class="back-btn" onclick="location.href='/'">
+      🏠 رجوع
+    </button>
+    <h1 class="page-title">📊 حالة أسطول السيارات</h1>
+  </header>
 
-  <!-- إحصائيات -->
-  <div class="status-box">
-    <div class="stat" id="availableCount">✅ المتاحة: 0</div>
-    <div class="stat" id="rentedCount">🚗 المؤجرة: 0</div>
-    <div class="stat" id="maintenanceCount">🔧 تحت الصيانة: 0</div>
-  </div>
+  <main class="page-content">
+    <!-- عنوان داخلي اختياري -->
+    <h2>ملخص حالة السيارات</h2>
 
-  <!-- المتاحة -->
-  <div class="section-title">✅ السيارات المتاحة</div>
-  <div id="availableList"></div>
+    <!-- إحصائيات -->
+    <div class="status-box">
+      <div class="stat" id="availableCount">✅ المتاحة: 0</div>
+      <div class="stat" id="rentedCount">🚗 المؤجرة: 0</div>
+      <div class="stat" id="maintenanceCount">🔧 تحت الصيانة: 0</div>
+    </div>
 
-  <!-- المؤجرة -->
-  <div class="section-title">🚗 السيارات المؤجرة</div>
-  <div id="rentedList"></div>
+    <!-- ✅ السيارات المتاحة -->
+    <div class="section-title">✅ السيارات المتاحة</div>
 
-  <!-- الصيانة -->
-  <div class="section-title">🔧 سيارات تحت الصيانة</div>
-  <div id="maintenanceList"></div>
+    <!-- جدول لاب -->
+    <div class="table-wrapper">
+      <table class="cars-table">
+        <thead>
+          <tr>
+            <th>رقم اللوحة</th>
+            <th>الموديل</th>
+            <th>النوع</th>
+            <th>الإيجار اليومي (ريال)</th>
+          </tr>
+        </thead>
+        <tbody id="availableTableBody">
+          <!-- يتم الملء من JavaScript -->
+        </tbody>
+      </table>
+    </div>
 
-  <button onclick="location.href='/'">🏠 الرجوع للصفحة الرئيسية</button>
+    <!-- كروت موبايل -->
+    <div class="card-list" id="availableCards"></div>
+
+    <!-- 🚗 السيارات المؤجرة -->
+    <div class="section-title">🚗 السيارات المؤجرة</div>
+
+    <div class="table-wrapper">
+      <table class="cars-table">
+        <thead>
+          <tr>
+            <th>رقم اللوحة</th>
+            <th>الموديل</th>
+            <th>النوع</th>
+            <th>الإيجار اليومي (ريال)</th>
+          </tr>
+        </thead>
+        <tbody id="rentedTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card-list" id="rentedCards"></div>
+
+    <!-- 🔧 سيارات تحت الصيانة -->
+    <div class="section-title">🔧 سيارات تحت الصيانة</div>
+
+    <div class="table-wrapper">
+      <table class="cars-table">
+        <thead>
+          <tr>
+            <th>رقم اللوحة</th>
+            <th>الموديل</th>
+            <th>النوع</th>
+            <th>الإيجار اليومي (ريال)</th>
+          </tr>
+        </thead>
+        <tbody id="maintenanceTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card-list" id="maintenanceCards"></div>
+
+  </main>
 
   <script>
     async function loadCars() {
@@ -115,15 +306,28 @@
       document.getElementById("rentedCount").textContent = `🚗 المؤجرة: ${rented.length}`;
       document.getElementById("maintenanceCount").textContent = `🔧 تحت الصيانة: ${maintenance.length}`;
 
-      // طباعة القوائم
-      renderList("availableList", available);
-      renderList("rentedList", rented);
-      renderList("maintenanceList", maintenance);
+      // طباعة الجداول + الكروت
+      renderTableAndCards("availableTableBody", "availableCards", available);
+      renderTableAndCards("rentedTableBody", "rentedCards", rented);
+      renderTableAndCards("maintenanceTableBody", "maintenanceCards", maintenance);
     }
 
-    function renderList(target, arr) {
-      const box = document.getElementById(target);
-      box.innerHTML = arr.map(c => `
+    function renderTableAndCards(tbodyId, cardsId, arr) {
+      const tbody = document.getElementById(tbodyId);
+      const cardsBox = document.getElementById(cardsId);
+
+      // جدول (للاب)
+      tbody.innerHTML = arr.map(c => `
+        <tr>
+          <td>${c.plate}</td>
+          <td>${c.model || "—"}</td>
+          <td>${c.car_type || "—"}</td>
+          <td>${c.daily_rent} ريال</td>
+        </tr>
+      `).join("");
+
+      // كروت (للموبايل)
+      cardsBox.innerHTML = arr.map(c => `
         <div class="card">
           <div class="row"><span class="label">رقم اللوحة:</span> ${c.plate}</div>
           <div class="row"><span class="label">الموديل:</span> ${c.model || "—"}</div>

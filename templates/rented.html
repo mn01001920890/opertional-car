@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🚗 السيارات المؤجرة الآن</title>
+  <title>🚗 السيارات المؤجرة (التفويضات النشطة)</title>
 
   <style>
     :root {
       --main-blue: #0d6efd;
       --main-purple: #6c63ff;
-      --card-radius: 12px;
+      --card-radius: 14px;
       --shadow: 0 4px 12px rgba(0,0,0,0.25);
+      --muted: #6b7280;
+      --danger: #dc2626;
+      --success: #16a34a;
     }
 
     * {
@@ -18,13 +21,14 @@
     }
 
     body {
-      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
       background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
       color: #fff;
+      min-height: 100vh;
     }
 
-    /* 🔝 شريط علوي ثابت + زر رجوع */
+    /* 🔝 شريط علوي ثابت */
     .top-bar {
       position: fixed;
       top: 0;
@@ -71,6 +75,29 @@
       color: #fff;
     }
 
+    .top-right-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .small-link-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(255,255,255,0.12);
+      color: #e5e7eb;
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .small-link-btn:hover {
+      background: rgba(255,255,255,0.22);
+    }
+
     /* محتوى الصفحة */
     .page-content {
       max-width: 1200px;
@@ -81,509 +108,732 @@
     h2 {
       text-align: center;
       font-size: 24px;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
     }
 
-    .summary-text {
+    .subtitle {
       text-align: center;
       font-size: 14px;
-      margin-bottom: 12px;
       opacity: 0.9;
+      margin-bottom: 18px;
     }
 
-    /* 🔍 صندوق البحث */
-    .search-box {
-      max-width: 400px;
-      margin: 0 auto 16px auto;
+    /* شريط الفلترة والعداد */
+    .toolbar {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
-      text-align: center;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
     }
 
-    .search-label {
+    .toolbar-card {
+      background: rgba(255,255,255,0.95);
+      color: #111827;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .counter-pill {
+      border-radius: 999px;
+      padding: 6px 12px;
+      background: #ecfdf3;
+      color: #166534;
       font-size: 13px;
-      opacity: 0.9;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .search-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 200px;
     }
 
     .search-input {
-      padding: 8px 10px;
-      border-radius: 999px;
-      border: none;
-      outline: none;
-      font-size: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-      text-align: center;
-      color: #333;
-    }
-
-    .search-input::placeholder {
-      color: #888;
-    }
-
-    /* 🖥️ جدول للّاب */
-    .table-wrapper {
-      background: #fff;
-      border-radius: var(--card-radius);
-      box-shadow: var(--shadow);
-      overflow: auto;
-      margin-bottom: 16px;
-    }
-
-    .rented-table {
       width: 100%;
-      border-collapse: collapse;
-      min-width: 900px;
-    }
-
-    .rented-table thead {
-      background: var(--main-blue);
-      color: #fff;
-    }
-
-    .rented-table th,
-    .rented-table td {
-      padding: 8px 6px;
-      text-align: center;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      padding: 7px 12px;
       font-size: 13px;
-      border-bottom: 1px solid #eee;
-      color: #333;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .search-input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 2px rgba(13,110,253,0.18);
+    }
+
+    .search-label {
+      font-size: 12px;
+      color: var(--muted);
       white-space: nowrap;
     }
 
-    .rented-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .link {
-      color: #0d6efd;
-      font-weight: bold;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-
-    .cost-now {
-      color: #28a745;
-      font-weight: 700;
-    }
-
-    .end-btn-table {
-      padding: 6px 10px;
-      font-size: 12px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: #dc3545;
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-      transition: 0.2s ease;
-      white-space: nowrap;
-    }
-
-    .end-btn-table:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-
-    .manual-cost-input {
-      width: 90px;
-      padding: 4px 6px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 12px;
-      text-align: center;
-    }
-
-    .manual-cost-note {
+    .badge {
       font-size: 11px;
-      color: #555;
-      margin-top: 2px;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      white-space: nowrap;
     }
 
-    /* 📱 كروت للموبايل */
-    .card-list {
-      display: none; /* تظهر في الموبايل فقط */
+    /* كروت التفويضات */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 1024px) {
+      .cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 700px) {
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .card {
-      background: #fff;
-      color: #333;
-      padding: 15px;
-      border-radius: 14px;
-      margin-bottom: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.25);
-      animation: fadeIn .4s ease-in-out;
+      background: #ffffff;
+      color: #111827;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      padding: 12px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border: 1px solid #e5e7eb;
     }
 
-    .row { margin: 6px 0; font-size: 14px; }
-    .label { font-weight: bold; color: #0d6efd; }
-
-    .btn-end-card{
-      width:100%;
-      padding:10px;
-      border:none;
-      border-radius:10px;
-      background:#dc3545;
-      color:#fff;
-      font-size:14px;
-      font-weight:bold;
-      margin-top:10px;
-      box-shadow:0 4px 10px rgba(0,0,0,.3);
-      transition:.3s;
-      cursor:pointer;
+    /* ✅ كارت متأخر (بعد الجمعة) */
+    .card-overdue {
+      border: 2px solid var(--danger);
+      box-shadow:
+        0 0 0 1px rgba(220,38,38,0.18),
+        var(--shadow);
     }
 
-    .btn-end-card:hover{
-      opacity:.9;
-      transform:scale(1.02);
+    .card-header-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 2px;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
+    .card-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      .page-title {
-        font-size: 16px;
-      }
-
-      .table-wrapper {
-        display: none;   /* نخفي الجدول على الموبايل */
-      }
-
-      .card-list {
-        display: block;  /* نظهر الكروت على الموبايل */
-      }
+    .pill-id {
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
     }
 
-    @media (min-width: 769px) {
-      .table-wrapper {
-        display: block;  /* نظهر الجدول على اللاب */
-      }
+    .status-pill {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #f97316;
+      color: #fff;
+      white-space: nowrap;
+    }
 
-      .card-list {
-        display: none;   /* نخفي الكروت على اللاب */
-      }
+    .status-pill.green {
+      background: #22c55e;
+    }
+
+    .status-pill.overdue {
+      background: var(--danger);
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .row span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .value {
+      font-weight: 600;
+    }
+
+    .value-strong {
+      font-weight: 800;
+      color: #16a34a;
+    }
+
+    /* 🔴 تمييز المدد المتأخرة */
+    .value-overdue {
+      color: var(--danger);
+      font-weight: 800;
+    }
+
+    .overdue-text {
+      font-size: 11px;
+      color: var(--danger);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 6px 0;
+    }
+
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .btn-sm-primary,
+    .btn-sm-danger,
+    .btn-sm-outline {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .btn-sm-primary {
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    .btn-sm-primary:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+
+    .btn-sm-danger {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+
+    .btn-sm-danger:hover {
+      background: #fecaca;
+    }
+
+    .btn-sm-outline {
+      background: #f9fafb;
+      color: #111827;
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn-sm-outline:hover {
+      background: #e5e7eb;
+    }
+
+    .empty-state {
+      margin-top: 18px;
+      background: rgba(255,255,255,0.95);
+      color: #111827;
+      padding: 14px 16px;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .empty-state strong {
+      font-weight: 700;
+    }
+
+    .status-bar {
+      margin-top: 10px;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      display: none;
+    }
+
+    .status-bar.ok {
+      display: block;
+      background: #ecfdf3;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-bar.err {
+      display: block;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .small-note {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 4px;
     }
   </style>
 </head>
 
 <body>
-
   <!-- 🔝 الهيدر الثابت -->
   <header class="top-bar">
     <button class="back-btn" onclick="location.href='/'">
-      🏠 رجوع
+      ⬅️ رجوع
     </button>
-    <h1 class="page-title">🚗 السيارات المؤجرة الآن</h1>
+
+    <h1 class="page-title">🚗 السيارات المؤجرة (التفويضات النشطة)</h1>
+
+    <div class="top-right-actions">
+      <button class="small-link-btn" onclick="location.href='/issue'">
+        ➕ إصدار تفويض جديد
+      </button>
+      <button class="small-link-btn" onclick="location.href='/receipt'">
+        🧾 سند تحصيل جديد
+      </button>
+    </div>
   </header>
 
   <main class="page-content">
-    <h2>قائمة السيارات المؤجرة الآن</h2>
-    <p class="summary-text" id="summaryText"></p>
+    <h2>السيارات المؤجرة حاليًا</h2>
+    <p class="subtitle">
+      هذه الشاشة تعرض <strong>كل التفويضات النشطة</strong> (لم يتم إنهاؤها بعد)، مع تمييز
+      <strong>التفويضات التي تجاوزت نهاية الأسبوع (الجمعة)</strong> باللون الأحمر وترتيبها في بداية الصفحة.
+    </p>
 
-    <!-- 🔍 البحث -->
-    <div class="search-box">
-      <span class="search-label">
-        ابحث برقم السيارة أو رقم رخصة السائق
+    <!-- شريط الفلترة والعداد -->
+    <section class="toolbar">
+      <div class="toolbar-card">
+        <div class="counter-pill">
+          <span>التفويضات النشطة:</span>
+          <span id="activeCount">0</span>
+        </div>
+
+        <div class="search-group">
+          <span class="search-label">بحث باسم السائق أو رقم السيارة:</span>
+          <input
+            id="searchInput"
+            type="text"
+            class="search-input"
+            placeholder="اكتب جزء من اسم السائق أو رقم السيارة..."
+            oninput="applyFilter()"
+          />
+        </div>
+
+        <span class="badge">
+          🔁 يتم تحديث البيانات مباشرة من الخادم
+        </span>
+      </div>
+    </section>
+
+    <!-- شريط الحالة (نجاح / خطأ) -->
+    <div id="statusBar" class="status-bar"></div>
+
+    <!-- كروت التفويضات -->
+    <section id="cardsContainer" class="cards-grid">
+      <!-- يتم ملؤها بالـ JS -->
+    </section>
+
+    <!-- حالة عدم وجود بيانات -->
+    <div id="emptyState" class="empty-state" style="display:none;">
+      <strong>لا توجد سيارات مؤجرة حاليًا.</strong>
+      <span>يمكنك إصدار تفويض جديد من زر "إصدار تفويض جديد" بالأعلى.</span>
+      <span class="small-note">
+        إذا كنت متأكدًا من وجود تفويضات، تأكد من أن حالة التفويض لم يتم إنهاؤها بالفعل (close_date = NULL فقط هي التي تظهر هنا).
       </span>
-      <input
-        id="searchInput"
-        class="search-input"
-        type="text"
-        placeholder="مثال: 123ABC أو رقم الرخصة"
-        oninput="applyFilter()"
-      />
     </div>
-
-    <!-- 🖥️ جدول (للّاب) -->
-    <div class="table-wrapper">
-      <table class="rented-table">
-        <thead>
-          <tr>
-            <th>السائق</th>
-            <th>رقم السيارة</th>
-            <th>الموديل</th>
-            <th>النوع</th>
-            <th>تاريخ الإصدار</th>
-            <th>بداية التفويض</th>
-            <th>نهاية الجمعة (المحاسبية)</th>
-            <th>تاريخ الإقفال</th>
-            <th>عدد الأيام حتى اليوم</th>
-            <th>الإيجار اليومي</th>
-            <th>التكلفة (قابلة للتعديل)</th>
-            <th>إقفال التفويض</th>
-          </tr>
-        </thead>
-        <tbody id="rentedTableBody">
-          <!-- JS -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 📱 كروت (للموبايل) -->
-    <div class="card-list" id="rentedCards"></div>
   </main>
 
   <script>
-    let activeAuthorizations = [];
+    let allAuthorizations = [];
+    let filteredAuthorizations = [];
 
-    // 🔹 تنسيق التاريخ
-    function formatDateTime(value){
-      if(!value) return "—";
-      const d = new Date(value);
-      if (isNaN(d)) return value;
-      const pad = n => String(n).padStart(2, "0");
-      const year  = d.getFullYear();
-      const month = pad(d.getMonth() + 1);
-      const day   = pad(d.getDate());
-      const hrs   = pad(d.getHours());
-      const mins  = pad(d.getMinutes());
-      const secs  = pad(d.getSeconds());
-      return `${year}-${month}-${day} ${hrs}:${mins}:${secs}`;
+    document.addEventListener("DOMContentLoaded", () => {
+      loadActiveAuthorizations();
+    });
+
+    // دالة بسيطة لتحويل النص "YYYY-MM-DD HH:MM:SS" إلى Date
+    function parseDateTime(str) {
+      if (!str) return null;
+      try {
+        // نستبدل المسافة بـ T عشان الـ Date يقرأها بشكل موحد
+        return new Date(str.replace(" ", "T"));
+      } catch {
+        return null;
+      }
     }
 
-    // 🔹 حساب عدد الأيام والتكلفة (باليوم)
-    function calcDaysAndCost(startStr, dailyRent){
-      if(!startStr || dailyRent == null) {
-        return {days: null, total: null};
-      }
-      const start = new Date(startStr);
-      const now   = new Date();
-      if (isNaN(start)) {
-        return {days: null, total: null};
-      }
-
-      // نشتغل على اليوم فقط بدون وقت
-      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      const endDay   = new Date(now.getFullYear(),   now.getMonth(),   now.getDate());
-      const dayMs    = 24 * 60 * 60 * 1000;
-
-      let diffDays = Math.floor((endDay - startDay) / dayMs) + 1;
-      if (diffDays < 1) diffDays = 1; // أي جزء من اليوم = يوم كامل
-
-      const rentNum = Number(dailyRent);
-      if (!isFinite(rentNum)) {
-        return {days: diffDays, total: null};
-      }
-
-      const total = diffDays * rentNum;
-      return {days: diffDays, total};
-    }
-
-    function formatCost(total){
-      if (total == null) return "—";
-      return `${total.toFixed(2)} ريال`;
-    }
-
-    async function loadData() {
-      const tableBody = document.getElementById("rentedTableBody");
-      const cardsBox  = document.getElementById("rentedCards");
-      const summary   = document.getElementById("summaryText");
-
-      tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
-      cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
-      summary.textContent = "";
+    // تحميل التفويضات النشطة فقط
+    async function loadActiveAuthorizations() {
+      showStatus("جارِ تحميل بيانات التفويضات النشطة...", false);
+      const container = document.getElementById("cardsContainer");
+      container.innerHTML = "";
 
       try {
-        // ✅ نستخدم /api/authorizations/active لإرجاع التفويضات المفتوحة فقط
-        const res = await fetch("/api/authorizations/active");
+        const res = await fetch("/api/authorizations?status=active");
         if (!res.ok) {
           throw new Error("HTTP " + res.status);
         }
         const data = await res.json();
-        activeAuthorizations = Array.isArray(data) ? data : [];
+        allAuthorizations = Array.isArray(data) ? data : [];
+        filteredAuthorizations = [...allAuthorizations];
 
-        applyFilter();
-      } catch (e) {
-        console.error(e);
-        tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>⚠️ تعذر تحميل البيانات من الخادم</td></tr>";
-        cardsBox.innerHTML  = "<p style='text-align:center'>⚠️ تعذر تحميل البيانات من الخادم</p>";
-        summary.textContent = "حدث خطأ أثناء تحميل بيانات التفويضات.";
+        document.getElementById("activeCount").textContent = allAuthorizations.length;
+
+        renderCards(filteredAuthorizations);
+        if (allAuthorizations.length === 0) {
+          document.getElementById("emptyState").style.display = "block";
+        } else {
+          document.getElementById("emptyState").style.display = "none";
+        }
+
+        if (allAuthorizations.length > 0) {
+          showStatus(`تم تحميل ${allAuthorizations.length} تفويض نشط.`, false);
+        } else {
+          showStatus("لا توجد تفويضات نشطة حاليًا.", false);
+        }
+      } catch (err) {
+        console.error(err);
+        showStatus("تعذر تحميل بيانات التفويضات النشطة. تأكد من أن الخادم يعمل.", true);
+        document.getElementById("emptyState").style.display = "block";
       }
     }
 
-    function applyFilter(){
-      const input = document.getElementById("searchInput");
-      const term  = (input.value || "").trim().toLowerCase();
-
-      let filtered = activeAuthorizations;
-      if (term) {
-        filtered = activeAuthorizations.filter(auth => {
-          const car  = (auth.car_number || "").toLowerCase();
-          const lic  = (auth.driver_license_no || "").toLowerCase();
-          return car.includes(term) || lic.includes(term);
-        });
+    // عرض رسالة حالة
+    function showStatus(message, isError = false) {
+      const bar = document.getElementById("statusBar");
+      if (!message) {
+        bar.style.display = "none";
+        return;
       }
-
-      renderLists(filtered);
+      bar.textContent = message;
+      bar.className = "status-bar " + (isError ? "err" : "ok");
+      bar.style.display = "block";
     }
 
-    function renderLists(list){
-      const tableBody = document.getElementById("rentedTableBody");
-      const cardsBox  = document.getElementById("rentedCards");
-      const summary   = document.getElementById("summaryText");
+    // رسم الكروت مع تمييز المتأخرين وترتيبهم في البداية
+    function renderCards(list) {
+      const container = document.getElementById("cardsContainer");
+      container.innerHTML = "";
 
       if (!list || list.length === 0) {
-        tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>⚪ لا توجد سيارات مؤجرة مطابقة لنتيجة البحث</td></tr>";
-        cardsBox.innerHTML  = "<p style='text-align:center;font-size:15px'>⚪ لا توجد سيارات مؤجرة مطابقة لنتيجة البحث</p>";
-        summary.textContent = `عدد التفويضات النشطة الكلي: ${activeAuthorizations.length}`;
         return;
       }
 
-      summary.textContent = `عدد السيارات المؤجرة الآن: ${list.length} (من إجمالي ${activeAuthorizations.length})`;
+      const now = new Date();
 
-      // 🖥️ جدول
-      tableBody.innerHTML = list.map(item => {
-        const issueFmt   = formatDateTime(item.issue_date);
-        const startFmt   = formatDateTime(item.start_date);
-        const plannedFmt = formatDateTime(item.planned_end_date || item.end_date);
-        const closeFmt   = formatDateTime(item.close_date);
+      // نثري الداتا بحساب حالة التأخير وأيام التأخير لكل تفويض
+      const enriched = list.map(a => {
+        const issueDt = parseDateTime(a.issue_date);
+        const plannedEndStr = a.end_date || a.planned_end_date || "";
+        const plannedEndDt = parseDateTime(plannedEndStr);
 
-        const {days, total} = calcDaysAndCost(item.start_date, item.daily_rent);
-        const daysText      = days != null ? `${days} يوم` : "—";
-        const autoCostText  = formatCost(total);
-        const costInputVal  = total != null ? total.toFixed(2) : "";
+        let isOverdue = false;
+        let overdueDays = 0;
 
-        const dailyRentText = item.daily_rent != null ? `${item.daily_rent} ريال` : "—";
+        if (plannedEndDt && now > plannedEndDt) {
+          isOverdue = true;
+          const diffMs = now.getTime() - plannedEndDt.getTime();
+          overdueDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)); // عدد الأيام تقريبًا
+          if (overdueDays < 0) overdueDays = 0;
+        }
 
-        const driverSafe = (item.driver_name || "").replace(/'/g, "\\'");
-        const carSafe    = (item.car_number || "").replace(/'/g, "\\'");
+        return {
+          raw: a,
+          issueDt,
+          plannedEndDt,
+          isOverdue,
+          overdueDays
+        };
+      });
 
-        return `
-          <tr>
-            <td>
-              <span class="link" onclick="goDriver('${driverSafe}')">
-                ${item.driver_name || "—"}
-              </span>
-            </td>
-            <td>
-              <span class="link" onclick="goCar('${carSafe}')">
-                ${item.car_number || "—"}
-              </span>
-            </td>
-            <td>${item.car_model || "—"}</td>
-            <td>${item.car_type  || "—"}</td>
-            <td>${issueFmt}</td>
-            <td>${startFmt}</td>
-            <td>${plannedFmt}</td>
-            <td>${closeFmt}</td>
-            <td>${daysText}</td>
-            <td>${dailyRentText}</td>
-            <td>
-              <div>
-                <div class="cost-now">محسوبة: ${autoCostText}</div>
-                <input
-                  type="number"
-                  class="manual-cost-input"
-                  value="${costInputVal}"
-                  step="0.01"
-                />
-                <div class="manual-cost-note">يمكن تعديلها يدويًا قبل الترحيل للدفاتر</div>
-              </div>
-            </td>
-            <td>
-              <button class="end-btn-table" onclick="endAuth(${item.id})">🛑 إقفال</button>
-            </td>
-          </tr>
-        `;
-      }).join("");
+      // ✅ ترتيب: المتأخرين أولاً، وبداخلهم الأكبر تأخيرًا في الأعلى
+      enriched.sort((x, y) => {
+        if (x.isOverdue && !y.isOverdue) return -1;
+        if (!x.isOverdue && y.isOverdue) return 1;
 
-      // 📱 كروت
-      cardsBox.innerHTML = list.map(item => {
-        const issueFmt   = formatDateTime(item.issue_date);
-        const startFmt   = formatDateTime(item.start_date);
-        const plannedFmt = formatDateTime(item.planned_end_date || item.end_date);
-        const closeFmt   = formatDateTime(item.close_date);
+        if (x.isOverdue && y.isOverdue) {
+          // الأكبر تأخيرًا (أيام) يظهر أولاً
+          return y.overdueDays - x.overdueDays;
+        }
 
-        const {days, total} = calcDaysAndCost(item.start_date, item.daily_rent);
-        const daysText      = days != null ? `${days} يوم` : "—";
-        const autoCostText  = formatCost(total);
-        const costInputVal  = total != null ? total.toFixed(2) : "";
+        // الباقي: ترتيب تصاعدي حسب تاريخ نهاية الأسبوع (الأقرب أولاً)
+        if (x.plannedEndDt && y.plannedEndDt) {
+          return x.plannedEndDt - y.plannedEndDt;
+        }
+        return 0;
+      });
 
-        const dailyRentText = item.daily_rent != null ? `${item.daily_rent} ريال` : "—";
+      enriched.forEach(item => {
+        const a = item.raw;
+        const isOverdue = item.isOverdue;
+        const overdueDays = item.overdueDays;
 
-        const driverSafe = (item.driver_name || "").replace(/'/g, "\\'");
-        const carSafe    = (item.car_number || "").replace(/'/g, "\\'");
+        const card = document.createElement("article");
+        card.className = "card" + (isOverdue ? " card-overdue" : "");
 
-        return `
-          <div class="card">
-            <div class="row">
+        const issueDate = a.issue_date || "";
+        const plannedEnd = a.end_date || a.planned_end_date || "";
+        const dailyRent = a.daily_rent != null ? `${a.daily_rent} ر.س/يوم` : "غير محدد";
+        const days = a.rental_days != null ? `${a.rental_days} يوم` : "—";
+        let plannedAmount = "—";
+        if (a.planned_amount != null) {
+          const val = typeof a.planned_amount === "number"
+            ? a.planned_amount.toFixed(2)
+            : a.planned_amount;
+          plannedAmount = `${val} ر.س`;
+        }
+
+        const statusClass = "status-pill" + (isOverdue ? " overdue" : "");
+        const durationClass = "value" + (isOverdue ? " value-overdue" : "");
+
+        card.innerHTML = `
+          <div class="card-header-line">
+            <h3 class="card-title">
+              <span class="pill-id">#${a.id}</span>
+              <span>${a.car_number || "بدون رقم"} — ${(a.car_model || "")} ${(a.car_type || "")}</span>
+            </h3>
+            <span class="${statusClass}">
+              ${isOverdue ? "مؤجرة — متجاوزة مدة الأسبوع" : "مؤجرة"}
+            </span>
+          </div>
+
+          <div class="row">
+            <span>
               <span class="label">السائق:</span>
-              <span class="link" onclick="goDriver('${driverSafe}')">
-                ${item.driver_name || "—"}
-              </span>
-            </div>
+              <span class="value">${a.driver_name || "—"}</span>
+            </span>
+            <span>
+              <span class="label">رخصة:</span>
+              <span class="value">${a.driver_license_no || "—"}</span>
+            </span>
+          </div>
 
-            <div class="row">
-              <span class="label">رقم السيارة:</span>
-              <span class="link" onclick="goCar('${carSafe}')">
-                ${item.car_number || "—"}
-              </span>
-            </div>
+          <div class="row">
+            <span>
+              <span class="label">بداية التفويض:</span>
+              <span class="value">${issueDate}</span>
+            </span>
+          </div>
 
-            <div class="row"><span class="label">الموديل:</span> ${item.car_model || "—"}</div>
-            <div class="row"><span class="label">النوع:</span> ${item.car_type || "—"}</div>
+          <div class="row">
+            <span>
+              <span class="label">نهاية الأسبوع (الجمعة):</span>
+              <span class="value">${plannedEnd}</span>
+            </span>
+          </div>
 
-            <div class="row"><span class="label">تاريخ الإصدار:</span> ${issueFmt}</div>
-            <div class="row"><span class="label">بداية التفويض:</span> ${startFmt}</div>
-            <div class="row"><span class="label">نهاية الجمعة (المحاسبية):</span> ${plannedFmt}</div>
-            <div class="row"><span class="label">تاريخ الإقفال:</span> ${closeFmt}</div>
+          <div class="row">
+            <span>
+              <span class="label">الإيجار اليومي:</span>
+              <span class="value">${dailyRent}</span>
+            </span>
+            <span>
+              <span class="label">عدد الأيام المخططة:</span>
+              <span class="${durationClass}">${days}</span>
+            </span>
+          </div>
 
-            <div class="row"><span class="label">عدد الأيام حتى اليوم:</span> ${daysText}</div>
-            <div class="row"><span class="label">الإيجار اليومي:</span> ${dailyRentText}</div>
+          ${
+            isOverdue
+              ? `
+              <div class="row">
+                <span class="label">🔴 أيام التأخير بعد الجمعة:</span>
+                <span class="value-overdue">${overdueDays} يوم</span>
+              </div>
+              <div class="overdue-text">
+                هذا التفويض تجاوز مدة الأسبوع المفترضة ولم يتم إقفاله بعد.
+              </div>
+              `
+              : ""
+          }
 
-            <div class="row">
-              <span class="label">التكلفة (محسوبة):</span>
-              <span class="cost-now">${autoCostText}</span>
-            </div>
+          <div class="row" style="margin-top:4px;">
+            <span class="label">قيمة الإيجار الأسبوعية تقريبًا:</span>
+            <span class="value-strong">${plannedAmount}</span>
+          </div>
 
-            <div class="row">
-              <span class="label">تعديل يدوي:</span>
-              <input
-                type="number"
-                class="manual-cost-input"
-                value="${costInputVal}"
-                step="0.01"
-              />
-            </div>
+          <div class="divider"></div>
 
-            <button class="btn-end-card" onclick="endAuth(${item.id})">
-              🛑 إقفال التفويض
+          <div class="row">
+            <span class="label">ملاحظات:</span>
+          </div>
+          <div class="row">
+            <span class="value">${a.details || "لا توجد ملاحظات مسجلة."}</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="actions-row">
+            <button class="btn-sm-primary" onclick="openReceipt(${a.id})">
+              🧾 سند تحصيل
+            </button>
+
+            <button class="btn-sm-danger" onclick="endAuthorization(${a.id}, this)">
+              ✅ إنهاء التفويض
+            </button>
+
+            <button class="btn-sm-outline" onclick="viewAuthorizationDetails(${a.id})">
+              🔍 تفاصيل إضافية (JSON)
             </button>
           </div>
+
+          <p class="small-note">
+            عند الضغط على "إنهاء التفويض" سيتم:
+            1) حساب قيمة الأسبوع،
+            2) تسجيل قيد محاسبي،
+            3) إنشاء تفويض جديد للأسبوع التالي تلقائيًا،
+            4) إخفاء هذا التفويض من قائمة السيارات المؤجرة.
+          </p>
         `;
-      }).join("");
+
+        container.appendChild(card);
+      });
     }
 
-    async function endAuth(id){
-      if(!confirm("تأكيد إقفال التفويض لهذه السيارة؟")) return;
-      try{
-        const res = await fetch(`/api/authorizations/${id}/end`, {method:"PATCH"});
-        const data = await res.json().catch(()=> ({}));
-        if(res.ok){
-          alert("✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي (حسب منطق الباك إند).");
-          loadData();
-        }else{
-          alert("❌ لم يتم الإقفال: " + (data.error || "خطأ غير معروف"));
+    // فلترة حسب البحث
+    function applyFilter() {
+      const term = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+      if (!term) {
+        filteredAuthorizations = [...allAuthorizations];
+      } else {
+        filteredAuthorizations = allAuthorizations.filter(a => {
+          const driver = (a.driver_name || "").toLowerCase();
+          const car = (a.car_number || "").toLowerCase();
+          return driver.includes(term) || car.includes(term);
+        });
+      }
+      renderCards(filteredAuthorizations);
+    }
+
+    // فتح صفحة سند التحصيل مع تمرير رقم التفويض
+    function openReceipt(authId) {
+      if (!authId) return;
+      window.location.href = `/receipt?authorization_id=${authId}`;
+    }
+
+    // إنهاء التفويض
+    async function endAuthorization(authId, btnEl) {
+      if (!authId) return;
+
+      const confirmed = window.confirm(
+        "هل أنت متأكد من إنهاء هذا التفويض؟\nسيتم حساب الأسبوع، تسجيل قيد محاسبي، وإنشاء تفويض جديد للأسبوع التالي."
+      );
+      if (!confirmed) return;
+
+      try {
+        if (btnEl) {
+          btnEl.disabled = true;
+          btnEl.textContent = "جاري الإنهاء...";
         }
-      }catch(e){
-        alert("⚠️ تعذر الاتصال بالخادم.");
+        showStatus("جارِ إنهاء التفويض وإنشاء التفويض الجديد للأسبوع التالي...", false);
+
+        const res = await fetch(`/api/authorizations/${authId}/end`, {
+          method: "PATCH",
+        });
+
+        let data = {};
+        try {
+          data = await res.json();
+        } catch (_) {}
+
+        if (!res.ok) {
+          const msg = data.error || `لم يتم إنهاء التفويض (HTTP ${res.status})`;
+          showStatus(msg, true);
+          if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = "✅ إنهاء التفويض";
+          }
+          return;
+        }
+
+        // إزالة التفويض المنتهي من القايمة الحالية
+        allAuthorizations = allAuthorizations.filter(a => String(a.id) !== String(authId));
+        applyFilter(); // هتعيد الرسم مع نفس منطق الترتيب
+        document.getElementById("activeCount").textContent = allAuthorizations.length;
+
+        if (allAuthorizations.length === 0) {
+          document.getElementById("emptyState").style.display = "block";
+        }
+
+        const totalAmount = data.total_amount != null ? data.total_amount : null;
+        const msgExtra = totalAmount
+          ? `، وقيمة الأسبوع تقريبًا: ${
+              totalAmount.toFixed ? totalAmount.toFixed(2) : totalAmount
+            } ر.س`
+          : "";
+
+        showStatus(
+          `✅ تم إنهاء التفويض بنجاح وإنشاء تفويض جديد للأسبوع التالي${msgExtra}.`,
+          false
+        );
+      } catch (err) {
+        console.error(err);
+        showStatus("تعذر إنهاء التفويض. تأكد من أن الخادم يعمل ثم أعد المحاولة.", true);
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = "✅ إنهاء التفويض";
+        }
       }
     }
 
-    function goDriver(name) {
-      location.href = `/drivers?focus=${encodeURIComponent(name)}`;
+    // عرض JSON للتفويض (للتصحيح فقط)
+    function viewAuthorizationDetails(authId) {
+      const auth = allAuthorizations.find(a => String(a.id) === String(authId));
+      if (!auth) {
+        alert("لم يتم العثور على بيانات هذا التفويض في القائمة الحالية.");
+        return;
+      }
+      alert(JSON.stringify(auth, null, 2));
     }
-
-    function goCar(plate) {
-      location.href = `/cars?focus=${encodeURIComponent(plate)}`;
-    }
-
-    loadData();
   </script>
-
 </body>
 </html>

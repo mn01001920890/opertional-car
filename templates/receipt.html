@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🧾 سند تحصيل نقدي</title>
+
+  <style>
+    :root {
+      --main-blue: #0d6efd;
+      --main-purple: #6c63ff;
+      --card-radius: 14px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.25);
+      --muted: #6b7280;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    /* 🔝 شريط علوي ثابت */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .back-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      color: var(--main-blue);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .back-btn:hover {
+      background: var(--main-blue);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+      color: #fff;
+    }
+
+    /* محتوى الصفحة */
+    .page-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 16px 24px; /* مساحة للهيدر الثابت */
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.9;
+      margin-bottom: 20px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 2.2fr 1.3fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: #ffffff;
+      color: #111827;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      padding: 16px 16px 18px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .card-header-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+      color: #111827;
+    }
+
+    .card-header-note {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 12px;
+    }
+
+    @media (max-width: 640px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      padding: 8px 10px;
+      font-size: 13px;
+      outline: none;
+      transition: 0.15s ease;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    input[type="datetime-local"]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 2px rgba(13,110,253,0.18);
+    }
+
+    textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+
+    .readonly {
+      background: #f9fafb;
+    }
+
+    .btn-primary {
+      margin-top: 8px;
+      width: 100%;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+
+    .btn-secondary {
+      margin-top: 6px;
+      width: 100%;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #f3f4f6;
+      color: #111827;
+      transition: 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .status-bar {
+      margin-top: 8px;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      display: none;
+    }
+
+    .status-bar.ok {
+      display: block;
+      background: #ecfdf3;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-bar.err {
+      display: block;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    /* كارت بيانات السائق والتفويض */
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .info-label {
+      color: var(--muted);
+    }
+
+    .info-value {
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      margin-left: 4px;
+    }
+
+    .small-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin: 4px 0 6px;
+      color: #111827;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 8px 0;
+    }
+
+    .auth-select-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .tag-warning {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: #b45309;
+      background: #fffbeb;
+      border-radius: 999px;
+      padding: 3px 8px;
+      border: 1px solid #fbbf24;
+    }
+
+    .mini-note {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .amount-highlight {
+      font-size: 16px;
+      font-weight: 800;
+      color: #16a34a;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- 🔝 الهيدر الثابت -->
+  <header class="top-bar">
+    <button class="back-btn" onclick="location.href='/'">
+      🏠 رجوع
+    </button>
+    <h1 class="page-title">🧾 سند تحصيل نقدي من السائق</h1>
+  </header>
+
+  <main class="page-content">
+    <h2>سند تحصيل نقدي</h2>
+    <p class="subtitle">
+      استخدم هذه الشاشة لتسجيل سداد نقدي من السائق عن تفويض واحد أو أكثر، وسيتم إنشاء
+      <strong>قيد يومية تلقائيًا</strong> من حـ/ الصندوق إلى حـ/ حساب السائقين.
+    </p>
+
+    <div class="layout">
+      <!-- ➤ الجزء الرئيسي: نموذج السند -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <p class="card-header-title">بيانات سند التحصيل</p>
+            <p class="card-header-note">
+              اختر السائق والتفويض (إن وجد)، ثم أدخل قيمة المبلغ والبيان، واضغط "حفظ سند التحصيل".
+            </p>
+          </div>
+        </div>
+
+        <form id="receiptForm" onsubmit="submitReceipt(event)">
+          <div class="form-grid">
+            <!-- التاريخ -->
+            <div class="form-group">
+              <label for="receiptDate">تاريخ السند</label>
+              <input id="receiptDate" type="datetime-local" />
+              <div class="hint">يتم ضبطه تلقائيًا على تاريخ ووقت الجهاز، ويمكنك تعديله يدويًا.</div>
+            </div>
+
+            <!-- السائق -->
+            <div class="form-group">
+              <label for="driverSelect">السائق</label>
+              <select id="driverSelect" onchange="onDriverChange()">
+                <option value="">اختر السائق من القائمة</option>
+              </select>
+              <div class="hint">يتم تحميل قائمة السائقين تلقائيًا من قاعدة البيانات.</div>
+            </div>
+
+            <!-- اسم السائق (حُر) -->
+            <div class="form-group">
+              <label for="driverName">اسم السائق (للتعديل اليدوي إن لزم)</label>
+              <input type="text" id="driverName" placeholder="يتم تعبئته تلقائيًا بعد اختيار السائق، ويمكن تعديله" />
+            </div>
+
+            <!-- اختيار تفويض -->
+            <div class="form-group">
+              <label for="authSelect">التفويض (اختياري)</label>
+              <select id="authSelect" onchange="onAuthChange()">
+                <option value="">بدون ربط بتفويض محدد</option>
+              </select>
+              <div class="hint">
+                لو فتحت الشاشة من رابط مثل: <code>?authorization_id=123</code> سيتم اختيار التفويض تلقائيًا.
+              </div>
+            </div>
+
+            <!-- المبلغ -->
+            <div class="form-group">
+              <label for="amount">قيمة المبلغ (ريال)</label>
+              <input id="amount" type="number" step="0.01" min="0" placeholder="مثال: 1500.00" />
+              <div class="hint">يمثل قيمة السداد النقدي الذي تم استلامه من السائق.</div>
+            </div>
+
+            <!-- بيان السند -->
+            <div class="form-group">
+              <label for="description">البيان</label>
+              <textarea id="description" placeholder="مثال: سداد عن تفويض رقم 10 عن الفترة من ... إلى ..."></textarea>
+              <div class="hint">يتم اقتراح بيان تلقائي عند اختيار التفويض ويمكنك تعديله بحرّية.</div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">
+            ✅ حفظ سند التحصيل وتسجيل القيد
+          </button>
+
+          <button type="button" class="btn-secondary" onclick="window.print()">
+            🖨️ طباعة السند
+          </button>
+
+          <div id="statusBar" class="status-bar"></div>
+        </form>
+      </section>
+
+      <!-- ➤ الجزء الجانبي: ملخص السائق والتفويض -->
+      <aside class="card">
+        <div class="card-header">
+          <div>
+            <p class="card-header-title">ملخص السائق والتفويض</p>
+            <p class="card-header-note">
+              يساعدك على مراجعة بيانات التفويض المختار قبل تسجيل سند التحصيل.
+            </p>
+          </div>
+        </div>
+
+        <div id="summaryEmpty" class="mini-note">
+          لم يتم اختيار سائق أو تفويض بعد. اختر السائق ثم التفويض لعرض التفاصيل هنا.
+        </div>
+
+        <div id="summaryContent" style="display:none;">
+          <div class="small-title">🧑‍✈️ بيانات السائق</div>
+          <div class="info-row">
+            <span class="info-label">الاسم:</span>
+            <span class="info-value" id="sumDriverName">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">رقم الرخصة:</span>
+            <span class="info-value" id="sumDriverLicense">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">رقم الجوال:</span>
+            <span class="info-value" id="sumDriverPhone">—</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="small-title">
+            🚗 بيانات التفويض
+            <span class="pill" id="sumAuthStatusPill" style="display:none;"></span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-label">رقم التفويض:</span>
+            <span class="info-value" id="sumAuthId">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">السيارة:</span>
+            <span class="info-value" id="sumAuthCar">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">الفترة:</span>
+            <span class="info-value" id="sumAuthPeriod">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">الإيجار اليومي:</span>
+            <span class="info-value" id="sumAuthDailyRent">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">عدد الأيام المخططة:</span>
+            <span class="info-value" id="sumAuthDays">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">قيمة الإيجار المخططة:</span>
+            <span class="info-value amount-highlight" id="sumAuthPlannedAmount">—</span>
+          </div>
+
+          <p class="mini-note">
+            هذه القيمة <strong>إرشادية</strong> لمساعدتك على تحديد مبلغ السداد، ويمكنك إدخال أي مبلغ يناسب حالة العميل.
+          </p>
+
+          <div class="divider"></div>
+
+          <div class="small-title">💡 تلميحات</div>
+          <p class="mini-note">
+            بعد حفظ السند، يتم إنشاء قيد في اليومية العامة:
+            <br />
+            من حـ/ <strong>الصندوق</strong> (مدين) &nbsp;&nbsp; إلى حـ/ <strong>حساب السائقين</strong> (دائن)
+          </p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    let allDrivers = [];
+    let allAuthorizations = [];
+
+    // 🔹 تهيئة الصفحة
+    document.addEventListener("DOMContentLoaded", () => {
+      setDefaultDateTime();
+      loadDrivers();
+      loadAuthorizations();
+    });
+
+    // ضبط التاريخ الحالي في input datetime-local
+    function setDefaultDateTime() {
+      const input = document.getElementById("receiptDate");
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+      const iso = local.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
+      input.value = iso;
+    }
+
+    // تحميل السائقين من /api/drivers
+    async function loadDrivers() {
+      try {
+        const res = await fetch("/api/drivers");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        allDrivers = Array.isArray(data) ? data : [];
+
+        const select = document.getElementById("driverSelect");
+        select.innerHTML = '<option value="">اختر السائق من القائمة</option>';
+
+        allDrivers.forEach(d => {
+          const opt = document.createElement("option");
+          opt.value = d.id;
+          opt.textContent = d.name || ("سائق #" + d.id);
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        console.error(err);
+        showStatus("تعذر تحميل قائمة السائقين من الخادم.", true);
+      }
+    }
+
+    // تحميل التفويضات من /api/authorizations
+    async function loadAuthorizations() {
+      try {
+        const res = await fetch("/api/authorizations");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        allAuthorizations = Array.isArray(data) ? data : [];
+
+        populateAuthSelect();
+        // دعم فتح الصفحة بـ ?authorization_id=123
+        preselectAuthorizationFromURL();
+      } catch (err) {
+        console.error(err);
+        showStatus("تعذر تحميل قائمة التفويضات من الخادم.", true);
+      }
+    }
+
+    function populateAuthSelect() {
+      const select = document.getElementById("authSelect");
+      const driverSelect = document.getElementById("driverSelect");
+      const chosenDriverId = driverSelect.value;
+
+      // نحدد التفويضات اللي تخص السائق المختار، لو موجود
+      let filtered = allAuthorizations;
+      if (chosenDriverId) {
+        const driver = allDrivers.find(d => String(d.id) === String(chosenDriverId));
+        if (driver) {
+          filtered = allAuthorizations.filter(a => (a.driver_name || "").trim() === (driver.name || "").trim());
+        }
+      }
+
+      select.innerHTML = '<option value="">بدون ربط بتفويض محدد</option>';
+
+      filtered.forEach(a => {
+        const issue = a.issue_date || "";
+        const car = a.car_number || "";
+        const status = (a.status || "").trim() || "غير معروف";
+        const text =
+          `تفويض #${a.id} - سيارة ${car} - من ${issue} - حالة: ${status}`;
+        const opt = document.createElement("option");
+        opt.value = a.id;
+        opt.textContent = text;
+        select.appendChild(opt);
+      });
+    }
+
+    function onDriverChange() {
+      const driverSelect = document.getElementById("driverSelect");
+      const id = driverSelect.value;
+      const driverNameInput = document.getElementById("driverName");
+
+      const driver = allDrivers.find(d => String(d.id) === String(id));
+      if (driver) {
+        driverNameInput.value = driver.name || "";
+      }
+
+      populateAuthSelect();
+      updateSummary();
+    }
+
+    function onAuthChange() {
+      // اقترح بيان تلقائي بناءً على التفويض
+      const authSelect = document.getElementById("authSelect");
+      const authId = authSelect.value;
+      const descInput = document.getElementById("description");
+
+      const auth = allAuthorizations.find(a => String(a.id) === String(authId));
+      if (auth) {
+        const from = auth.issue_date || "";
+        const to = auth.end_date || auth.planned_end_date || "";
+        const car = auth.car_number || "";
+        const baseText = `سداد عن تفويض رقم ${auth.id} عن سيارة ${car} عن الفترة من ${from} حتى ${to}`;
+        // لو البيان فاضي أو كان نص افتراضي قديم نبدله
+        if (!descInput.value.trim() || descInput.value.startsWith("سداد عن تفويض رقم")) {
+          descInput.value = baseText;
+        }
+      }
+
+      updateSummary();
+    }
+
+    // قراءة authorization_id من URL إن وجد
+    function preselectAuthorizationFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      const authId = params.get("authorization_id");
+      if (!authId) return;
+
+      const authSelect = document.getElementById("authSelect");
+      const option = Array.from(authSelect.options).find(
+        opt => String(opt.value) === String(authId)
+      );
+      if (option) {
+        authSelect.value = authId;
+        onAuthChange();
+
+        // نحاول نضبط السائق تلقائيًا من التفويض
+        const auth = allAuthorizations.find(a => String(a.id) === String(authId));
+        if (auth && auth.driver_name) {
+          const driver = allDrivers.find(d => (d.name || "").trim() === (auth.driver_name || "").trim());
+          if (driver) {
+            const driverSelect = document.getElementById("driverSelect");
+            driverSelect.value = driver.id;
+            document.getElementById("driverName").value = driver.name || "";
+          }
+        }
+      }
+    }
+
+    // تحديث ملخص السائق/التفويض في الكارت الجانبي
+    function updateSummary() {
+      const driverSelect = document.getElementById("driverSelect");
+      const driverId = driverSelect.value;
+      const authSelect = document.getElementById("authSelect");
+      const authId = authSelect.value;
+
+      const summaryEmpty = document.getElementById("summaryEmpty");
+      const summaryContent = document.getElementById("summaryContent");
+
+      const d = allDrivers.find(dr => String(dr.id) === String(driverId));
+      const a = allAuthorizations.find(au => String(au.id) === String(authId));
+
+      if (!d && !a) {
+        summaryEmpty.style.display = "block";
+        summaryContent.style.display = "none";
+        return;
+      }
+
+      summaryEmpty.style.display = "none";
+      summaryContent.style.display = "block";
+
+      // سائق
+      document.getElementById("sumDriverName").textContent = d ? (d.name || "—") : "—";
+      document.getElementById("sumDriverLicense").textContent = d ? (d.license_no || "—") : "—";
+      document.getElementById("sumDriverPhone").textContent = d ? (d.phone || "—") : "—";
+
+      // تفويض
+      const pill = document.getElementById("sumAuthStatusPill");
+      if (!a) {
+        document.getElementById("sumAuthId").textContent = "—";
+        document.getElementById("sumAuthCar").textContent = "—";
+        document.getElementById("sumAuthPeriod").textContent = "—";
+        document.getElementById("sumAuthDailyRent").textContent = "—";
+        document.getElementById("sumAuthDays").textContent = "—";
+        document.getElementById("sumAuthPlannedAmount").textContent = "—";
+        pill.style.display = "none";
+      } else {
+        document.getElementById("sumAuthId").textContent = a.id || "—";
+        document.getElementById("sumAuthCar").textContent =
+          (a.car_number || "—") + " / " + (a.car_model || "") + " " + (a.car_type || "");
+
+        const from = a.issue_date || "";
+        const to = a.end_date || a.planned_end_date || "";
+        document.getElementById("sumAuthPeriod").textContent = `من ${from} حتى ${to}`;
+
+        const daily = a.daily_rent != null ? `${a.daily_rent} ريال/يوم` : "—";
+        document.getElementById("sumAuthDailyRent").textContent = daily;
+
+        const days = a.rental_days != null ? a.rental_days : null;
+        document.getElementById("sumAuthDays").textContent = days != null ? `${days} يوم` : "—";
+
+        const plannedAmount =
+          a.planned_amount != null ? `${a.planned_amount.toFixed ? a.planned_amount.toFixed(2) : a.planned_amount} ريال` : "—";
+        document.getElementById("sumAuthPlannedAmount").textContent = plannedAmount;
+
+        const status = (a.status || "").trim() || "غير معروف";
+        pill.style.display = "inline-flex";
+        pill.textContent = `حالة التفويض: ${status}`;
+      }
+    }
+
+    // عرض رسالة حالة (نجاح / خطأ)
+    function showStatus(message, isError = false) {
+      const bar = document.getElementById("statusBar");
+      bar.textContent = message || "";
+      bar.className = "status-bar " + (isError ? "err" : "ok");
+    }
+
+    // إرسال بيانات السند إلى /api/receipts
+    async function submitReceipt(e) {
+      e.preventDefault();
+      showStatus("");
+
+      const driverSelect = document.getElementById("driverSelect");
+      const driverId = driverSelect.value || null;
+      const driverName = (document.getElementById("driverName").value || "").trim();
+      const authSelect = document.getElementById("authSelect");
+      const authId = authSelect.value || null;
+      const amountStr = (document.getElementById("amount").value || "").trim();
+      const desc = (document.getElementById("description").value || "").trim();
+      const dateVal = (document.getElementById("receiptDate").value || "").trim();
+
+      if (!amountStr) {
+        showStatus("قيمة المبلغ مطلوبة لتسجيل سند التحصيل.", true);
+        return;
+      }
+
+      const payload = {
+        amount: amountStr,
+        driver_id: driverId ? Number(driverId) : null,
+        driver_name: driverName || null,
+        authorization_id: authId ? Number(authId) : null,
+        description: desc || null,
+        date: dateVal || null,
+      };
+
+      try {
+        const res = await fetch("/api/receipts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        let data = {};
+        try {
+          data = await res.json();
+        } catch (_) {}
+
+        if (!res.ok) {
+          const msg = data.error || `لم يتم حفظ السند (HTTP ${res.status})`;
+          showStatus(msg, true);
+          return;
+        }
+
+        showStatus("✅ تم حفظ سند التحصيل وتسجيل القيد في اليومية العامة بنجاح.");
+
+        // ممكن بعد النجاح تفرّغ المبلغ فقط وتبقي باقي البيانات لتسجيل سند آخر لنفس السائق
+        // document.getElementById("amount").value = "";
+        // document.getElementById("description").value = data.receipt ? (data.receipt.description || "") : desc;
+      } catch (err) {
+        console.error(err);
+        showStatus("⚠️ تعذر الاتصال بالخادم. تأكد أن الباك إند يعمل ثم أعد المحاولة.", true);
+      }
+    }
+  </script>
+</body>
+</html>

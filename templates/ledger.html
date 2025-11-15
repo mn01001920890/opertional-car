@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>📑 دفتر الأستاذ / كشف حساب</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg1:#0d6efd;
+      --bg2:#6c63ff;
+      --card:#111827;
+      --ink:#f9fafb;
+      --muted:#9ca3af;
+      --border:#374151;
+      --accent:#2563eb;
+      --danger:#dc2626;
+      --success:#16a34a;
+      --print-bg:#ffffff;
+      --print-ink:#111827;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.25), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(15,23,42,0.55), transparent 55%),
+                  #020617;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
+
+    .title-group p {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: #e5e7eb;
+    }
+
+    .top-buttons {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .btn-back {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-back:hover {
+      background: rgba(15,23,42,1);
+      transform: translateY(-1px);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.6fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 14px 12px;
+      border: 1px solid rgba(148,163,184,0.45);
+      box-shadow: 0 14px 40px rgba(0,0,0,0.48);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-header span.badge {
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: rgba(37,99,235,0.12);
+      border: 1px solid rgba(59,130,246,0.4);
+      color: #dbeafe;
+    }
+
+    .card-body {
+      font-size: 0.9rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+      color: #e5e7eb;
+    }
+
+    .field {
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 9px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: #020617;
+      color: var(--ink);
+      font-size: 0.9rem;
+      outline: none;
+      transition: 0.15s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.45);
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .info-box {
+      background: rgba(15,23,42,0.9);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 10px 10px 8px;
+      margin-top: 6px;
+      font-size: 0.83rem;
+    }
+
+    .info-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin-bottom: 4px;
+    }
+
+    .info-label {
+      color: var(--muted);
+    }
+
+    .info-value {
+      color: #e5e7eb;
+      font-weight: 500;
+    }
+
+    .badge-type {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid rgba(148,163,184,0.7);
+      color: #e5e7eb;
+      white-space: nowrap;
+    }
+
+    .badge-type.asset { border-color:#22c55e; color:#bbf7d0; }
+    .badge-type.liability { border-color:#f97316; color:#fed7aa; }
+    .badge-type.revenue { border-color:#38bdf8; color:#bae6fd; }
+    .badge-type.expense { border-color:#f97373; color:#fecaca; }
+
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-start;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.85rem;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: white;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.4);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #e5e7eb;
+      border: 1px solid rgba(148,163,184,0.7);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(15,23,42,0.9);
+    }
+
+    .btn-print {
+      background: transparent;
+      color: #f97316;
+      border: 1px solid rgba(248,150,69,0.9);
+    }
+
+    .btn-print:hover {
+      background: rgba(251,146,60,0.15);
+    }
+
+    .message {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      padding: 6px 9px;
+      border-radius: 9px;
+      display: none;
+    }
+
+    .message.error {
+      background: rgba(220,38,38,0.08);
+      border: 1px solid rgba(220,38,38,0.85);
+      color: #fecaca;
+    }
+
+    .message.success {
+      background: rgba(22,163,74,0.08);
+      border: 1px solid rgba(22,163,74,0.9);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    th, td {
+      padding: 6px 6px;
+      border-bottom: 1px solid rgba(55,65,81,0.7);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    thead {
+      background: #020617;
+    }
+
+    th {
+      font-weight: 600;
+      color: #e5e7eb;
+      font-size: 0.78rem;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: rgba(15,23,42,0.85);
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(15,23,42,0.65);
+    }
+
+    tbody tr:hover {
+      background: rgba(37,99,235,0.25);
+    }
+
+    .ledger-wrapper {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: auto;
+      max-height: 440px;
+      background: rgba(15,23,42,0.9);
+    }
+
+    .badge-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 12px 5px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .totals-footer {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .totals-footer span strong {
+      color: #e5e7eb;
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: minmax(0,1.1fr) minmax(0,0.9fr);
+      gap: 8px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+
+    .filter-row-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .small-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .print-header {
+      display:none;
+    }
+
+    @media print {
+      body {
+        background: var(--print-bg);
+        color: var(--print-ink);
+        padding: 0;
+      }
+      .container {
+        background: var(--print-bg);
+        color: var(--print-ink);
+        box-shadow: none;
+        border-radius: 0;
+        max-width: 100%;
+        padding: 10mm 12mm;
+      }
+      .header,
+      .top-buttons,
+      .btn,
+      .actions,
+      .hint,
+      .message {
+        display: none !important;
+      }
+      .card {
+        box-shadow: none;
+        border-radius: 0;
+        border: none;
+        padding: 0;
+      }
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .ledger-wrapper {
+        max-height: none;
+      }
+      .print-header {
+        display:block;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+      }
+      table, th, td {
+        border-color:#e5e7eb !important;
+        color:#111827 !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="title-group">
+        <h1>📑 دفتر الأستاذ / كشف حساب</h1>
+        <p>اختيار حساب معيّن، عرض حركته (مدين/دائن/رصيد)، مع إمكانية الفلترة والطباعة ككشف حساب.</p>
+      </div>
+      <div class="top-buttons">
+        <a href="/" class="btn-back">
+          <span>🏠</span>
+          <span>الرئيسية</span>
+        </a>
+        <a href="/accounts" class="btn-back">
+          <span>📒</span>
+          <span>دليل الحسابات</span>
+        </a>
+        <a href="/general" class="btn-back">
+          <span>📓</span>
+          <span>اليومية العامة</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Print header (يظهر فقط في الطباعة) -->
+    <div class="print-header">
+      <h2 style="margin:0 0 4px;">كشف حساب</h2>
+      <div id="printAccountName" style="font-size:0.9rem; margin-bottom:2px;"></div>
+      <div id="printDateRange" style="font-size:0.8rem; color:#4b5563;"></div>
+    </div>
+
+    <div class="layout">
+      <!-- left: filters & account info -->
+      <div class="card">
+        <div class="card-header">
+          <h2>⚙️ إعداد كشف الحساب</h2>
+          <span class="badge">اختيار الحساب والفلترة</span>
+        </div>
+        <div class="card-body">
+
+          <div class="field">
+            <label for="accountSelect">الحساب</label>
+            <select id="accountSelect">
+              <option value="">اختر حساباً من دليل الحسابات...</option>
+            </select>
+            <div class="hint">
+              لو مش لاقي الحساب، تأكد إنه مضاف من صفحة <strong>دليل الحسابات</strong>.
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div class="field">
+              <label for="accountSearch">بحث عن حساب بالاسم</label>
+              <input id="accountSearch" type="text" placeholder="اكتب جزء من اسم الحساب لسرعة الوصول..." />
+              <div class="hint">مثال: "سائقين" أو "إيراد".</div>
+            </div>
+            <div class="field">
+              <label class="small-label">حسابات متاحة</label>
+              <div class="hint" id="accountsCountHint">—</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>فلترة على مستوى الحركة</label>
+            <div class="filter-row-2">
+              <div>
+                <label for="fromDate" class="small-label">من تاريخ</label>
+                <input id="fromDate" type="date" />
+              </div>
+              <div>
+                <label for="toDate" class="small-label">إلى تاريخ</label>
+                <input id="toDate" type="date" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="textFilter">بحث نصّي داخل الحركة</label>
+              <input id="textFilter" type="text" placeholder="بحث في الوصف / ملاحظات / رقم الرخصة إن وُجد..." />
+            </div>
+            <div class="hint">
+              الفلترة دي بتشتغل على البيانات المعروضة فقط (client-side)، بدون استعلام إضافي من السيرفر.
+            </div>
+          </div>
+
+          <div class="info-box" id="accountInfoBox">
+            <div class="info-row">
+              <span class="info-label">الحساب المحدد:</span>
+              <span class="info-value" id="infoAccountName">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">النوع:</span>
+              <span id="infoAccountType" class="badge-type">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">ID داخلي:</span>
+              <span class="info-value" id="infoAccountId">—</span>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnLoadLedger">
+              📥 تحميل كشف الحساب
+            </button>
+            <button type="button" class="btn btn-print" id="btnPrint">
+              🖨️ طباعة / حفظ PDF
+            </button>
+            <button type="button" class="btn btn-ghost" id="btnResetFilters">
+              ♻️ مسح الفلاتر
+            </button>
+          </div>
+
+          <div id="formMessage" class="message"></div>
+        </div>
+      </div>
+
+      <!-- right: ledger table -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📊 كشف الحركة للحساب</h2>
+          <span class="badge-count" id="ledgerCount">—</span>
+        </div>
+        <div class="card-body">
+          <div class="ledger-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>الوصف / البيان</th>
+                  <th>مدين</th>
+                  <th>دائن</th>
+                  <th>الرصيد</th>
+                </tr>
+              </thead>
+              <tbody id="ledgerBody">
+                <tr>
+                  <td colspan="5" class="empty-state">
+                    لم يتم اختيار أي حساب بعد.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="totals-footer">
+            <span>إجمالي المدين: <strong id="totalDebit">0.00</strong></span>
+            <span>إجمالي الدائن: <strong id="totalCredit">0.00</strong></span>
+            <span>الرصيد النهائي: <strong id="finalBalance">0.00</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allAccounts = [];
+    let currentLedgerRaw = [];     // كل الصفوف الراجعة من ال API
+    let currentLedgerFiltered = []; // بعد الفلاتر
+    let currentAccount = null;
+
+    const accountSelect = document.getElementById("accountSelect");
+    const accountSearch = document.getElementById("accountSearch");
+    const accountsCountHint = document.getElementById("accountsCountHint");
+
+    const fromDateInput = document.getElementById("fromDate");
+    const toDateInput = document.getElementById("toDate");
+    const textFilterInput = document.getElementById("textFilter");
+
+    const infoAccountName = document.getElementById("infoAccountName");
+    const infoAccountType = document.getElementById("infoAccountType");
+    const infoAccountId = document.getElementById("infoAccountId");
+
+    const ledgerBody = document.getElementById("ledgerBody");
+    const ledgerCount = document.getElementById("ledgerCount");
+    const totalDebitEl = document.getElementById("totalDebit");
+    const totalCreditEl = document.getElementById("totalCredit");
+    const finalBalanceEl = document.getElementById("finalBalance");
+
+    const btnLoadLedger = document.getElementById("btnLoadLedger");
+    const btnPrint = document.getElementById("btnPrint");
+    const btnResetFilters = document.getElementById("btnResetFilters");
+    const formMessage = document.getElementById("formMessage");
+
+    const printAccountName = document.getElementById("printAccountName");
+    const printDateRange = document.getElementById("printDateRange");
+
+    function showMessage(text, type = "success") {
+      formMessage.textContent = text;
+      formMessage.className = "message " + type;
+      formMessage.style.display = "block";
+    }
+
+    function clearMessage() {
+      formMessage.textContent = "";
+      formMessage.style.display = "none";
+    }
+
+    function formatNumber(val) {
+      const num = Number(val || 0);
+      return num.toFixed(2);
+    }
+
+    function typeLabel(type) {
+      switch (type) {
+        case "asset": return "أصل (Asset)";
+        case "liability": return "التزام (Liability)";
+        case "revenue": return "إيراد (Revenue)";
+        case "expense": return "مصروف (Expense)";
+        default: return type || "غير محدد";
+      }
+    }
+
+    function typeBadgeClass(type) {
+      if (!type) return "badge-type";
+      return "badge-type " + type;
+    }
+
+    async function loadAccounts() {
+      try {
+        const res = await fetch("/api/accounts");
+        if (!res.ok) throw new Error("error");
+        const data = await res.json();
+        allAccounts = data || [];
+        accountsCountHint.textContent = `${allAccounts.length} حساب/حسابات متاحة`;
+        populateAccountsSelect();
+      } catch (err) {
+        accountsCountHint.textContent = "خطأ في تحميل الحسابات";
+        console.error("Error loading accounts", err);
+      }
+    }
+
+    function populateAccountsSelect(filteredList) {
+      const list = filteredList || allAccounts;
+      const currentValue = accountSelect.value;
+
+      accountSelect.innerHTML = "";
+      const defaultOpt = document.createElement("option");
+      defaultOpt.value = "";
+      defaultOpt.textContent = "اختر حساباً من دليل الحسابات...";
+      accountSelect.appendChild(defaultOpt);
+
+      list.forEach(acc => {
+        const opt = document.createElement("option");
+        opt.value = acc.id;
+        opt.textContent = acc.name;
+        accountSelect.appendChild(opt);
+      });
+
+      // لو الحساب القديم لسه موجود في الفلترة نخليه selected
+      const exists = list.some(acc => String(acc.id) === String(currentValue));
+      if (exists) {
+        accountSelect.value = currentValue;
+      } else {
+        accountSelect.value = "";
+      }
+    }
+
+    accountSearch.addEventListener("input", () => {
+      const term = accountSearch.value.trim().toLowerCase();
+      if (!term) {
+        populateAccountsSelect();
+        return;
+      }
+      const filtered = allAccounts.filter(acc =>
+        (acc.name || "").toLowerCase().includes(term)
+      );
+      populateAccountsSelect(filtered);
+    });
+
+    accountSelect.addEventListener("change", () => {
+      const id = Number(accountSelect.value || 0);
+      currentAccount = allAccounts.find(acc => acc.id === id) || null;
+      updateAccountInfoBox();
+      // مسح الجدول عند تغيير الحساب
+      currentLedgerRaw = [];
+      currentLedgerFiltered = [];
+      renderLedger();
+    });
+
+    function updateAccountInfoBox() {
+      if (!currentAccount) {
+        infoAccountName.textContent = "—";
+        infoAccountType.textContent = "—";
+        infoAccountType.className = "badge-type";
+        infoAccountId.textContent = "—";
+        printAccountName.textContent = "";
+        return;
+      }
+
+      infoAccountName.textContent = currentAccount.name || "—";
+      infoAccountType.textContent = typeLabel(currentAccount.type);
+      infoAccountType.className = typeBadgeClass(currentAccount.type);
+      infoAccountId.textContent = currentAccount.id || "—";
+
+      printAccountName.textContent = `الحساب: ${currentAccount.name} (ID: ${currentAccount.id})`;
+    }
+
+    function parseDateStringToDateObj(dateString) {
+      // dateString expected "YYYY-MM-DD HH:MM:SS"
+      if (!dateString) return null;
+      const parts = dateString.split(" ");
+      const datePart = parts[0];
+      const [y, m, d] = datePart.split("-").map(Number);
+      if (!y || !m || !d) return null;
+      return new Date(y, m - 1, d);
+    }
+
+    function applyFilters() {
+      if (!currentLedgerRaw || currentLedgerRaw.length === 0) {
+        currentLedgerFiltered = [];
+        renderLedger();
+        return;
+      }
+
+      const fromDateVal = fromDateInput.value.trim();
+      const toDateVal = toDateInput.value.trim();
+      const textFilterVal = textFilterInput.value.trim().toLowerCase();
+
+      let fromDateObj = null;
+      let toDateObj = null;
+
+      if (fromDateVal) {
+        const [y, m, d] = fromDateVal.split("-").map(Number);
+        fromDateObj = new Date(y, m - 1, d, 0, 0, 0);
+      }
+      if (toDateVal) {
+        const [y, m, d] = toDateVal.split("-").map(Number);
+        toDateObj = new Date(y, m - 1, d, 23, 59, 59);
+      }
+
+      currentLedgerFiltered = currentLedgerRaw.filter(row => {
+        // فلتر التاريخ
+        const rowDate = parseDateStringToDateObj(row.date);
+        if (fromDateObj && rowDate && rowDate < fromDateObj) return false;
+        if (toDateObj && rowDate && rowDate > toDateObj) return false;
+
+        // فلتر النص
+        if (textFilterVal) {
+          const haystack = (row.description || "").toLowerCase();
+          if (!haystack.includes(textFilterVal)) return false;
+        }
+
+        return true;
+      });
+
+      renderLedger();
+      updatePrintDateRange(fromDateVal, toDateVal);
+    }
+
+    function updatePrintDateRange(fromDateVal, toDateVal) {
+      const fromVal = fromDateVal || fromDateInput.value.trim();
+      const toVal = toDateVal || toDateInput.value.trim();
+
+      if (!fromVal && !toVal) {
+        printDateRange.textContent = "";
+        return;
+      }
+
+      let text = "الفترة: ";
+      if (fromVal) text += `من ${fromVal} `;
+      if (toVal) text += `إلى ${toVal}`;
+      printDateRange.textContent = text;
+    }
+
+    function renderLedger() {
+      const rows = currentLedgerFiltered && currentLedgerFiltered.length
+        ? currentLedgerFiltered
+        : [];
+
+      if (!currentAccount) {
+        ledgerBody.innerHTML = `
+          <tr>
+            <td colspan="5" class="empty-state">
+              لم يتم اختيار أي حساب بعد.
+            </td>
+          </tr>
+        `;
+        ledgerCount.textContent = "—";
+        totalDebitEl.textContent = "0.00";
+        totalCreditEl.textContent = "0.00";
+        finalBalanceEl.textContent = "0.00";
+        return;
+      }
+
+      if (rows.length === 0) {
+        ledgerBody.innerHTML = `
+          <tr>
+            <td colspan="5" class="empty-state">
+              لا توجد حركات لهذا الحساب طبقًا للفلاتر الحالية.
+            </td>
+          </tr>
+        `;
+        ledgerCount.textContent = "0 حركة";
+        totalDebitEl.textContent = "0.00";
+        totalCreditEl.textContent = "0.00";
+        finalBalanceEl.textContent = "0.00";
+        return;
+      }
+
+      ledgerBody.innerHTML = "";
+      let totalDebit = 0;
+      let totalCredit = 0;
+      let endingBalance = 0;
+
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.date || ""}</td>
+          <td>${row.description || ""}</td>
+          <td>${formatNumber(row.debit)}</td>
+          <td>${formatNumber(row.credit)}</td>
+          <td>${formatNumber(row.balance)}</td>
+        `;
+        ledgerBody.appendChild(tr);
+
+        totalDebit += row.debit || 0;
+        totalCredit += row.credit || 0;
+        endingBalance = row.balance || endingBalance;
+      });
+
+      ledgerCount.textContent = `${rows.length} حركة`;
+      totalDebitEl.textContent = formatNumber(totalDebit);
+      totalCreditEl.textContent = formatNumber(totalCredit);
+      finalBalanceEl.textContent = formatNumber(endingBalance);
+    }
+
+    async function loadLedgerForSelectedAccount() {
+      clearMessage();
+      const accId = Number(accountSelect.value || 0);
+      if (!accId) {
+        showMessage("من فضلك اختر حسابًا أولاً.", "error");
+        return;
+      }
+      currentAccount = allAccounts.find(a => a.id === accId) || null;
+      updateAccountInfoBox();
+
+      try {
+        ledgerBody.innerHTML = `
+          <tr>
+            <td colspan="5" class="empty-state">
+              جاري تحميل كشف الحساب...
+            </td>
+          </tr>
+        `;
+        ledgerCount.textContent = "—";
+        totalDebitEl.textContent = "0.00";
+        totalCreditEl.textContent = "0.00";
+        finalBalanceEl.textContent = "0.00";
+
+        const res = await fetch(`/api/accounts/${accId}/ledger`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          showMessage(data.error || "حدث خطأ أثناء تحميل كشف الحساب.", "error");
+          ledgerBody.innerHTML = `
+            <tr>
+              <td colspan="5" class="empty-state">
+                ⚠️ تعذر تحميل كشف الحساب.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        currentLedgerRaw = data.lines || [];
+        applyFilters();
+        if (!currentLedgerRaw.length) {
+          showMessage("لا توجد حركات مسجَّلة لهذا الحساب حتى الآن.", "success");
+        } else {
+          showMessage("✅ تم تحميل كشف الحساب بنجاح.", "success");
+        }
+      } catch (err) {
+        console.error(err);
+        showMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error");
+      }
+    }
+
+    btnLoadLedger.addEventListener("click", loadLedgerForSelectedAccount);
+
+    [fromDateInput, toDateInput, textFilterInput].forEach(input => {
+      input.addEventListener("input", () => {
+        applyFilters();
+      });
+    });
+
+    btnResetFilters.addEventListener("click", () => {
+      fromDateInput.value = "";
+      toDateInput.value = "";
+      textFilterInput.value = "";
+      applyFilters();
+      clearMessage();
+    });
+
+    btnPrint.addEventListener("click", () => {
+      if (!currentAccount) {
+        alert("اختر حسابًا أولاً قبل الطباعة.");
+        return;
+      }
+      window.print();
+    });
+
+    async function init() {
+      await loadAccounts();
+      updateAccountInfoBox();
+    }
+
+    init();
+  </script>
+</body>
+</html>

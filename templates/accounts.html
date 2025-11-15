@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>📒 دليل الحسابات</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg1:#0d6efd;
+      --bg2:#6c63ff;
+      --card:#ffffff;
+      --ink:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --accent:#0d6efd;
+      --danger:#dc2626;
+      --success:#16a34a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.35), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(15,23,42,0.35), transparent 55%),
+                  #0b1120;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      color: #f9fafb;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .title-group p {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: #e5e7eb;
+    }
+
+    .btn-back {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.85);
+      color: #e5e7eb;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-back:hover {
+      background: rgba(15,23,42,1);
+      transform: translateY(-1px);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: rgba(15,23,42,0.92);
+      border-radius: 14px;
+      padding: 16px 16px 14px;
+      border: 1px solid rgba(148,163,184,0.4);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-header span.badge {
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: rgba(37,99,235,0.12);
+      border: 1px solid rgba(59,130,246,0.4);
+      color: #dbeafe;
+    }
+
+    .card-body {
+      font-size: 0.9rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+      color: #e5e7eb;
+    }
+
+    .field {
+      margin-bottom: 10px;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 9px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.9);
+      color: #f9fafb;
+      font-size: 0.9rem;
+      outline: none;
+      transition: 0.15s ease;
+    }
+
+    input[type="text"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.4);
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: #9ca3af;
+    }
+
+    .actions {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-start;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.85rem;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.15s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: white;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.4);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #e5e7eb;
+      border: 1px solid rgba(148,163,184,0.7);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(15,23,42,0.9);
+    }
+
+    .message {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      padding: 6px 9px;
+      border-radius: 9px;
+      display: none;
+    }
+
+    .message.error {
+      background: rgba(220,38,38,0.08);
+      border: 1px solid rgba(220,38,38,0.8);
+      color: #fecaca;
+    }
+
+    .message.success {
+      background: rgba(22,163,74,0.08);
+      border: 1px solid rgba(22,163,74,0.8);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead {
+      background: rgba(15,23,42,0.95);
+    }
+
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(55,65,81,0.7);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th {
+      font-weight: 600;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: rgba(15,23,42,0.75);
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(15,23,42,0.55);
+    }
+
+    tbody tr:hover {
+      background: rgba(37,99,235,0.22);
+    }
+
+    .pill-type {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid rgba(148,163,184,0.7);
+      color: #e5e7eb;
+    }
+
+    .pill-type.asset { border-color:#22c55e; color:#bbf7d0; }
+    .pill-type.liability { border-color:#f97316; color:#fed7aa; }
+    .pill-type.revenue { border-color:#38bdf8; color:#bae6fd; }
+    .pill-type.expense { border-color:#f97373; color:#fecaca; }
+
+    .empty-state {
+      text-align: center;
+      padding: 12px 4px;
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+
+    .badge-count {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="title-group">
+        <h1>📒 دليل الحسابات</h1>
+        <p>إضافة الحسابات الأساسية (مثلاً: حساب السائقين، إيراد إيجار سيارات) وربطها بالموديول المحاسبي.</p>
+      </div>
+      <a href="/" class="btn-back">
+        <span>🏠</span>
+        <span>الرجوع للوحة الرئيسية</span>
+      </a>
+    </div>
+
+    <div class="layout">
+      <!-- Form card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>➕ إضافة حساب جديد</h2>
+          <span class="badge">دليل الحسابات</span>
+        </div>
+        <div class="card-body">
+          <form id="accountForm">
+            <div class="field">
+              <label for="accName">اسم الحساب</label>
+              <input id="accName" type="text" placeholder="مثال: حساب السائقين / إيراد إيجار سيارات" />
+              <div class="hint">هذا الاسم سيظهر في اليومية ودفتر الأستاذ كما هو.</div>
+            </div>
+
+            <div class="field">
+              <label for="accType">نوع الحساب</label>
+              <select id="accType">
+                <option value="">اختر نوع الحساب</option>
+                <option value="asset">أصل (Asset)</option>
+                <option value="liability">التزام (Liability)</option>
+                <option value="revenue">إيراد (Revenue)</option>
+                <option value="expense">مصروف (Expense)</option>
+              </select>
+              <div class="hint">التصنيف يساعدك بعدين لو حبيت تعمل تقارير أقوى.</div>
+            </div>
+
+            <!-- لو حبيت نضيف ربط بسائق/سيارة بعدين نرجع نفتحهم -->
+            <!--
+            <div class="field">
+              <label for="driverId">ربط بسائق (اختياري)</label>
+              <input id="driverId" type="text" placeholder="ID السائق إن احتجته لاحقًا" />
+            </div>
+
+            <div class="field">
+              <label for="carId">ربط بسيارة (اختياري)</label>
+              <input id="carId" type="text" placeholder="ID السيارة إن احتجته لاحقًا" />
+            </div>
+            -->
+
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">
+                💾 حفظ الحساب
+              </button>
+              <button type="button" class="btn btn-ghost" id="btnReset">
+                ♻️ مسح الحقول
+              </button>
+            </div>
+
+            <div id="formMessage" class="message"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Table card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📋 قائمة الحسابات المسجّلة</h2>
+          <span class="badge-count" id="accountsCount">—</span>
+        </div>
+        <div class="card-body">
+          <div style="max-height: 340px; overflow: auto; border-radius: 10px; border: 1px solid rgba(55,65,81,0.7);">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>اسم الحساب</th>
+                  <th>النوع</th>
+                  <th>ID داخلي</th>
+                </tr>
+              </thead>
+              <tbody id="accountsTableBody">
+                <tr>
+                  <td colspan="4" class="empty-state">
+                    جاري تحميل الحسابات...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hint" style="margin-top:8px;">
+            ملاحظات:
+            <br/>• لا تقلق لو عدّلت الحسابات لاحقًا، المهم إن أسماء الحسابات الأساسية تفضل ثابتة للاستخدام في القيود الآلية.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("accountForm");
+    const accNameInput = document.getElementById("accName");
+    const accTypeSelect = document.getElementById("accType");
+    const formMessage = document.getElementById("formMessage");
+    const resetBtn = document.getElementById("btnReset");
+    const tableBody = document.getElementById("accountsTableBody");
+    const accountsCount = document.getElementById("accountsCount");
+
+    function showMessage(text, type = "success") {
+      formMessage.textContent = text;
+      formMessage.className = "message " + type;
+      formMessage.style.display = "block";
+    }
+
+    function clearMessage() {
+      formMessage.textContent = "";
+      formMessage.style.display = "none";
+    }
+
+    function typeLabel(type) {
+      switch (type) {
+        case "asset": return "أصل (Asset)";
+        case "liability": return "التزام (Liability)";
+        case "revenue": return "إيراد (Revenue)";
+        case "expense": return "مصروف (Expense)";
+        default: return type || "غير محدد";
+      }
+    }
+
+    function typePillClass(type) {
+      if (!type) return "";
+      return "pill-type " + type;
+    }
+
+    async function loadAccounts() {
+      try {
+        const res = await fetch("/api/accounts");
+        if (!res.ok) {
+          throw new Error("خطأ في تحميل الحسابات");
+        }
+        const data = await res.json();
+        renderAccountsTable(data);
+      } catch (err) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="4" class="empty-state">
+              ⚠️ حدث خطأ أثناء تحميل الحسابات، حاول تحديث الصفحة.
+            </td>
+          </tr>
+        `;
+        accountsCount.textContent = "خطأ في التحميل";
+      }
+    }
+
+    function renderAccountsTable(accounts) {
+      if (!accounts || accounts.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="4" class="empty-state">
+              لا توجد حسابات مسجَّلة حتى الآن. أضف أول حساب من النموذج على اليسار.
+            </td>
+          </tr>
+        `;
+        accountsCount.textContent = "0 حساب";
+        return;
+      }
+
+      accountsCount.textContent = `${accounts.length} حساب/حسابات`;
+
+      tableBody.innerHTML = "";
+      accounts.forEach((acc, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${acc.name}</td>
+          <td><span class="${typePillClass(acc.type)}">${typeLabel(acc.type)}</span></td>
+          <td>${acc.id}</td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearMessage();
+
+      const name = accNameInput.value.trim();
+      const type = accTypeSelect.value;
+
+      if (!name) {
+        showMessage("اسم الحساب مطلوب.", "error");
+        return;
+      }
+
+      if (!type) {
+        showMessage("من فضلك اختر نوع الحساب.", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/accounts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, type })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showMessage(data.error || "حدث خطأ أثناء إضافة الحساب.", "error");
+          return;
+        }
+
+        showMessage("✅ تم إضافة الحساب بنجاح.", "success");
+        accNameInput.value = "";
+        accTypeSelect.value = "";
+        await loadAccounts();
+      } catch (err) {
+        showMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error");
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      accNameInput.value = "";
+      accTypeSelect.value = "";
+      clearMessage();
+      accNameInput.focus();
+    });
+
+    // أول ما الصفحة تفتح
+    loadAccounts();
+  </script>
+</body>
+</html>

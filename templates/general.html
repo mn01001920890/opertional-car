@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>📓 اليومية العامة</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg1:#0d6efd;
+      --bg2:#6c63ff;
+      --card:#111827;
+      --ink:#f9fafb;
+      --muted:#9ca3af;
+      --border:#374151;
+      --accent:#2563eb;
+      --danger:#dc2626;
+      --success:#16a34a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.25), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(15,23,42,0.55), transparent 55%),
+                  #020617;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
+
+    .title-group p {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: #e5e7eb;
+    }
+
+    .btn-back {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-back:hover {
+      background: rgba(15,23,42,1);
+      transform: translateY(-1px);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.35fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 14px 12px;
+      border: 1px solid rgba(148,163,184,0.45);
+      box-shadow: 0 14px 40px rgba(0,0,0,0.48);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-header span.badge {
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: rgba(37,99,235,0.12);
+      border: 1px solid rgba(59,130,246,0.4);
+      color: #dbeafe;
+    }
+
+    .card-body {
+      font-size: 0.9rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+      color: #e5e7eb;
+    }
+
+    .field {
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 9px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: #020617;
+      color: var(--ink);
+      font-size: 0.9rem;
+      outline: none;
+      transition: 0.15s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.45);
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .hint-strong {
+      font-size: 0.78rem;
+      color: #facc15;
+      margin-top: 4px;
+    }
+
+    .actions {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-start;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.85rem;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: white;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.4);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #e5e7eb;
+      border: 1px solid rgba(148,163,184,0.7);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(15,23,42,0.9);
+    }
+
+    .btn-line {
+      padding: 4px 9px;
+      font-size: 0.78rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .btn-line:hover {
+      background: rgba(37,99,235,0.4);
+    }
+
+    .btn-remove {
+      border-color: rgba(248,113,113,0.9);
+      color: #fecaca;
+    }
+
+    .message {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      padding: 6px 9px;
+      border-radius: 9px;
+      display: none;
+    }
+
+    .message.error {
+      background: rgba(220,38,38,0.08);
+      border: 1px solid rgba(220,38,38,0.85);
+      color: #fecaca;
+    }
+
+    .message.success {
+      background: rgba(22,163,74,0.08);
+      border: 1px solid rgba(22,163,74,0.9);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    th, td {
+      padding: 6px 6px;
+      border-bottom: 1px solid rgba(55,65,81,0.7);
+      text-align: right;
+    }
+
+    thead {
+      background: #020617;
+    }
+
+    th {
+      font-weight: 600;
+      color: #e5e7eb;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: rgba(15,23,42,0.8);
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(15,23,42,0.6);
+    }
+
+    tbody tr:hover {
+      background: rgba(37,99,235,0.25);
+    }
+
+    .lines-table-wrapper {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: auto;
+      max-height: 220px;
+      background: rgba(15,23,42,0.85);
+      margin-top: 4px;
+    }
+
+    .small-input {
+      max-width: 120px;
+    }
+
+    .footer-totals {
+      margin-top: 6px;
+      display: flex;
+      justify-content: flex-start;
+      gap: 16px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .footer-totals span strong {
+      color: #e5e7eb;
+    }
+
+    .badge-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .entry-card {
+      border-radius: 10px;
+      border: 1px solid rgba(55,65,81,0.9);
+      padding: 8px 9px;
+      margin-bottom: 8px;
+      background: rgba(15,23,42,0.9);
+    }
+
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+    }
+
+    .entry-header-left {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+    }
+
+    .entry-id {
+      font-weight: 600;
+      color: #bfdbfe;
+    }
+
+    .entry-date {
+      color: var(--muted);
+    }
+
+    .entry-desc {
+      font-size: 0.8rem;
+      color: #e5e7eb;
+      margin-bottom: 4px;
+    }
+
+    .entry-lines-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+
+    .entry-lines-table th,
+    .entry-lines-table td {
+      padding: 3px 4px;
+      border-bottom: 1px solid rgba(55,65,81,0.6);
+    }
+
+    .entry-lines-table thead {
+      background: rgba(15,23,42,1);
+    }
+
+    .badge-total {
+      font-size: 0.78rem;
+      color: #bbf7d0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 12px 5px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="title-group">
+        <h1>📓 اليومية العامة</h1>
+        <p>إنشاء قيود يومية يدوية (مدين/دائن) ومراجعة القيود المسجَّلة في النظام.</p>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="/" class="btn-back">
+          <span>🏠</span>
+          <span>الرئيسية</span>
+        </a>
+        <a href="/accounts" class="btn-back">
+          <span>📒</span>
+          <span>دليل الحسابات</span>
+        </a>
+        <a href="/ledger" class="btn-back">
+          <span>📑</span>
+          <span>دفتر الأستاذ</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <!-- Form: new journal entry -->
+      <div class="card">
+        <div class="card-header">
+          <h2>➕ قيد يومية جديد</h2>
+          <span class="badge">مدين / دائن</span>
+        </div>
+        <div class="card-body">
+          <form id="journalForm">
+            <div class="field">
+              <label for="jeDate">تاريخ القيد</label>
+              <input id="jeDate" type="date" />
+              <div class="hint">لو تركته فارغًا، سيتم استخدام تاريخ اليوم تلقائيًا.</div>
+            </div>
+
+            <div class="field">
+              <label for="jeDesc">وصف القيد</label>
+              <input id="jeDesc" type="text" placeholder="مثال: قيد تسوية / قيد يدوي لعميل معين..." />
+            </div>
+
+            <div class="field">
+              <label>بنود القيد (مدين / دائن)</label>
+              <div class="hint">
+                يجب أن يكون مجموع المدين = مجموع الدائن قبل حفظ القيد.
+              </div>
+
+              <div class="lines-table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 40%;">الحساب</th>
+                      <th style="width: 20%;">مدين</th>
+                      <th style="width: 20%;">دائن</th>
+                      <th style="width: 20%;">إجراء</th>
+                    </tr>
+                  </thead>
+                  <tbody id="linesBody">
+                    <!-- صفوف البنود تتضاف هنا ديناميكياً -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="footer-totals">
+                <span>إجمالي المدين: <strong id="totalDebit">0.00</strong></span>
+                <span>إجمالي الدائن: <strong id="totalCredit">0.00</strong></span>
+              </div>
+
+              <div class="hint-strong" id="balanceHint">
+                ⚖️ يجب أن يكون القيد متوازنًا (مجموع المدين = مجموع الدائن).
+              </div>
+
+              <div style="margin-top:6px;">
+                <button type="button" class="btn-line" id="btnAddLine">
+                  ➕ إضافة سطر
+                </button>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">
+                💾 حفظ القيد
+              </button>
+              <button type="button" class="btn btn-ghost" id="btnResetForm">
+                ♻️ مسح الحقول
+              </button>
+            </div>
+
+            <div id="formMessage" class="message"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- List: existing journal entries -->
+      <div class="card">
+        <div class="card-header">
+          <h2>📜 القيود المسجَّلة</h2>
+          <span class="badge-count" id="entriesCount">—</span>
+        </div>
+        <div class="card-body" style="max-height: 470px; overflow:auto;">
+          <div id="entriesContainer">
+            <div class="empty-state">
+              جاري تحميل القيود...
+            </div>
+          </div>
+          <div class="hint" style="margin-top:6px;">
+            ملاحظة: القيود الآلية الناتجة من إقفال التفويضات ستظهر هنا أيضًا (مرتبطة برقم التفويض).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // بيانات الحسابات
+    let accounts = [];
+    const accountsMap = new Map();
+
+    // عناصر الفورم
+    const jeDateInput = document.getElementById("jeDate");
+    const jeDescInput = document.getElementById("jeDesc");
+    const linesBody = document.getElementById("linesBody");
+    const totalDebitEl = document.getElementById("totalDebit");
+    const totalCreditEl = document.getElementById("totalCredit");
+    const balanceHint = document.getElementById("balanceHint");
+    const formMessage = document.getElementById("formMessage");
+    const journalForm = document.getElementById("journalForm");
+    const btnAddLine = document.getElementById("btnAddLine");
+    const btnResetForm = document.getElementById("btnResetForm");
+    const entriesContainer = document.getElementById("entriesContainer");
+    const entriesCount = document.getElementById("entriesCount");
+
+    // ضبط تاريخ اليوم مبدئيًا
+    (function setToday() {
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = String(today.getMonth() + 1).padStart(2, "0");
+      const d = String(today.getDate()).padStart(2, "0");
+      jeDateInput.value = `${y}-${m}-${d}`;
+    })();
+
+    function showFormMessage(text, type = "success") {
+      formMessage.textContent = text;
+      formMessage.className = "message " + type;
+      formMessage.style.display = "block";
+    }
+
+    function clearFormMessage() {
+      formMessage.textContent = "";
+      formMessage.style.display = "none";
+    }
+
+    function formatNumber(val) {
+      const num = Number(val || 0);
+      return num.toFixed(2);
+    }
+
+    function updateTotals() {
+      let totalDebit = 0;
+      let totalCredit = 0;
+
+      const rows = linesBody.querySelectorAll("tr");
+      rows.forEach(row => {
+        const debitInput = row.querySelector(".line-debit");
+        const creditInput = row.querySelector(".line-credit");
+        const d = parseFloat(debitInput.value || "0");
+        const c = parseFloat(creditInput.value || "0");
+        if (!isNaN(d)) totalDebit += d;
+        if (!isNaN(c)) totalCredit += c;
+      });
+
+      totalDebitEl.textContent = formatNumber(totalDebit);
+      totalCreditEl.textContent = formatNumber(totalCredit);
+
+      const diff = Math.abs(totalDebit - totalCredit);
+      if (rows.length === 0) {
+        balanceHint.textContent = "⚖️ يجب أن يكون القيد متوازنًا (مجموع المدين = مجموع الدائن).";
+        balanceHint.style.color = "#facc15";
+      } else if (diff < 0.005) {
+        balanceHint.textContent = "✅ القيد متوازن (مجموع المدين = مجموع الدائن).";
+        balanceHint.style.color = "#bbf7d0";
+      } else {
+        balanceHint.textContent = "⚠️ القيد غير متوازن، راجع مبالغ المدين والدائن.";
+        balanceHint.style.color = "#fecaca";
+      }
+    }
+
+    function createAccountSelect() {
+      const select = document.createElement("select");
+      select.className = "line-account";
+      const defaultOpt = document.createElement("option");
+      defaultOpt.value = "";
+      defaultOpt.textContent = "اختر حساباً...";
+      select.appendChild(defaultOpt);
+
+      accounts.forEach(acc => {
+        const opt = document.createElement("option");
+        opt.value = acc.id;
+        opt.textContent = acc.name;
+        select.appendChild(opt);
+      });
+
+      return select;
+    }
+
+    function addLineRow() {
+      const tr = document.createElement("tr");
+
+      const tdAccount = document.createElement("td");
+      const tdDebit = document.createElement("td");
+      const tdCredit = document.createElement("td");
+      const tdAction = document.createElement("td");
+
+      const sel = createAccountSelect();
+      tdAccount.appendChild(sel);
+
+      const debitInput = document.createElement("input");
+      debitInput.type = "number";
+      debitInput.step = "0.01";
+      debitInput.className = "small-input line-debit";
+      debitInput.addEventListener("input", () => {
+        // لو فيه قيمة في المدين نخلي الدائن 0 (اختياري)
+        if (debitInput.value && parseFloat(debitInput.value) !== 0) {
+          creditInput.value = "";
+        }
+        updateTotals();
+      });
+
+      const creditInput = document.createElement("input");
+      creditInput.type = "number";
+      creditInput.step = "0.01";
+      creditInput.className = "small-input line-credit";
+      creditInput.addEventListener("input", () => {
+        // لو فيه قيمة في الدائن نخلي المدين 0 (اختياري)
+        if (creditInput.value && parseFloat(creditInput.value) !== 0) {
+          debitInput.value = "";
+        }
+        updateTotals();
+      });
+
+      tdDebit.appendChild(debitInput);
+      tdCredit.appendChild(creditInput);
+
+      const btnRemove = document.createElement("button");
+      btnRemove.type = "button";
+      btnRemove.className = "btn-line btn-remove";
+      btnRemove.textContent = "🗑️ حذف";
+      btnRemove.addEventListener("click", () => {
+        tr.remove();
+        updateTotals();
+      });
+      tdAction.appendChild(btnRemove);
+
+      tr.appendChild(tdAccount);
+      tr.appendChild(tdDebit);
+      tr.appendChild(tdCredit);
+      tr.appendChild(tdAction);
+
+      linesBody.appendChild(tr);
+      updateTotals();
+    }
+
+    btnAddLine.addEventListener("click", () => {
+      if (accounts.length === 0) {
+        alert("لا توجد حسابات متاحة. أضف حسابات أولاً من صفحة دليل الحسابات.");
+        return;
+      }
+      addLineRow();
+    });
+
+    btnResetForm.addEventListener("click", () => {
+      jeDescInput.value = "";
+      linesBody.innerHTML = "";
+      updateTotals();
+      clearFormMessage();
+      // إعادة التاريخ لليوم
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = String(today.getMonth() + 1).padStart(2, "0");
+      const d = String(today.getDate()).padStart(2, "0");
+      jeDateInput.value = `${y}-${m}-${d}`;
+    });
+
+    journalForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearFormMessage();
+
+      const rows = Array.from(linesBody.querySelectorAll("tr"));
+      if (rows.length < 1) {
+        showFormMessage("يجب إضافة بند واحد على الأقل في القيد.", "error");
+        return;
+      }
+
+      // حساب التوتال والتأكد من التوازن
+      let totalDebit = 0;
+      let totalCredit = 0;
+      const linesPayload = [];
+
+      for (const row of rows) {
+        const accountSelect = row.querySelector(".line-account");
+        const debitInput = row.querySelector(".line-debit");
+        const creditInput = row.querySelector(".line-credit");
+
+        const account_id = accountSelect.value;
+        if (!account_id) continue;
+
+        const debit = parseFloat(debitInput.value || "0");
+        const credit = parseFloat(creditInput.value || "0");
+
+        if ((isNaN(debit) || debit === 0) && (isNaN(credit) || credit === 0)) {
+          continue; // سطر فاضي
+        }
+
+        if (!isNaN(debit)) totalDebit += debit;
+        if (!isNaN(credit)) totalCredit += credit;
+
+        linesPayload.push({
+          account_id: Number(account_id),
+          debit: isNaN(debit) ? 0 : debit,
+          credit: isNaN(credit) ? 0 : credit
+        });
+      }
+
+      if (linesPayload.length === 0) {
+        showFormMessage("كل البنود فارغة، أضف مبالغ مدين أو دائن.", "error");
+        return;
+      }
+
+      if (Math.abs(totalDebit - totalCredit) > 0.005) {
+        showFormMessage("القيد غير متوازن: إجمالي المدين لا يساوي إجمالي الدائن.", "error");
+        return;
+      }
+
+      const dateVal = jeDateInput.value.trim();
+      const descVal = jeDescInput.value.trim();
+
+      const payload = {
+        date: dateVal || null, // الباك إند هيتعامل مع null أو تاريخ
+        description: descVal,
+        lines: linesPayload
+      };
+
+      try {
+        const res = await fetch("/api/journal_entries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          showFormMessage(data.error || "حدث خطأ أثناء حفظ القيد.", "error");
+          return;
+        }
+
+        showFormMessage("✅ تم حفظ قيد اليومية بنجاح.", "success");
+        // فضي البنود والحقول
+        linesBody.innerHTML = "";
+        updateTotals();
+        jeDescInput.value = "";
+        await loadJournalEntries();
+      } catch (err) {
+        showFormMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error");
+      }
+    });
+
+    // تحميل الحسابات
+    async function loadAccounts() {
+      try {
+        const res = await fetch("/api/accounts");
+        if (!res.ok) throw new Error("error");
+        const data = await res.json();
+        accounts = data || [];
+        accountsMap.clear();
+        accounts.forEach(acc => {
+          accountsMap.set(acc.id, acc.name);
+        });
+      } catch (err) {
+        console.error("Error loading accounts", err);
+        accounts = [];
+      }
+    }
+
+    // تحميل قيود اليومية
+    async function loadJournalEntries() {
+      try {
+        const res = await fetch("/api/journal_entries");
+        if (!res.ok) throw new Error("error");
+        const data = await res.json();
+        renderJournalEntries(data || []);
+      } catch (err) {
+        console.error("Error loading journal entries", err);
+        entriesContainer.innerHTML = `
+          <div class="empty-state">
+            ⚠️ حدث خطأ أثناء تحميل القيود، حاول تحديث الصفحة.
+          </div>
+        `;
+        entriesCount.textContent = "خطأ في التحميل";
+      }
+    }
+
+    function renderJournalEntries(entries) {
+      if (!entries || entries.length === 0) {
+        entriesContainer.innerHTML = `
+          <div class="empty-state">
+            لا توجد قيود يومية مسجَّلة حتى الآن.
+          </div>
+        `;
+        entriesCount.textContent = "0 قيد";
+        return;
+      }
+
+      entriesCount.textContent = `${entries.length} قيد/قيود`;
+      entriesContainer.innerHTML = "";
+
+      entries.forEach(entry => {
+        const card = document.createElement("div");
+        card.className = "entry-card";
+
+        // حساب إجماليات القيد
+        let totalDebit = 0;
+        let totalCredit = 0;
+        (entry.lines || []).forEach(ln => {
+          totalDebit += ln.debit || 0;
+          totalCredit += ln.credit || 0;
+        });
+
+        const header = document.createElement("div");
+        header.className = "entry-header";
+
+        const left = document.createElement("div");
+        left.className = "entry-header-left";
+        const idSpan = document.createElement("span");
+        idSpan.className = "entry-id";
+        idSpan.textContent = `قيد #${entry.id}`;
+
+        const dateSpan = document.createElement("span");
+        dateSpan.className = "entry-date";
+        dateSpan.textContent = entry.date || "";
+
+        left.appendChild(idSpan);
+        left.appendChild(dateSpan);
+
+        if (entry.ref_authorization_id) {
+          const authSpan = document.createElement("span");
+          authSpan.style.color = "#fbbf24";
+          authSpan.textContent = `تفويض مرتبط: ${entry.ref_authorization_id}`;
+          left.appendChild(authSpan);
+        }
+
+        const right = document.createElement("div");
+        right.className = "badge-total";
+        right.textContent = `مدين: ${formatNumber(totalDebit)} | دائن: ${formatNumber(totalCredit)}`;
+
+        header.appendChild(left);
+        header.appendChild(right);
+
+        const desc = document.createElement("div");
+        desc.className = "entry-desc";
+        desc.textContent = entry.description || "—";
+
+        const linesTable = document.createElement("table");
+        linesTable.className = "entry-lines-table";
+        linesTable.innerHTML = `
+          <thead>
+            <tr>
+              <th style="width:45%;">الحساب</th>
+              <th style="width:22%;">مدين</th>
+              <th style="width:22%;">دائن</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+
+        const tbody = linesTable.querySelector("tbody");
+        (entry.lines || []).forEach(ln => {
+          const tr = document.createElement("tr");
+          const accName = accountsMap.get(ln.account_id) || `حساب #${ln.account_id}`;
+          tr.innerHTML = `
+            <td>${accName}</td>
+            <td>${formatNumber(ln.debit)}</td>
+            <td>${formatNumber(ln.credit)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        card.appendChild(header);
+        card.appendChild(desc);
+        card.appendChild(linesTable);
+
+        entriesContainer.appendChild(card);
+      });
+    }
+
+    async function init() {
+      await loadAccounts();
+      // مبدئيًا نحط سطرين (ممكن تعدل العدد بعدين)
+      if (accounts.length > 0) {
+        addLineRow();
+        addLineRow();
+      }
+      await loadJournalEntries();
+    }
+
+    init();
+  </script>
+</body>
+</html>

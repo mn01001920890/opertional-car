@@ -70,13 +70,24 @@ class Authorization(db.Model):
     close_date  = db.Column(db.DateTime, nullable=True)   # تاريخ الإقفال الفعلي (زر الإنهاء)
 
     def to_dict(self):
-        # حساب عدد الأيام والمبلغ (محسوبين على أساس issue_date → end_date)
+        """
+        حساب عدد الأيام والمبلغ:
+        من start_date (لو موجود، وإلا issue_date) → end_date (الجمعة)
+        مع تجاهل الساعات + إضافة يوم.
+        """
         rental_days = None
         planned_amount = None
-        if self.issue_date and self.end_date and self.daily_rent is not None:
+
+        # الأساس في العد = start_date لو موجود، غير كده نرجع لـ issue_date
+        base_start = self.start_date or self.issue_date
+
+        if base_start and self.end_date and self.daily_rent is not None:
             try:
-                days = (self.end_date.date() - self.issue_date.date()).days + 1
-                days = max(days, 0)
+                start_d = base_start.date()
+                end_d   = self.end_date.date()
+                days = (end_d - start_d).days + 1  # +1 عشان يشمل يوم البداية
+                if days < 0:
+                    days = 0
                 rental_days = days
                 planned_amount = float(self.daily_rent) * days
             except Exception:
@@ -269,6 +280,7 @@ def view_page():
 @app.route("/cars")
 def cars_page():
     return render_template("cars.html")
+
 
 @app.route("/drivers")
 def drivers_page():
@@ -587,16 +599,22 @@ def end_authorization(auth_id):
         auth.close_date = close_dt
         auth.status = "منتهية"
 
-        # لو end_date (نهاية الجمعة) مش متخزّن لأي سبب، نحسبه الآن من issue_date
-        if not auth.end_date and auth.issue_date:
-            auth.end_date = get_friday_end(auth.issue_date)
+        # لو end_date (نهاية الجمعة) مش متخزّن لأي سبب، نحسبه الآن من start_date أو issue_date
+        if not auth.end_date:
+            base_for_end = auth.start_date or auth.issue_date
+            if base_for_end:
+                auth.end_date = get_friday_end(base_for_end)
 
-        # حساب عدد الأيام والمبلغ (للتقارير / دفتر اليومية)
+        # ✅ حساب عدد الأيام والمبلغ بنفس منطق start_date → end_date
         rental_days = None
         total_amount = None
-        if auth.issue_date and auth.end_date and auth.daily_rent is not None:
-            days = (auth.end_date.date() - auth.issue_date.date()).days + 1
-            days = max(days, 0)
+        base_start = auth.start_date or auth.issue_date
+        if base_start and auth.end_date and auth.daily_rent is not None:
+            start_d = base_start.date()
+            end_d   = auth.end_date.date()
+            days = (end_d - start_d).days + 1  # +1 عشان يشمل يوم البداية
+            if days < 0:
+                days = 0
             rental_days = days
             total_amount = float(auth.daily_rent) * days
 
@@ -971,4 +989,3 @@ with app.app_context():
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-

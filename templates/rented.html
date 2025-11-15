@@ -191,7 +191,7 @@
       white-space: nowrap;
     }
 
-    /* كروت التفويضات */
+    /* كروت التفويضات (موبايل / شاشات صغيرة) */
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -419,6 +419,92 @@
       color: #6b7280;
       margin-top: 4px;
     }
+
+    /* 👇👇 جدول على شاشات اللاب / الكبيرة فقط */
+    .table-wrapper {
+      display: none;
+      margin-top: 14px;
+    }
+
+    .table-card {
+      background: rgba(255,255,255,0.98);
+      color: #111827;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      direction: rtl;
+    }
+
+    thead {
+      background: #f3f4f6;
+    }
+
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th {
+      font-weight: 700;
+      font-size: 12px;
+      color: #374151;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    tbody tr.row-overdue {
+      background: #fef2f2;
+    }
+
+    tbody tr.row-overdue td {
+      border-bottom-color: #fecaca;
+    }
+
+    .td-overdue {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .td-amount {
+      font-weight: 700;
+      color: #16a34a;
+    }
+
+    .td-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    /* ✅ التحكم في العرض حسب حجم الشاشة */
+    @media (min-width: 900px) {
+      .cards-grid {
+        display: none;
+      }
+      .table-wrapper {
+        display: block;
+      }
+    }
+
+    @media (max-width: 899px) {
+      .cards-grid {
+        display: grid;
+      }
+      .table-wrapper {
+        display: none;
+      }
+    }
   </style>
 </head>
 
@@ -446,6 +532,9 @@
     <p class="subtitle">
       هذه الشاشة تعرض <strong>كل التفويضات النشطة</strong> (لم يتم إنهاؤها بعد)، مع تمييز
       <strong>التفويضات التي تجاوزت نهاية الأسبوع (الجمعة)</strong> باللون الأحمر وترتيبها في بداية الصفحة.
+      <br/>
+      عدد الأيام المحاسبية محسوب من <strong>تاريخ بداية التفويض (start_date)</strong> حتى
+      <strong>نهاية الجمعة المحاسبية (planned_end)</strong> شامل يوم البداية.
     </p>
 
     <!-- شريط الفلترة والعداد -->
@@ -457,12 +546,12 @@
         </div>
 
         <div class="search-group">
-          <span class="search-label">بحث باسم السائق أو رقم السيارة:</span>
+          <span class="search-label">بحث باسم السائق أو رقم السيارة أو رقم الرخصة:</span>
           <input
             id="searchInput"
             type="text"
             class="search-input"
-            placeholder="اكتب جزء من اسم السائق أو رقم السيارة..."
+            placeholder="اكتب جزء من اسم السائق أو رقم السيارة أو رقم الرخصة..."
             oninput="applyFilter()"
           />
         </div>
@@ -476,9 +565,36 @@
     <!-- شريط الحالة (نجاح / خطأ) -->
     <div id="statusBar" class="status-bar"></div>
 
-    <!-- كروت التفويضات -->
+    <!-- ✅ عرض كروت على الموبايل / الشاشات الصغيرة -->
     <section id="cardsContainer" class="cards-grid">
       <!-- يتم ملؤها بالـ JS -->
+    </section>
+
+    <!-- ✅ جدول على اللابتوب / الشاشات الكبيرة -->
+    <section class="table-wrapper">
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>السيارة</th>
+              <th>السائق</th>
+              <th>رقم الرخصة</th>
+              <th>تاريخ الإصدار</th>
+              <th>بداية التفويض</th>
+              <th>نهاية الجمعة المحاسبية</th>
+              <th>أيام التفويض</th>
+              <th>أيام التأخير</th>
+              <th>الإيجار اليومي</th>
+              <th>قيمة الأسبوع تقريبًا</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- الصفوف من JS -->
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <!-- حالة عدم وجود بيانات -->
@@ -499,11 +615,11 @@
       loadActiveAuthorizations();
     });
 
-    // دالة بسيطة لتحويل النص "YYYY-MM-DD HH:MM:SS" إلى Date
+    // دالة بسيطة لتحويل النص "YYYY-MM-DD HH:MM:SS" أو ISO إلى Date
     function parseDateTime(str) {
       if (!str) return null;
       try {
-        // نستبدل المسافة بـ T عشان الـ Date يقرأها بشكل موحد
+        if (str.includes("T")) return new Date(str);
         return new Date(str.replace(" ", "T"));
       } catch {
         return null;
@@ -515,6 +631,7 @@
       showStatus("جارِ تحميل بيانات التفويضات النشطة...", false);
       const container = document.getElementById("cardsContainer");
       container.innerHTML = "";
+      document.getElementById("tableBody").innerHTML = "";
 
       try {
         const res = await fetch("/api/authorizations?status=active");
@@ -527,17 +644,14 @@
 
         document.getElementById("activeCount").textContent = allAuthorizations.length;
 
-        renderCards(filteredAuthorizations);
+        refreshViews();
+
         if (allAuthorizations.length === 0) {
           document.getElementById("emptyState").style.display = "block";
+          showStatus("لا توجد تفويضات نشطة حاليًا.", false);
         } else {
           document.getElementById("emptyState").style.display = "none";
-        }
-
-        if (allAuthorizations.length > 0) {
           showStatus(`تم تحميل ${allAuthorizations.length} تفويض نشط.`, false);
-        } else {
-          showStatus("لا توجد تفويضات نشطة حاليًا.", false);
         }
       } catch (err) {
         console.error(err);
@@ -558,20 +672,13 @@
       bar.style.display = "block";
     }
 
-    // رسم الكروت مع تمييز المتأخرين وترتيبهم في البداية
-    function renderCards(list) {
-      const container = document.getElementById("cardsContainer");
-      container.innerHTML = "";
-
-      if (!list || list.length === 0) {
-        return;
-      }
-
+    // تجهيز البيانات (تمييز المتأخرين + ترتيب)
+    function enrichAndSort(list) {
       const now = new Date();
 
-      // نثري الداتا بحساب حالة التأخير وأيام التأخير لكل تفويض
-      const enriched = list.map(a => {
+      const enriched = (list || []).map(a => {
         const issueDt = parseDateTime(a.issue_date);
+        const startDt = parseDateTime(a.start_date);
         const plannedEndStr = a.end_date || a.planned_end_date || "";
         const plannedEndDt = parseDateTime(plannedEndStr);
 
@@ -581,37 +688,52 @@
         if (plannedEndDt && now > plannedEndDt) {
           isOverdue = true;
           const diffMs = now.getTime() - plannedEndDt.getTime();
-          overdueDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)); // عدد الأيام تقريبًا
+          overdueDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
           if (overdueDays < 0) overdueDays = 0;
         }
 
         return {
           raw: a,
           issueDt,
+          startDt,
           plannedEndDt,
           isOverdue,
           overdueDays
         };
       });
 
-      // ✅ ترتيب: المتأخرين أولاً، وبداخلهم الأكبر تأخيرًا في الأعلى
+      // ✅ ترتيب: المتأخرين أولاً، الأكبر تأخيرًا بالأعلى، ثم الباقي حسب نهاية الجمعة
       enriched.sort((x, y) => {
         if (x.isOverdue && !y.isOverdue) return -1;
         if (!x.isOverdue && y.isOverdue) return 1;
 
         if (x.isOverdue && y.isOverdue) {
-          // الأكبر تأخيرًا (أيام) يظهر أولاً
           return y.overdueDays - x.overdueDays;
         }
 
-        // الباقي: ترتيب تصاعدي حسب تاريخ نهاية الأسبوع (الأقرب أولاً)
         if (x.plannedEndDt && y.plannedEndDt) {
           return x.plannedEndDt - y.plannedEndDt;
         }
         return 0;
       });
 
-      enriched.forEach(item => {
+      return enriched;
+    }
+
+    function refreshViews() {
+      const enriched = enrichAndSort(filteredAuthorizations);
+      renderCards(enriched);
+      renderTable(enriched);
+    }
+
+    // رسم الكروت (موبايل)
+    function renderCards(enrichedList) {
+      const container = document.getElementById("cardsContainer");
+      container.innerHTML = "";
+
+      if (!enrichedList || enrichedList.length === 0) return;
+
+      enrichedList.forEach(item => {
         const a = item.raw;
         const isOverdue = item.isOverdue;
         const overdueDays = item.overdueDays;
@@ -620,7 +742,8 @@
         card.className = "card" + (isOverdue ? " card-overdue" : "");
 
         const issueDate = a.issue_date || "";
-        const plannedEnd = a.end_date || a.planned_end_date || "";
+        const startDate = a.start_date ? a.start_date.replace("T", " ").slice(0,19) : "";
+        const plannedEnd = (a.end_date || a.planned_end_date || "");
         const dailyRent = a.daily_rent != null ? `${a.daily_rent} ر.س/يوم` : "غير محدد";
         const days = a.rental_days != null ? `${a.rental_days} يوم` : "—";
         let plannedAmount = "—";
@@ -658,15 +781,22 @@
 
           <div class="row">
             <span>
-              <span class="label">بداية التفويض:</span>
+              <span class="label">تاريخ الإصدار:</span>
               <span class="value">${issueDate}</span>
             </span>
           </div>
 
           <div class="row">
             <span>
+              <span class="label">بداية التفويض (start_date):</span>
+              <span class="value">${startDate || "—"}</span>
+            </span>
+          </div>
+
+          <div class="row">
+            <span>
               <span class="label">نهاية الأسبوع (الجمعة):</span>
-              <span class="value">${plannedEnd}</span>
+              <span class="value">${plannedEnd || "—"}</span>
             </span>
           </div>
 
@@ -676,7 +806,7 @@
               <span class="value">${dailyRent}</span>
             </span>
             <span>
-              <span class="label">عدد الأيام المخططة:</span>
+              <span class="label">عدد الأيام المحاسبية:</span>
               <span class="${durationClass}">${days}</span>
             </span>
           </div>
@@ -689,14 +819,14 @@
                 <span class="value-overdue">${overdueDays} يوم</span>
               </div>
               <div class="overdue-text">
-                هذا التفويض تجاوز مدة الأسبوع المفترضة ولم يتم إقفاله بعد.
+                هذا التفويض تجاوز مدة الأسبوع المحاسبية (من بداية التفويض حتى الجمعة) ولم يتم إقفاله بعد.
               </div>
               `
               : ""
           }
 
           <div class="row" style="margin-top:4px;">
-            <span class="label">قيمة الإيجار الأسبوعية تقريبًا:</span>
+            <span class="label">قيمة الإيجار للأيام المخططة تقريبًا:</span>
             <span class="value-strong">${plannedAmount}</span>
           </div>
 
@@ -727,9 +857,9 @@
 
           <p class="small-note">
             عند الضغط على "إنهاء التفويض" سيتم:
-            1) حساب قيمة الأسبوع،
-            2) تسجيل قيد محاسبي،
-            3) إنشاء تفويض جديد للأسبوع التالي تلقائيًا،
+            1) حساب قيمة المدة من بداية التفويض حتى نهاية الجمعة،<br/>
+            2) تسجيل قيد محاسبي،<br/>
+            3) إنشاء تفويض جديد للأسبوع التالي تلقائيًا،<br/>
             4) إخفاء هذا التفويض من قائمة السيارات المؤجرة.
           </p>
         `;
@@ -738,7 +868,60 @@
       });
     }
 
-    // فلترة حسب البحث
+    // رسم الجدول (لاب توب)
+    function renderTable(enrichedList) {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+
+      if (!enrichedList || enrichedList.length === 0) return;
+
+      enrichedList.forEach(item => {
+        const a = item.raw;
+        const isOverdue = item.isOverdue;
+        const overdueDays = item.overdueDays;
+
+        const tr = document.createElement("tr");
+        if (isOverdue) tr.classList.add("row-overdue");
+
+        const issueDate = a.issue_date || "";
+        const startDate = a.start_date ? a.start_date.replace("T", " ").slice(0,19) : "";
+        const plannedEnd = (a.end_date || a.planned_end_date || "");
+        const days = a.rental_days != null ? a.rental_days : "—";
+        const dailyRent = a.daily_rent != null ? a.daily_rent : "—";
+        let plannedAmount = "—";
+        if (a.planned_amount != null) {
+          plannedAmount =
+            typeof a.planned_amount === "number"
+              ? a.planned_amount.toFixed(2)
+              : a.planned_amount;
+        }
+
+        tr.innerHTML = `
+          <td>${a.id}</td>
+          <td>${a.car_number || "—"}<br/><span class="label">${(a.car_model || "")} ${(a.car_type || "")}</span></td>
+          <td>${a.driver_name || "—"}</td>
+          <td>${a.driver_license_no || "—"}</td>
+          <td>${issueDate}</td>
+          <td>${startDate || "—"}</td>
+          <td>${plannedEnd || "—"}</td>
+          <td class="${isOverdue ? "td-overdue" : ""}">${days}</td>
+          <td class="${isOverdue ? "td-overdue" : ""}">${isOverdue ? overdueDays : "0"}</td>
+          <td>${dailyRent !== "—" ? dailyRent + " ر.س/يوم" : "غير محدد"}</td>
+          <td class="td-amount">${plannedAmount !== "—" ? plannedAmount + " ر.س" : "—"}</td>
+          <td>
+            <div class="td-actions">
+              <button class="btn-sm-primary" onclick="openReceipt(${a.id})">🧾</button>
+              <button class="btn-sm-danger" onclick="endAuthorization(${a.id}, this)">✅</button>
+              <button class="btn-sm-outline" onclick="viewAuthorizationDetails(${a.id})">🔍</button>
+            </div>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // فلترة حسب البحث (اسم السائق / رقم السيارة / رقم الرخصة)
     function applyFilter() {
       const term = (document.getElementById("searchInput").value || "").trim().toLowerCase();
       if (!term) {
@@ -747,10 +930,11 @@
         filteredAuthorizations = allAuthorizations.filter(a => {
           const driver = (a.driver_name || "").toLowerCase();
           const car = (a.car_number || "").toLowerCase();
-          return driver.includes(term) || car.includes(term);
+          const license = (a.driver_license_no || "").toLowerCase();
+          return driver.includes(term) || car.includes(term) || license.includes(term);
         });
       }
-      renderCards(filteredAuthorizations);
+      refreshViews();
     }
 
     // فتح صفحة سند التحصيل مع تمرير رقم التفويض
@@ -764,7 +948,7 @@
       if (!authId) return;
 
       const confirmed = window.confirm(
-        "هل أنت متأكد من إنهاء هذا التفويض؟\nسيتم حساب الأسبوع، تسجيل قيد محاسبي، وإنشاء تفويض جديد للأسبوع التالي."
+        "هل أنت متأكد من إنهاء هذا التفويض؟\nسيتم حساب المدة من بداية التفويض حتى نهاية الجمعة، تسجيل قيد محاسبي، وإنشاء تفويض جديد للأسبوع التالي."
       );
       if (!confirmed) return;
 
@@ -796,7 +980,7 @@
 
         // إزالة التفويض المنتهي من القايمة الحالية
         allAuthorizations = allAuthorizations.filter(a => String(a.id) !== String(authId));
-        applyFilter(); // هتعيد الرسم مع نفس منطق الترتيب
+        applyFilter(); // يعيد الرسم مع ترتيب المتأخرين
         document.getElementById("activeCount").textContent = allAuthorizations.length;
 
         if (allAuthorizations.length === 0) {
@@ -805,7 +989,7 @@
 
         const totalAmount = data.total_amount != null ? data.total_amount : null;
         const msgExtra = totalAmount
-          ? `، وقيمة الأسبوع تقريبًا: ${
+          ? `، وقيمة الأيام المحاسبية تقريبًا: ${
               totalAmount.toFixed ? totalAmount.toFixed(2) : totalAmount
             } ر.س`
           : "";

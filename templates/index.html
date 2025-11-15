@@ -56,21 +56,44 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: 24px;
     }
 
     h1 {
       font-size: 26px;
-      margin: 0 0 24px;
+      margin: 0;
       letter-spacing: 1px;
       text-align: center;
     }
 
+    .section-title {
+      font-size: 18px;
+      margin: 0 0 8px;
+      text-align: center;
+    }
+
+    .section-subtitle {
+      font-size: 13px;
+      margin: 0 0 12px;
+      opacity: 0.9;
+      text-align: center;
+    }
+
+    .section {
+      width: 100%;
+      max-width: 950px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 18px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+      padding: 16px 14px 20px;
+      backdrop-filter: blur(6px);
+    }
+
     .container {
       width: 100%;
-      max-width: 900px;
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
       justify-content: center;
     }
 
@@ -80,7 +103,7 @@
       border: none;
       border-radius: var(--card-radius);
       padding: 14px 18px;
-      font-size: 16px;
+      font-size: 15px;
       cursor: pointer;
       font-weight: bold;
       box-shadow: var(--shadow);
@@ -106,12 +129,6 @@
     }
 
     /* 📱 موبايل / تابلت */
-    @media (max-width: 900px) {
-      .container {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-
     @media (max-width: 600px) {
       .page-title {
         font-size: 18px;
@@ -121,8 +138,8 @@
         font-size: 22px;
       }
 
-      .container {
-        grid-template-columns: 1fr;
+      .section {
+        padding: 14px 10px 18px;
       }
 
       .menu-btn {
@@ -141,31 +158,65 @@
   <main class="page-content">
     <h1>اختر العملية المطلوبة</h1>
 
-    <div class="container">
-      <button class="menu-btn" onclick="goTo('/issue')">
-        📝 إصدار تفويض جديد
-      </button>
+    <!-- القسم الأول: العمليات التشغيلية -->
+    <section class="section">
+      <h2 class="section-title">العمليات التشغيلية اليومية</h2>
+      <p class="section-subtitle">
+        من هنا تدير إصدار التفويضات، عرضها، والسائقين والسيارات وحالة السيارات المؤجرة.
+      </p>
 
-      <button class="menu-btn" onclick="goTo('/view')">
-        📜 عرض جميع التفويضات
-      </button>
+      <div class="container">
+        <button class="menu-btn" onclick="goTo('/issue')">
+          📝 إصدار تفويض جديد
+        </button>
 
-      <button class="menu-btn" onclick="goTo('/drivers')">
-        👤 إدارة السائقين
-      </button>
+        <button class="menu-btn" onclick="goTo('/view')">
+          📜 عرض جميع التفويضات
+        </button>
 
-      <button class="menu-btn" onclick="goTo('/cars')">
-        🚗 إدارة السيارات
-      </button>
+        <button class="menu-btn" onclick="goTo('/drivers')">
+          👤 إدارة السائقين
+        </button>
 
-      <button class="menu-btn" onclick="goTo('/rented')">
-        🚗 السيارات المؤجرة الآن
-      </button>
+        <button class="menu-btn" onclick="goTo('/cars')">
+          🚗 إدارة السيارات
+        </button>
 
-      <button class="menu-btn" onclick="goTo('/cars-status')">
-        📊 حالة السيارات
-      </button>
-    </div>
+        <button class="menu-btn" onclick="goTo('/rented')">
+          🚗 السيارات المؤجرة الآن
+        </button>
+
+        <button class="menu-btn" onclick="goTo('/cars-status')">
+          📊 حالة السيارات
+        </button>
+      </div>
+    </section>
+
+    <!-- القسم الثاني: الموديول المحاسبي -->
+    <section class="section">
+      <h2 class="section-title">الموديول المحاسبي</h2>
+      <p class="section-subtitle">
+        إدارة الحسابات، دفتر الأستاذ، اليومية العامة، وسندات التحصيل النقدي المرتبطة بالتفويضات.
+      </p>
+
+      <div class="container">
+        <button class="menu-btn" onclick="goTo('/accounts')">
+          📒 دليل الحسابات
+        </button>
+
+        <button class="menu-btn" onclick="goTo('/ledger')">
+          📑 دفتر الأستاذ (لكل حساب)
+        </button>
+
+        <button class="menu-btn" onclick="goTo('/general')">
+          📓 اليومية العامة
+        </button>
+
+        <button class="menu-btn" onclick="goTo('/receipt')">
+          🧾 سند تحصيل نقدي جديد
+        </button>
+      </div>
+    </section>
   </main>
 
   <footer>

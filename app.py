@@ -1,5 +1,5 @@
-# ======================================================
-# 🚗 Flask Authorization System — Weekly Authorizations (Friday Logic)
+# ====================================================== 
+# 🚗 Flask Authorization System — Weekly Authorizations + Accounting
 # ======================================================
 
 from flask import Flask, render_template, request, jsonify, send_from_directory
@@ -65,7 +65,7 @@ class Authorization(db.Model):
     daily_rent  = db.Column(db.Numeric(10, 2))
     details     = db.Column(db.Text)
     status      = db.Column(db.String(50))        # مؤجرة / منتهية
-    # ⚠️ مهم: نستخدم end_date كتاريخ نهاية التفويض (الجمعة) وليس تاريخ الإقفال
+    # نستخدم end_date كتاريخ نهاية التفويض (الجمعة) وليس تاريخ الإقفال
     end_date    = db.Column(db.DateTime, nullable=True)   # تاريخ نهاية التفويض (الجمعة)
     close_date  = db.Column(db.DateTime, nullable=True)   # تاريخ الإقفال الفعلي (زر الإنهاء)
 
@@ -144,6 +144,80 @@ class Driver(db.Model):
         }
 
 
+# ===== Accounting Models =====
+class Account(db.Model):
+    """
+    جدول الحسابات (دليل الحسابات المبسط)
+    مثال: "حساب السائقين", "إيراد إيجار سيارات"
+    """
+    __tablename__ = "accounts"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, unique=True)
+    type = db.Column(db.String(50))  # asset / liability / revenue / expense ...
+    related_driver_id = db.Column(db.Integer, db.ForeignKey("drivers.id"), nullable=True)
+    related_car_id = db.Column(db.Integer, db.ForeignKey("cars.id"), nullable=True)
+
+    related_driver = db.relationship("Driver", backref="accounts", lazy=True)
+    related_car = db.relationship("Car", backref="accounts", lazy=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "type": self.type,
+            "related_driver_id": self.related_driver_id,
+            "related_car_id": self.related_car_id,
+        }
+
+
+class JournalEntry(db.Model):
+    """
+    رأس اليومية journal_entries
+    """
+    __tablename__ = "journal_entries"
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    description = db.Column(db.String(255))
+    ref_authorization_id = db.Column(db.Integer, db.ForeignKey("authorizations.id"), nullable=True)
+
+    authorization = db.relationship("Authorization", backref="journal_entries", lazy=True)
+
+    def to_dict(self, with_lines: bool = False):
+        base = {
+            "id": self.id,
+            "date": self.date.strftime("%Y-%m-%d %H:%M:%S") if self.date else "",
+            "description": self.description,
+            "ref_authorization_id": self.ref_authorization_id,
+        }
+        if with_lines:
+            base["lines"] = [ln.to_dict() for ln in self.lines]
+        return base
+
+
+class JournalLine(db.Model):
+    """
+    بنود اليومية journal_lines
+    """
+    __tablename__ = "journal_lines"
+    id = db.Column(db.Integer, primary_key=True)
+    journal_entry_id = db.Column(db.Integer, db.ForeignKey("journal_entries.id"), nullable=False)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+    debit = db.Column(db.Numeric(12, 2), default=0)
+    credit = db.Column(db.Numeric(12, 2), default=0)
+
+    journal_entry = db.relationship("JournalEntry", backref="lines", lazy=True)
+    account = db.relationship("Account", backref="lines", lazy=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "journal_entry_id": self.journal_entry_id,
+            "account_id": self.account_id,
+            "debit": float(self.debit or 0),
+            "credit": float(self.credit or 0),
+        }
+
+
 # ---------------- Routes (Pages) ----------------
 @app.route("/")
 def index_page():
@@ -175,6 +249,22 @@ def cars_status_page():
     return render_template("cars-status.html")
 
 
+# صفحات الموديول المحاسبي الجديدة
+@app.route("/accounts")
+def accounts_page():
+    return render_template("accounts.html")
+
+
+@app.route("/ledger")
+def ledger_page():
+    return render_template("ledger.html")
+
+
+@app.route("/general")
+def general_journal_page():
+    return render_template("general.html")
+
+
 @app.route("/api/health")
 def api_health():
     return jsonify({"status": "ok"})
@@ -182,8 +272,57 @@ def api_health():
 
 @app.route("/api/debug/dburl")
 def api_debug_dburl():
-    # خليك مطمن إن DATABASE_URL متضبوطة على Vercel
     return jsonify({"DATABASE_URL_present": bool(os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL"))})
+
+
+# ---------------- Accounting Helpers ----------------
+def create_journal_for_closed_authorization(auth, total_amount):
+    """
+    ينشئ قيد يومية بسيط عند إقفال التفويض:
+    من حـ/ السائقين (مدين)
+    إلى حـ/ إيراد إيجار سيارات (دائن)
+    """
+    try:
+        if not total_amount or total_amount <= 0:
+            return
+
+        # لازم يكون عندك حسابين جاهزين بأسمائهم فى جدول accounts
+        driver_account = Account.query.filter_by(name="حساب السائقين").first()
+        revenue_account = Account.query.filter_by(name="إيراد إيجار سيارات").first()
+        if not driver_account or not revenue_account:
+            # لو الحسابات مش موجودة، ما نوقفش السيستم؛ نكمل بدون إنشاء قيد
+            return
+
+        je = JournalEntry(
+            date=datetime.utcnow(),
+            description=f"قيد إقفال تفويض رقم {auth.id}",
+            ref_authorization_id=auth.id,
+        )
+        db.session.add(je)
+        db.session.flush()  # عشان je.id يتولد
+
+        amount_dec = Decimal(str(total_amount))
+
+        # من حـ/ السائقين (مدين)
+        line1 = JournalLine(
+            journal_entry_id=je.id,
+            account_id=driver_account.id,
+            debit=amount_dec,
+            credit=Decimal("0"),
+        )
+
+        # إلى حـ/ إيراد إيجار سيارات (دائن)
+        line2 = JournalLine(
+            journal_entry_id=je.id,
+            account_id=revenue_account.id,
+            debit=Decimal("0"),
+            credit=amount_dec,
+        )
+
+        db.session.add_all([line1, line2])
+        # مفيش commit هنا؛ الـ Route نفسه هو اللي بيعمل commit
+    except Exception:
+        traceback.print_exc()
 
 
 # ---------------- APIs ----------------
@@ -370,6 +509,9 @@ def end_authorization(auth_id):
             rental_days = days
             total_amount = float(auth.daily_rent) * days
 
+        # 🎯 إنشاء قيد اليومية لهذا التفويض المقفول
+        create_journal_for_closed_authorization(auth, total_amount)
+
         # 📌 إنشاء تفويض جديد تلقائيًا لنفس السيارة والسائق من السبت التالي
         if auth.end_date:
             new_issue = auth.end_date + timedelta(days=1)  # السبت التالي
@@ -403,7 +545,7 @@ def end_authorization(auth_id):
         db.session.commit()
 
         return jsonify({
-            "message": "✅ تم إنهاء التفويض وإنشاء تفويض جديد للأسبوع التالي",
+            "message": "✅ تم إنهاء التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد اليومية",
             "closed_authorization": auth.to_dict(),
             "new_authorization": new_auth.to_dict(),
             "rental_days": rental_days,
@@ -492,6 +634,164 @@ def add_driver():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+# ----- Accounts APIs -----
+@app.route("/api/accounts", methods=["GET", "POST"])
+def accounts_api():
+    """
+    GET  → يرجع قائمة الحسابات (لـ Dropdown + جدول العرض)
+    POST → إضافة حساب جديد (من صفحة accounts.html)
+    """
+    if request.method == "GET":
+        accounts = Account.query.order_by(Account.id.asc()).all()
+        return jsonify([acc.to_dict() for acc in accounts])
+
+    # POST
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "اسم الحساب مطلوب"}), 400
+
+    # منع تكرار الاسم
+    existing = Account.query.filter_by(name=name).first()
+    if existing:
+        return jsonify({"error": "هذا الحساب موجود بالفعل"}), 400
+
+    acc = Account(
+        name=name,
+        type=data.get("type"),
+        related_driver_id=data.get("related_driver_id"),
+        related_car_id=data.get("related_car_id"),
+    )
+    try:
+        db.session.add(acc)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"DB error: {str(e)}"}), 500
+
+    return jsonify({"message": "✅ تم إضافة الحساب بنجاح", "account": acc.to_dict()}), 201
+
+
+# ----- Ledger API -----
+@app.route("/api/accounts/<int:account_id>/ledger", methods=["GET"])
+def get_account_ledger(account_id):
+    """
+    دفتر أستاذ مبسط لحساب واحد:
+    يرجع جميع بنود اليومية المرتبطة بالحساب مع رصيد تراكمي.
+    """
+    account = Account.query.get(account_id)
+    if not account:
+        return jsonify({"error": "الحساب غير موجود"}), 404
+
+    # نرتّب حسب تاريخ القيد ثم رقم السطر
+    lines = (
+        JournalLine.query
+        .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
+        .filter(JournalLine.account_id == account_id)
+        .order_by(JournalEntry.date.asc(), JournalLine.id.asc())
+        .all()
+    )
+
+    running_balance = Decimal("0")
+    ledger_rows = []
+
+    for line in lines:
+        je = line.journal_entry
+        debit = line.debit or Decimal("0")
+        credit = line.credit or Decimal("0")
+        running_balance += debit - credit
+
+        ledger_rows.append({
+            "entry_id": je.id,
+            "date": je.date.strftime("%Y-%m-%d %H:%M:%S") if je.date else "",
+            "description": je.description,
+            "debit": float(debit or 0),
+            "credit": float(credit or 0),
+            "balance": float(running_balance),
+        })
+
+    return jsonify({
+        "account": account.to_dict(),
+        "lines": ledger_rows,
+    })
+
+
+# ----- General Journal APIs (لليومية العامة) -----
+@app.route("/api/journal_entries", methods=["GET", "POST"])
+def journal_entries_api():
+    """
+    GET  → قائمة بسيطة بقيود اليومية (تستخدمها صفحة general.html)
+    POST → إنشاء قيد يدوي (من صفحة اليومية العامة)
+    """
+    if request.method == "GET":
+        entries = JournalEntry.query.order_by(JournalEntry.date.desc(), JournalEntry.id.desc()).all()
+        return jsonify([e.to_dict(with_lines=True) for e in entries])
+
+    # POST – إنشاء قيد يدوي
+    data = request.get_json() or {}
+    desc = (data.get("description") or "").strip()
+    date_str = (data.get("date") or "").strip()
+    lines_data = data.get("lines") or []
+
+    if not lines_data:
+        return jsonify({"error": "لا يوجد بنود في القيد"}), 400
+
+    # تحويل التاريخ لو مبعوت، وإلا نستخدم الآن
+    je_date = datetime.utcnow()
+    if date_str:
+        try:
+            je_date = datetime.fromisoformat(date_str)
+        except Exception:
+            return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601"}), 400
+
+    je = JournalEntry(date=je_date, description=desc)
+    db.session.add(je)
+    db.session.flush()
+
+    try:
+        for ln in lines_data:
+            acc_id = ln.get("account_id")
+            if not acc_id:
+                continue
+            acc = Account.query.get(acc_id)
+            if not acc:
+                continue
+
+            debit_val = ln.get("debit") or 0
+            credit_val = ln.get("credit") or 0
+
+            try:
+                debit_dec = Decimal(str(debit_val)) if debit_val not in (None, "", " ") else Decimal("0")
+                credit_dec = Decimal(str(credit_val)) if credit_val not in (None, "", " ") else Decimal("0")
+            except (InvalidOperation, ValueError, TypeError):
+                continue
+
+            line = JournalLine(
+                journal_entry_id=je.id,
+                account_id=acc.id,
+                debit=debit_dec,
+                credit=credit_dec,
+            )
+            db.session.add(line)
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({"error": f"DB error: {str(e)}"}), 500
+
+    return jsonify({"message": "✅ تم إنشاء قيد اليومية بنجاح", "journal_entry": je.to_dict(with_lines=True)}), 201
+
+
+# ---------------- Auto create tables ----------------
+with app.app_context():
+    try:
+        db.create_all()
+    except Exception as e:
+        # في حالة أي خطأ أثناء إنشاء الجداول
+        print("❌ DB create_all error:", e)
 
 
 # ---------------- Run (local) ----------------

@@ -1,5 +1,5 @@
-# ====================================================== 
-# 🚗 Flask Authorization System — Weekly Authorizations + Accounting
+# ======================================================
+# 🚗 Flask Authorization System — Weekly Authorizations + Accounting + Cash Receipts
 # ======================================================
 
 from flask import Flask, render_template, request, jsonify, send_from_directory
@@ -148,7 +148,7 @@ class Driver(db.Model):
 class Account(db.Model):
     """
     جدول الحسابات (دليل الحسابات المبسط)
-    مثال: "حساب السائقين", "إيراد إيجار سيارات"
+    مثال: "حساب السائقين", "إيراد إيجار سيارات", "الصندوق"
     """
     __tablename__ = "accounts"
     id = db.Column(db.Integer, primary_key=True)
@@ -170,6 +170,35 @@ class Account(db.Model):
         }
 
 
+class CashReceipt(db.Model):
+    """
+    سند تحصيل نقدي cash_receipts
+    يمثل قبض نقدي من السائق (أو العميل) عن تفويض معيّن.
+    """
+    __tablename__ = "cash_receipts"
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    driver_id = db.Column(db.Integer, db.ForeignKey("drivers.id"), nullable=True)
+    driver_name = db.Column(db.String(100))
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    description = db.Column(db.String(255))
+    ref_authorization_id = db.Column(db.Integer, db.ForeignKey("authorizations.id"), nullable=True)
+
+    driver = db.relationship("Driver", backref="cash_receipts", lazy=True)
+    authorization = db.relationship("Authorization", backref="cash_receipts", lazy=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "date": self.date.strftime("%Y-%m-%d %H:%M:%S") if self.date else "",
+            "driver_id": self.driver_id,
+            "driver_name": self.driver_name,
+            "amount": float(self.amount or 0),
+            "description": self.description,
+            "ref_authorization_id": self.ref_authorization_id,
+        }
+
+
 class JournalEntry(db.Model):
     """
     رأس اليومية journal_entries
@@ -179,8 +208,10 @@ class JournalEntry(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
     description = db.Column(db.String(255))
     ref_authorization_id = db.Column(db.Integer, db.ForeignKey("authorizations.id"), nullable=True)
+    ref_receipt_id = db.Column(db.Integer, db.ForeignKey("cash_receipts.id"), nullable=True)
 
     authorization = db.relationship("Authorization", backref="journal_entries", lazy=True)
+    receipt = db.relationship("CashReceipt", backref="journal_entries", lazy=True)
 
     def to_dict(self, with_lines: bool = False):
         base = {
@@ -188,6 +219,7 @@ class JournalEntry(db.Model):
             "date": self.date.strftime("%Y-%m-%d %H:%M:%S") if self.date else "",
             "description": self.description,
             "ref_authorization_id": self.ref_authorization_id,
+            "ref_receipt_id": self.ref_receipt_id,
         }
         if with_lines:
             base["lines"] = [ln.to_dict() for ln in self.lines]
@@ -265,6 +297,12 @@ def general_journal_page():
     return render_template("general.html")
 
 
+# صفحة سند التحصيل (هنبني receipt.html بعدين)
+@app.route("/receipt")
+def receipt_page():
+    return render_template("receipt.html")
+
+
 @app.route("/api/health")
 def api_health():
     return jsonify({"status": "ok"})
@@ -321,6 +359,55 @@ def create_journal_for_closed_authorization(auth, total_amount):
 
         db.session.add_all([line1, line2])
         # مفيش commit هنا؛ الـ Route نفسه هو اللي بيعمل commit
+    except Exception:
+        traceback.print_exc()
+
+
+def create_journal_for_cash_receipt(receipt: CashReceipt):
+    """
+    ينشئ قيد يومية لسند تحصيل نقدي:
+    من حـ/ الصندوق (مدين)
+    إلى حـ/ حساب السائقين (دائن)
+    """
+    try:
+        if not receipt or not receipt.amount or receipt.amount <= 0:
+            return
+
+        cash_account = Account.query.filter_by(name="الصندوق").first()
+        driver_account = Account.query.filter_by(name="حساب السائقين").first()
+        if not cash_account or not driver_account:
+            # لو الحسابات غير موجودة ما نوقفش إضافة السند، فقط نتخطى القيد
+            return
+
+        je = JournalEntry(
+            date=receipt.date or datetime.utcnow(),
+            description=receipt.description or f"سند تحصيل نقدي رقم {receipt.id}",
+            ref_authorization_id=receipt.ref_authorization_id,
+            ref_receipt_id=receipt.id,
+        )
+        db.session.add(je)
+        db.session.flush()
+
+        amount_dec = Decimal(str(receipt.amount))
+
+        # من حـ/ الصندوق (مدين)
+        line1 = JournalLine(
+            journal_entry_id=je.id,
+            account_id=cash_account.id,
+            debit=amount_dec,
+            credit=Decimal("0"),
+        )
+
+        # إلى حـ/ حساب السائقين (دائن)
+        line2 = JournalLine(
+            journal_entry_id=je.id,
+            account_id=driver_account.id,
+            debit=Decimal("0"),
+            credit=amount_dec,
+        )
+
+        db.session.add_all([line1, line2])
+        # الـ commit في الـ Route
     except Exception:
         traceback.print_exc()
 
@@ -783,6 +870,89 @@ def journal_entries_api():
         return jsonify({"error": f"DB error: {str(e)}"}), 500
 
     return jsonify({"message": "✅ تم إنشاء قيد اليومية بنجاح", "journal_entry": je.to_dict(with_lines=True)}), 201
+
+
+# ----- Cash Receipts APIs (سندات التحصيل النقدي) -----
+@app.route("/api/receipts", methods=["GET", "POST"])
+def receipts_api():
+    """
+    GET  → يرجع قائمة سندات التحصيل النقدي.
+    POST → إنشاء سند تحصيل نقدي جديد + قيد محاسبي (من /receipt.html مستقبلاً).
+    """
+    if request.method == "GET":
+        receipts = CashReceipt.query.order_by(CashReceipt.date.desc(), CashReceipt.id.desc()).all()
+        return jsonify([r.to_dict() for r in receipts])
+
+    # POST – إنشاء سند تحصيل
+    data = request.get_json() or {}
+
+    driver_name = (data.get("driver_name") or "").strip()
+    driver_id = data.get("driver_id")
+    auth_id = data.get("authorization_id")
+    desc = (data.get("description") or "").strip()
+    amount_val = data.get("amount")
+    date_str = (data.get("date") or "").strip()
+
+    if amount_val in (None, "", " "):
+        return jsonify({"error": "قيمة المبلغ مطلوبة"}), 400
+
+    try:
+        amount_dec = Decimal(str(amount_val))
+    except (InvalidOperation, ValueError, TypeError):
+        return jsonify({"error": "قيمة المبلغ غير صحيحة"}), 400
+
+    if amount_dec <= 0:
+        return jsonify({"error": "قيمة المبلغ يجب أن تكون أكبر من صفر"}), 400
+
+    # التاريخ
+    rc_date = datetime.utcnow()
+    if date_str:
+        try:
+            rc_date = datetime.fromisoformat(date_str)
+        except Exception:
+            return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601"}), 400
+
+    # لو عندك driver_id مش مبعوت لكن الاسم موجود، نحاول نجيبه
+    driver_obj = None
+    if driver_id:
+        driver_obj = Driver.query.get(driver_id)
+    elif driver_name:
+        driver_obj = Driver.query.filter_by(name=driver_name).first()
+
+    if driver_obj and not driver_name:
+        driver_name = driver_obj.name
+
+    # تفويض مرجعي اختياري
+    auth_obj = None
+    if auth_id:
+        auth_obj = Authorization.query.get(auth_id)
+
+    receipt = CashReceipt(
+        date=rc_date,
+        driver_id=driver_obj.id if driver_obj else None,
+        driver_name=driver_name or (driver_obj.name if driver_obj else None),
+        amount=amount_dec,
+        description=desc or (f"سداد عن تفويض رقم {auth_obj.id}" if auth_obj else "سند تحصيل نقدي"),
+        ref_authorization_id=auth_obj.id if auth_obj else None,
+    )
+
+    try:
+        db.session.add(receipt)
+        db.session.flush()  # عشان receipt.id
+
+        # إنشاء قيد اليومية (من الصندوق إلى حساب السائقين)
+        create_journal_for_cash_receipt(receipt)
+
+        db.session.commit()
+        return jsonify({
+            "message": "✅ تم إنشاء سند التحصيل النقدي وتسجيل القيد المحاسبي",
+            "receipt": receipt.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({"error": f"DB error: {str(e)}"}), 500
 
 
 # ---------------- Auto create tables ----------------

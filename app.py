@@ -270,6 +270,10 @@ def view_page():
 def cars_page():
     return render_template("cars.html")
 
+@app.route("/drivers")
+def drivers_page():
+    return render_template("drivers.html")
+
 
 @app.route("/rented")
 def rented_cars_page():
@@ -967,3 +971,4 @@ with app.app_context():
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+

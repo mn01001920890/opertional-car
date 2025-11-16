@@ -23,9 +23,10 @@
       margin: 0;
       background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
       color: #fff;
+      min-height: 100vh;
     }
 
-    /* 🔝 شريط علوي ثابت فيه زر الرجوع */
+    /* 🔝 شريط علوي ثابت + تنقّل موحّد */
     .top-bar {
       position: fixed;
       top: 0;
@@ -38,6 +39,14 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .back-btn {
@@ -55,6 +64,7 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
       transition: 0.2s ease;
       white-space: nowrap;
+      text-decoration: none;
     }
 
     .back-btn:hover {
@@ -281,11 +291,15 @@
 
 <body>
 
-  <!-- 🔝 شريط علوي ثابت فيه زر رجوع -->
+  <!-- 🔝 شريط علوي ثابت + تنقّل موحّد -->
   <header class="top-bar">
-    <button class="back-btn" onclick="location.href='/'">
-      🏠 رجوع
-    </button>
+    <div class="nav-group">
+      <button class="back-btn" onclick="location.href='/'">🏠 الرئيسية</button>
+      <button class="back-btn" onclick="location.href='/cars'">🚗 السيارات</button>
+      <button class="back-btn" onclick="location.href='/drivers'">🧑‍✈️ السائقون</button>
+      <button class="back-btn" onclick="location.href='/authorizations'">📄 التفويضات</button>
+      <button class="back-btn" onclick="location.href='/operations'">🧾 العمليات</button>
+    </div>
     <h1 class="page-title">📊 حالة أسطول السيارات</h1>
   </header>
 
@@ -399,20 +413,20 @@
         const all         = data;
         const available   = data.filter(c => c.status === "متاحة");
         const rented      = data.filter(c => c.status === "مؤجرة");
-        const maintenance = data.filter(c => c.status === "تحت الصيانة");
+        const maintenance = data.filter(c => c.status === "تحت الصيانة" || c.status === "خارج الخدمة");
 
         // عدّاد الإحصائيات
-        document.getElementById("totalCount").querySelector(".stat-main-number").textContent =
-          all.length.toString();
+        document.getElementById("totalCount")
+          .querySelector(".stat-main-number").textContent = all.length.toString();
 
-        document.getElementById("availableCount").querySelector(".stat-main-number").textContent =
-          available.length.toString();
+        document.getElementById("availableCount")
+          .querySelector(".stat-main-number").textContent = available.length.toString();
 
-        document.getElementById("rentedCount").querySelector(".stat-main-number").textContent =
-          rented.length.toString();
+        document.getElementById("rentedCount")
+          .querySelector(".stat-main-number").textContent = rented.length.toString();
 
-        document.getElementById("maintenanceCount").querySelector(".stat-main-number").textContent =
-          maintenance.length.toString();
+        document.getElementById("maintenanceCount")
+          .querySelector(".stat-main-number").textContent = maintenance.length.toString();
 
         // ✅ المتاحة: جدول + كروت
         renderTableAndCards("availableTableBody", "availableCards", available);

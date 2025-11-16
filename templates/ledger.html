@@ -432,12 +432,18 @@
     <div class="header">
       <div class="title-group">
         <h1>📑 دفتر الأستاذ / كشف حساب</h1>
-        <p>اختيار حساب معيّن، عرض حركته (مدين/دائن/رصيد)، مع إمكانية الفلترة والطباعة ككشف حساب.</p>
+        <p>
+          هذه الصفحة جزء من موديول المحاسبة، ويمكن فتحها من <strong>صفحة العمليات</strong> لعرض كشف حساب لأي حساب في شجرة الحسابات.
+        </p>
       </div>
       <div class="top-buttons">
         <a href="/" class="btn-back">
           <span>🏠</span>
           <span>الرئيسية</span>
+        </a>
+        <a href="/operations" class="btn-back">
+          <span>🧾</span>
+          <span>صفحة العمليات</span>
         </a>
         <a href="/accounts" class="btn-back">
           <span>📒</span>
@@ -462,7 +468,7 @@
       <div class="card">
         <div class="card-header">
           <h2>⚙️ إعداد كشف الحساب</h2>
-          <span class="badge">اختيار الحساب والفلترة</span>
+          <span class="badge">مرتبط بحركات صفحة العمليات</span>
         </div>
         <div class="card-body">
 
@@ -472,7 +478,7 @@
               <option value="">اختر حساباً من دليل الحسابات...</option>
             </select>
             <div class="hint">
-              لو مش لاقي الحساب، تأكد إنه مضاف من صفحة <strong>دليل الحسابات</strong>.
+              لو مش لاقي الحساب، تأكد إنه مضاف من صفحة <strong>دليل الحسابات</strong> وأن العمليات مسجلة عليه من صفحة العمليات / اليومية.
             </div>
           </div>
 
@@ -578,8 +584,12 @@
   </div>
 
   <script>
+    // ✅ دعم الربط من صفحة العمليات عن طريق باراميترات URL
+    // مثال: /ledger?account_id=5&from=2025-01-01&to=2025-12-31
+    const urlParams = new URLSearchParams(window.location.search);
+
     let allAccounts = [];
-    let currentLedgerRaw = [];     // كل الصفوف الراجعة من ال API
+    let currentLedgerRaw = [];      // كل الصفوف الراجعة من ال API
     let currentLedgerFiltered = []; // بعد الفلاتر
     let currentAccount = null;
 
@@ -849,11 +859,13 @@
       finalBalanceEl.textContent = formatNumber(endingBalance);
     }
 
-    async function loadLedgerForSelectedAccount() {
+    async function loadLedgerForSelectedAccount(autoFromURL = false) {
       clearMessage();
       const accId = Number(accountSelect.value || 0);
       if (!accId) {
-        showMessage("من فضلك اختر حسابًا أولاً.", "error");
+        if (!autoFromURL) {
+          showMessage("من فضلك اختر حسابًا أولاً.", "error");
+        }
         return;
       }
       currentAccount = allAccounts.find(a => a.id === accId) || null;
@@ -891,7 +903,7 @@
         applyFilters();
         if (!currentLedgerRaw.length) {
           showMessage("لا توجد حركات مسجَّلة لهذا الحساب حتى الآن.", "success");
-        } else {
+        } else if (!autoFromURL) {
           showMessage("✅ تم تحميل كشف الحساب بنجاح.", "success");
         }
       } catch (err) {
@@ -900,7 +912,7 @@
       }
     }
 
-    btnLoadLedger.addEventListener("click", loadLedgerForSelectedAccount);
+    btnLoadLedger.addEventListener("click", () => loadLedgerForSelectedAccount(false));
 
     [fromDateInput, toDateInput, textFilterInput].forEach(input => {
       input.addEventListener("input", () => {
@@ -924,9 +936,34 @@
       window.print();
     });
 
+    // ✅ تهيئة الفلاتر بناءً على باراميترات URL القادمة من صفحة العمليات
+    function applyInitialURLFilters() {
+      // account_id أو acc_id
+      const accIdParam = urlParams.get("account_id") || urlParams.get("acc_id");
+      if (accIdParam) {
+        accountSelect.value = String(accIdParam);
+        const idNum = Number(accIdParam);
+        currentAccount = allAccounts.find(a => a.id === idNum) || null;
+        updateAccountInfoBox();
+      }
+
+      // from / to (YYYY-MM-DD)
+      const fromParam = urlParams.get("from");
+      const toParam = urlParams.get("to");
+      if (fromParam) fromDateInput.value = fromParam;
+      if (toParam) toDateInput.value = toParam;
+      updatePrintDateRange(fromParam || "", toParam || "");
+
+      // لو account_id موجود نحمّل الكشف أوتوماتيك
+      if (accIdParam) {
+        loadLedgerForSelectedAccount(true);
+      }
+    }
+
     async function init() {
       await loadAccounts();
       updateAccountInfoBox();
+      applyInitialURLFilters();
     }
 
     init();

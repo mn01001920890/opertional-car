@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>🧾 صفحة العمليات</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg1:#0d6efd;
+      --bg2:#6c63ff;
+      --card:#ffffff;
+      --ink:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --accent:#0d6efd;
+      --danger:#dc2626;
+      --success:#16a34a;
+      --info:#0ea5e9;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.35), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(15,23,42,0.35), transparent 55%),
+        #0b1120;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      color: #f9fafb;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .title-group p {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: #e5e7eb;
+    }
+
+    .btn-back {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.85);
+      color: #e5e7eb;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-back:hover {
+      background: rgba(15,23,42,1);
+      transform: translateY(-1px);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: rgba(15,23,42,0.92);
+      border-radius: 14px;
+      padding: 14px 16px;
+      border: 1px solid rgba(148,163,184,0.4);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-header span.badge {
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: rgba(37,99,235,0.12);
+      border: 1px solid rgba(59,130,246,0.4);
+      color: #dbeafe;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .filters {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.78rem;
+      color: #e5e7eb;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 6px 9px;
+      border-radius: 9px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.9);
+      color: #f9fafb;
+      font-size: 0.85rem;
+      outline: none;
+      transition: 0.15s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.4);
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .badge-count {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead {
+      background: rgba(15,23,42,0.95);
+    }
+
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(55,65,81,0.7);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th {
+      font-weight: 600;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: rgba(15,23,42,0.75);
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(15,23,42,0.55);
+    }
+
+    tbody tr:hover {
+      background: rgba(37,99,235,0.22);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 12px 4px;
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+
+    .pill-op {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid rgba(148,163,184,0.7);
+      color: #e5e7eb;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pill-op.auth {
+      border-color:#22c55e;
+      color:#bbf7d0;
+    }
+
+    .pill-op.receipt {
+      border-color:#0ea5e9;
+      color:#bae6fd;
+    }
+
+    .pill-op.journal {
+      border-color:#a855f7;
+      color:#e9d5ff;
+    }
+
+    .amount-cell {
+      font-family: "SF Mono","Cascadia Code",monospace;
+    }
+
+    .ref {
+      font-family: "SF Mono","Cascadia Code",monospace;
+      font-size: 0.8rem;
+      color:#e5e7eb;
+    }
+
+    .subtext {
+      font-size: 0.78rem;
+      color:#9ca3af;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="title-group">
+        <h1>🧾 صفحة العمليات</h1>
+        <p>
+          عرض كل العمليات المحاسبية تحت بعضها سواء كانت ناتجة عن إقفال تفويض، سند تحصيل نقدي، أو قيد يومية.
+        </p>
+      </div>
+      <a href="/" class="btn-back">
+        <span>🏠</span>
+        <span>الرجوع للوحة الرئيسية</span>
+      </a>
+    </div>
+
+    <div class="layout">
+      <div class="card">
+        <div class="card-header">
+          <h2>🔍 فلاتر العمليات</h2>
+          <span class="badge-count" id="operationsCount">—</span>
+        </div>
+        <div class="card-body">
+          <div class="filters">
+            <div>
+              <label for="filterType">نوع العملية</label>
+              <select id="filterType">
+                <option value="all">الكل</option>
+                <option value="auth_close">إقفال تفويض</option>
+                <option value="receipt">سند تحصيل نقدي</option>
+                <option value="journal">قيد يومية</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="filterFromDate">من تاريخ</label>
+              <input type="date" id="filterFromDate" />
+            </div>
+
+            <div>
+              <label for="filterToDate">إلى تاريخ</label>
+              <input type="date" id="filterToDate" />
+            </div>
+
+            <div>
+              <label for="filterSearch">بحث (سائق / سيارة / وصف)</label>
+              <input type="text" id="filterSearch" placeholder="اكتب جزء من الاسم أو رقم السيارة أو كلمة من البيان" />
+            </div>
+          </div>
+
+          <div class="hint">
+            • يتم تجميع العمليات من: إقفال التفويضات، سندات التحصيل النقدي، وقيود اليومية اليدوية.<br/>
+            • لاحقًا يمكن إضافة زر لفتح تفاصيل العملية أو طباعة سند مستقل لكل عملية.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>📋 قائمة العمليات</h2>
+          <span class="badge">Operations Log</span>
+        </div>
+        <div class="card-body">
+          <div style="max-height: 420px; overflow: auto; border-radius: 10px; border: 1px solid rgba(55,65,81,0.7);">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>التاريخ</th>
+                  <th>نوع العملية</th>
+                  <th>المرجع</th>
+                  <th>الوصف</th>
+                  <th>السائق</th>
+                  <th>السيارة</th>
+                  <th>المبلغ</th>
+                </tr>
+              </thead>
+              <tbody id="operationsTableBody">
+                <tr>
+                  <td colspan="8" class="empty-state">
+                    جاري تحميل العمليات...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hint" style="margin-top:8px;">
+            الترتيب الافتراضي من الأحدث إلى الأقدم. يمكنك تضييق النتائج باستخدام الفلاتر بالأعلى.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const filterType = document.getElementById("filterType");
+    const filterFromDate = document.getElementById("filterFromDate");
+    const filterToDate = document.getElementById("filterToDate");
+    const filterSearch = document.getElementById("filterSearch");
+    const operationsTableBody = document.getElementById("operationsTableBody");
+    const operationsCount = document.getElementById("operationsCount");
+
+    let operations = [];      // كل العمليات الموحّدة
+    let filteredOperations = [];
+
+    function parseDateStr(dateStr) {
+      if (!dateStr) return null;
+      // الشكل من الـ API: "YYYY-MM-DD HH:MM:SS"
+      try {
+        return new Date(dateStr.replace(" ", "T"));
+      } catch {
+        return null;
+      }
+    }
+
+    function formatDateForDisplay(dateStr) {
+      if (!dateStr) return "—";
+      const d = parseDateStr(dateStr);
+      if (!d || isNaN(d.getTime())) return dateStr;
+      // تنسيق بسيط: YYYY-MM-DD HH:MM
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mi = String(d.getMinutes()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+    }
+
+    function formatAmount(amount) {
+      if (amount === null || amount === undefined) return "—";
+      const num = Number(amount);
+      if (isNaN(num)) return "—";
+      return num.toLocaleString("ar-EG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function typePill(opType) {
+      let cls = "pill-op";
+      let label = "";
+      let icon = "";
+
+      if (opType === "auth_close") {
+        cls += " auth";
+        label = "إقفال تفويض";
+        icon = "🚗";
+      } else if (opType === "receipt") {
+        cls += " receipt";
+        label = "سند تحصيل نقدي";
+        icon = "💵";
+      } else if (opType === "journal") {
+        cls += " journal";
+        label = "قيد يومية";
+        icon = "📘";
+      } else {
+        label = "عملية";
+        icon = "📝";
+      }
+
+      return `<span class="${cls}"><span>${icon}</span><span>${label}</span></span>`;
+    }
+
+    function buildOperationsRow(op, index) {
+      const dateStr = formatDateForDisplay(op.date);
+      const amountStr = formatAmount(op.amount);
+      const driver = op.driver_name || "—";
+      const car = op.car_number || "—";
+      const desc = op.description || "—";
+
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${dateStr}</td>
+          <td>${typePill(op.type)}</td>
+          <td><span class="ref">${op.ref || "—"}</span></td>
+          <td>
+            ${desc}
+            ${
+              op.extra
+                ? `<div class="subtext">${op.extra}</div>`
+                : ""
+            }
+          </td>
+          <td>${driver}</td>
+          <td>${car}</td>
+          <td class="amount-cell">${amountStr}</td>
+        </tr>
+      `;
+    }
+
+    function applyFilters() {
+      const typeVal = filterType.value;
+      const fromVal = filterFromDate.value; // "YYYY-MM-DD"
+      const toVal = filterToDate.value;
+      const searchVal = (filterSearch.value || "").trim().toLowerCase();
+
+      let fromDate = null;
+      let toDate = null;
+
+      if (fromVal) {
+        fromDate = new Date(fromVal + "T00:00:00");
+      }
+      if (toVal) {
+        toDate = new Date(toVal + "T23:59:59");
+      }
+
+      filteredOperations = operations.filter(op => {
+        // نوع العملية
+        if (typeVal !== "all" && op.type !== typeVal) return false;
+
+        // الفلتر الزمني
+        const opDate = parseDateStr(op.date);
+        if (fromDate && opDate && opDate < fromDate) return false;
+        if (toDate && opDate && opDate > toDate) return false;
+
+        // البحث النصي
+        if (searchVal) {
+          const haystack = (
+            (op.description || "") +
+            " " +
+            (op.driver_name || "") +
+            " " +
+            (op.car_number || "") +
+            " " +
+            (op.ref || "")
+          ).toLowerCase();
+          if (!haystack.includes(searchVal)) return false;
+        }
+
+        return true;
+      });
+
+      renderOperationsTable();
+    }
+
+    function renderOperationsTable() {
+      if (!filteredOperations || filteredOperations.length === 0) {
+        operationsTableBody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state">
+              لا توجد عمليات مطابقة للفلاتر الحالية.
+            </td>
+          </tr>
+        `;
+        operationsCount.textContent = "0 عملية";
+        return;
+      }
+
+      operationsTableBody.innerHTML = "";
+      filteredOperations.forEach((op, idx) => {
+        operationsTableBody.insertAdjacentHTML("beforeend", buildOperationsRow(op, idx));
+      });
+
+      operationsCount.textContent = `${filteredOperations.length} عملية`;
+    }
+
+    async function loadOperations() {
+      try {
+        // نحمّل 3 مصادر في نفس الوقت
+        const [authRes, receiptsRes, journalRes] = await Promise.all([
+          fetch("/api/authorizations/closed"),
+          fetch("/api/receipts"),
+          fetch("/api/journal_entries"),
+        ]);
+
+        if (!authRes.ok || !receiptsRes.ok || !journalRes.ok) {
+          throw new Error("خطأ في تحميل بيانات العمليات");
+        }
+
+        const [auths, receipts, journalEntries] = await Promise.all([
+          authRes.json(),
+          receiptsRes.json(),
+          journalRes.json(),
+        ]);
+
+        const ops = [];
+
+        // 1) عمليات إقفال التفويضات
+        (auths || []).forEach(a => {
+          // نستخدم تاريخ الإقفال إن وجد، وإلا تاريخ النهاية، وإلا تاريخ الإصدار
+          const opDate = a.close_date || a.end_date || a.issue_date;
+          const amount = a.closed_amount != null && a.closed_amount !== undefined
+            ? a.closed_amount
+            : a.planned_amount;
+
+          ops.push({
+            type: "auth_close",
+            date: opDate,
+            ref: `AUTH-${a.id}`,
+            description: a.details || `إقفال تفويض للسيارة ${a.car_number || ""}`.trim(),
+            extra: `سائق: ${a.driver_name || "غير محدد"}`,
+            driver_name: a.driver_name,
+            car_number: a.car_number,
+            amount: amount
+          });
+        });
+
+        // 2) سندات التحصيل النقدي
+        (receipts || []).forEach(r => {
+          ops.push({
+            type: "receipt",
+            date: r.date,
+            ref: `RCPT-${r.id}`,
+            description: r.description || "سند تحصيل نقدي",
+            extra: r.ref_authorization_id ? `عن تفويض رقم ${r.ref_authorization_id}` : "",
+            driver_name: r.driver_name,
+            car_number: "",
+            amount: r.amount
+          });
+        });
+
+        // 3) قيود اليومية (يدوي + أوتوماتيك)
+        (journalEntries || []).forEach(je => {
+          let totalDebit = 0;
+          if (Array.isArray(je.lines)) {
+            je.lines.forEach(ln => {
+              if (ln.debit) totalDebit += Number(ln.debit) || 0;
+            });
+          }
+
+          let desc = je.description || "قيد يومية";
+          let extra = "";
+          if (je.ref_authorization_id) {
+            extra = `مرتبط بتفويض رقم ${je.ref_authorization_id}`;
+          } else if (je.ref_receipt_id) {
+            extra = `مرتبط بسند تحصيل رقم ${je.ref_receipt_id}`;
+          }
+
+          ops.push({
+            type: "journal",
+            date: je.date,
+            ref: `JE-${je.id}`,
+            description: desc,
+            extra: extra,
+            driver_name: "",
+            car_number: "",
+            amount: totalDebit || null
+          });
+        });
+
+        // ترتيب من الأحدث للأقدم
+        ops.sort((a, b) => {
+          const da = parseDateStr(a.date);
+          const db = parseDateStr(b.date);
+          const na = da ? da.getTime() : 0;
+          const nb = db ? db.getTime() : 0;
+          return nb - na;
+        });
+
+        operations = ops;
+        filteredOperations = ops.slice();
+        renderOperationsTable();
+        operationsCount.textContent = `${filteredOperations.length} عملية`;
+      } catch (err) {
+        console.error(err);
+        operationsTableBody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state">
+              ⚠️ حدث خطأ أثناء تحميل العمليات، حاول تحديث الصفحة.
+            </td>
+          </tr>
+        `;
+        operationsCount.textContent = "خطأ في التحميل";
+      }
+    }
+
+    // ربط الفلاتر
+    filterType.addEventListener("change", applyFilters);
+    filterFromDate.addEventListener("change", applyFilters);
+    filterToDate.addEventListener("change", applyFilters);
+    filterSearch.addEventListener("input", () => {
+      // نسيب المستخدم يكتب بحرّية بدون إعادة تحميل من السيرفر
+      applyFilters();
+    });
+
+    // أول ما الصفحة تفتح
+    loadOperations();
+  </script>
+</body>
+</html>

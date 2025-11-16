@@ -28,7 +28,7 @@
       min-height: 100vh;
     }
 
-    /* 🔝 شريط علوي ثابت */
+    /* 🔝 شريط علوي ثابت + مجموعة تنقّل */
     .top-bar {
       position: fixed;
       top: 0;
@@ -41,6 +41,14 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .back-btn {
@@ -58,6 +66,7 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
       transition: 0.2s ease;
       white-space: nowrap;
+      text-decoration: none;
     }
 
     .back-btn:hover {
@@ -79,6 +88,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     .small-link-btn {
@@ -568,7 +578,7 @@
 
     .modal-row {
       display: flex;
-      justify-content: space-between;
+      justify-content: space بين;
       gap: 6px;
       margin-bottom: 4px;
     }
@@ -669,9 +679,13 @@
 <body>
   <!-- 🔝 الهيدر الثابت -->
   <header class="top-bar">
-    <button class="back-btn" onclick="location.href='/'">
-      ⬅️ رجوع
-    </button>
+    <div class="nav-group">
+      <button class="back-btn" onclick="location.href='/'">🏠 الرئيسية</button>
+      <button class="back-btn" onclick="location.href='/cars'">🚗 السيارات</button>
+      <button class="back-btn" onclick="location.href='/drivers'">🧑‍✈️ السائقون</button>
+      <button class="back-btn" onclick="location.href='/authorizations'">📄 التفويضات</button>
+      <button class="back-btn" onclick="location.href='/operations'">🧾 العمليات</button>
+    </div>
 
     <h1 class="page-title">🚗 السيارات المؤجرة (التفويضات النشطة)</h1>
 
@@ -1022,9 +1036,7 @@
               <span class="pill-id">#${a.id}</span>
               <span>${a.car_number || "بدون رقم"} — ${(a.car_model || "")} ${(a.car_type || "")}</span>
             </h3>
-            <span class="${statusClass}">
-              ${isOverdue ? "مؤجرة — متجاوزة مدة الأسبوع" : "مؤجرة"}
-            </span>
+            <span class="${statusClass}">${isOverdue ? "مؤجرة — متجاوزة مدة الأسبوع" : "مؤجرة"}</span>
           </div>
 
           <div class="row">
@@ -1193,13 +1205,13 @@
       refreshViews();
     }
 
-    // فتح صفحة سند التحصيل مع تمرير رقم التفويض (نستخدمها حاليًا يدويًا)
+    // فتح صفحة سند التحصيل مع تمرير رقم التفويض
     function openReceipt(authId) {
       if (!authId) return;
       window.location.href = `/receipt?authorization_id=${authId}`;
     }
 
-    // ✳️ بدلاً من الإقفال المباشر: نفتح مودال مراجعة التفويض
+    // ✳️ فتح مودال مراجعة التفويض قبل الإقفال
     function endAuthorization(authId, btnEl) {
       const auth = allAuthorizations.find(a => String(a.id) === String(authId));
       if (!auth) {

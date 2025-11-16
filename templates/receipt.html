@@ -39,13 +39,21 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
     }
 
-    .back-btn {
+    .top-left {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .nav-btn {
       border: none;
       border-radius: 999px;
-      padding: 8px 16px;
-      font-size: 14px;
+      padding: 8px 14px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       background: #fff;
@@ -56,9 +64,10 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
       transition: 0.2s ease;
       white-space: nowrap;
+      text-decoration:none;
     }
 
-    .back-btn:hover {
+    .nav-btn:hover {
       background: var(--main-blue);
       color: #fff;
       transform: translateY(-1px);
@@ -296,24 +305,6 @@
       margin: 8px 0;
     }
 
-    .auth-select-row {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin-top: 6px;
-    }
-
-    .tag-warning {
-      display: inline-block;
-      margin-top: 4px;
-      font-size: 11px;
-      color: #b45309;
-      background: #fffbeb;
-      border-radius: 999px;
-      padding: 3px 8px;
-      border: 1px solid #fbbf24;
-    }
-
     .mini-note {
       font-size: 11px;
       color: var(--muted);
@@ -353,9 +344,23 @@
 
   <!-- 🔝 الهيدر الثابت -->
   <header class="top-bar">
-    <button class="back-btn" onclick="location.href='/'">
-      🏠 رجوع
-    </button>
+    <div class="top-left">
+      <a class="nav-btn" href="/">
+        🏠 الرئيسية
+      </a>
+      <a class="nav-btn" href="/operations">
+        📋 العمليات
+      </a>
+      <a class="nav-btn" href="/accounts">
+        📒 دليل الحسابات
+      </a>
+      <a class="nav-btn" href="/ledger">
+        📑 دفتر الأستاذ
+      </a>
+      <a class="nav-btn" href="/general">
+        📓 اليومية العامة
+      </a>
+    </div>
     <h1 class="page-title">🧾 سند تحصيل نقدي من السائق</h1>
   </header>
 
@@ -807,11 +812,11 @@
     function showStatus(message, isError = false) {
       const bar = document.getElementById("statusBar");
       if (!message) {
-        bar.textContent = "";
+        bar.innerHTML = "";
         bar.style.display = "none";
         return;
       }
-      bar.textContent = message;
+      bar.innerHTML = message;
       bar.className = "status-bar " + (isError ? "err" : "ok");
       bar.style.display = "block";
     }
@@ -862,7 +867,18 @@
           return;
         }
 
-        showStatus("✅ تم حفظ سند التحصيل وتسجيل القيد في اليومية العامة بنجاح.");
+        // لو الباك إند بيرجع receipt.id نعرض لينك لصفحة العمليات
+        let extraLink = "";
+        if (data.receipt && data.receipt.id) {
+          const opsUrl = `/operations?type=receipt&receipt_id=${data.receipt.id}`;
+          extraLink =
+            ` <a href="${opsUrl}" style="color:#1d4ed8; text-decoration:underline; margin-right:6px;">فتح العملية في صفحة العمليات</a>`;
+        }
+
+        showStatus(
+          "✅ تم حفظ سند التحصيل وتسجيل القيد في اليومية العامة بنجاح." + extraLink,
+          false
+        );
 
         // ممكن بعد النجاح تفرّغ المبلغ فقط وتبقي باقي البيانات لتسجيل سند آخر لنفس السائق
         // document.getElementById("amount").value = "";

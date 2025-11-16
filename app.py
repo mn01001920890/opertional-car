@@ -9,7 +9,6 @@ from decimal import Decimal, InvalidOperation
 import os
 import traceback
 
-
 app = Flask(__name__)
 
 # ---------------- Favicon ----------------
@@ -302,6 +301,171 @@ class JournalLine(db.Model):
         }
 
 
+# ---------------- Accounting Helpers ----------------
+def ensure_driver_root_account():
+    """
+    يتأكد إن حساب (مجموعة) رئيسي للسائقين موجود،
+    ولو مش موجود ينشئ: "حساب السائقين" من نوع أصل (asset).
+    """
+    root = Account.query.filter_by(name="حساب السائقين", is_group=True).first()
+    if root:
+        return root
+
+    root = Account(
+        name="حساب السائقين",
+        type="asset",
+        parent_id=None,
+        is_group=True,
+    )
+    db.session.add(root)
+    db.session.flush()
+    return root
+
+
+def ensure_driver_sub_account(driver: Driver):
+    """
+    يتأكد إن لكل سائق حساب فرعي مربوط بـ related_driver_id.
+    لو مش موجود ينشئه تحت حساب "حساب السائقين" الرئيسي.
+    """
+    if not driver:
+        return None
+
+    existing = Account.query.filter_by(related_driver_id=driver.id).first()
+    if existing:
+        return existing
+
+    root = ensure_driver_root_account()
+    acc_name = f"سائق: {driver.name}" if driver.name else f"سائق رقم {driver.id}"
+
+    acc = Account(
+        name=acc_name,
+        type="asset",
+        parent_id=root.id if root else None,
+        is_group=False,
+        related_driver_id=driver.id,
+    )
+    db.session.add(acc)
+    db.session.flush()
+    return acc
+
+
+def create_journal_for_closed_authorization(auth, total_amount):
+    """
+    ينشئ قيد يومية عند إقفال التفويض:
+    من حـ/ السائق (الفرعي إن وجد) أو حـ/ السائقين العام (مدين)
+    إلى حـ/ إيراد إيجار سيارات (دائن)
+    """
+    try:
+        if not total_amount or total_amount <= 0:
+            return
+
+        revenue_account = Account.query.filter_by(name="إيراد إيجار سيارات").first()
+        if not revenue_account:
+            # لو حساب الإيراد مش موجود ما نعملش قيد
+            return
+
+        driver_account = None
+        if auth and auth.driver_id:
+            # نحاول نستخدم حساب السائق الفرعي
+            driver_account = ensure_driver_sub_account(auth.driver)
+
+        if not driver_account:
+            # fallback على الحساب العام للسائقين
+            driver_account = ensure_driver_root_account()
+
+        if not driver_account:
+            return
+
+        je = JournalEntry(
+            date=datetime.utcnow(),
+            description=f"قيد إقفال تفويض رقم {auth.id}" if auth else "قيد إقفال تفويض",
+            ref_authorization_id=auth.id if auth else None,
+        )
+        db.session.add(je)
+        db.session.flush()  # عشان je.id يتولد
+
+        amount_dec = Decimal(str(total_amount))
+
+        # من حـ/ السائق / السائقين (مدين)
+        line1 = JournalLine(
+            journal_entry_id=je.id,
+            account_id=driver_account.id,
+            debit=amount_dec,
+            credit=Decimal("0"),
+        )
+
+        # إلى حـ/ إيراد إيجار سيارات (دائن)
+        line2 = JournalLine(
+            journal_entry_id=je.id,
+            account_id=revenue_account.id,
+            debit=Decimal("0"),
+            credit=amount_dec,
+        )
+
+        db.session.add_all([line1, line2])
+        # مفيش commit هنا؛ الـ Route نفسه هو اللي بيعمل commit
+    except Exception:
+        traceback.print_exc()
+
+
+def create_journal_for_cash_receipt(receipt: CashReceipt):
+    """
+    ينشئ قيد يومية لسند تحصيل نقدي:
+    من حـ/ الصندوق (مدين)
+    إلى حـ/ حساب السائق (الفرعي إن وجد) أو حـ/ السائقين العام (دائن)
+    """
+    try:
+        if not receipt or not receipt.amount or receipt.amount <= 0:
+            return
+
+        cash_account = Account.query.filter_by(name="الصندوق").first()
+        if not cash_account:
+            # بدون حساب الصندوق ما نقدرش نعمل قيد
+            return
+
+        driver_account = None
+        if receipt.driver_id:
+            driver_account = ensure_driver_sub_account(receipt.driver)
+
+        if not driver_account:
+            driver_account = ensure_driver_root_account()
+
+        if not driver_account:
+            return
+
+        je = JournalEntry(
+            date=receipt.date or datetime.utcnow(),
+            description=receipt.description or f"سند تحصيل نقدي رقم {receipt.id}",
+            ref_authorization_id=receipt.ref_authorization_id,
+            ref_receipt_id=receipt.id,
+        )
+        db.session.add(je)
+        db.session.flush()
+
+        amount_dec = Decimal(str(receipt.amount))
+
+        # من حـ/ الصندوق (مدين)
+        line1 = JournalLine(
+            journal_entry_id=je.id,
+            account_id=cash_account.id,
+            debit=amount_dec,
+            credit=Decimal("0"),
+        )
+
+        # إلى حـ/ حساب السائق (دائن)
+        line2 = JournalLine(
+            journal_entry_id=je.id,
+            account_id=driver_account.id,
+            debit=Decimal("0"),
+            credit=amount_dec,
+        )
+
+        db.session.add_all([line1, line2])
+        # الـ commit في الـ Route
+    except Exception:
+        traceback.print_exc()
+
+
 # ---------------- Routes (Pages) ----------------
 @app.route("/")
 def index_page():
@@ -338,7 +502,6 @@ def cars_status_page():
     return render_template("cars-status.html")
 
 
-# صفحات الموديول المحاسبي الجديدة
 @app.route("/accounts")
 def accounts_page():
     return render_template("accounts.html")
@@ -354,10 +517,14 @@ def general_journal_page():
     return render_template("general.html")
 
 
-# صفحة سند التحصيل (هنبني receipt.html بعدين)
 @app.route("/receipt")
 def receipt_page():
     return render_template("receipt.html")
+
+
+@app.route("/operations")
+def operations_page():
+    return render_template("operations.html")
 
 
 @app.route("/api/health")
@@ -370,105 +537,6 @@ def api_debug_dburl():
     return jsonify(
         {"DATABASE_URL_present": bool(os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL"))}
     )
-
-
-# ---------------- Accounting Helpers ----------------
-def create_journal_for_closed_authorization(auth, total_amount):
-    """
-    ينشئ قيد يومية بسيط عند إقفال التفويض:
-    من حـ/ السائقين (مدين)
-    إلى حـ/ إيراد إيجار سيارات (دائن)
-    """
-    try:
-        if not total_amount or total_amount <= 0:
-            return
-
-        # لازم يكون عندك حسابين جاهزين بأسمائهم فى جدول accounts
-        driver_account = Account.query.filter_by(name="حساب السائقين").first()
-        revenue_account = Account.query.filter_by(name="إيراد إيجار سيارات").first()
-        if not driver_account or not revenue_account:
-            # لو الحسابات مش موجودة، ما نوقفش السيستم؛ نكمل بدون إنشاء قيد
-            return
-
-        je = JournalEntry(
-            date=datetime.utcnow(),
-            description=f"قيد إقفال تفويض رقم {auth.id}",
-            ref_authorization_id=auth.id,
-        )
-        db.session.add(je)
-        db.session.flush()  # عشان je.id يتولد
-
-        amount_dec = Decimal(str(total_amount))
-
-        # من حـ/ السائقين (مدين)
-        line1 = JournalLine(
-            journal_entry_id=je.id,
-            account_id=driver_account.id,
-            debit=amount_dec,
-            credit=Decimal("0"),
-        )
-
-        # إلى حـ/ إيراد إيجار سيارات (دائن)
-        line2 = JournalLine(
-            journal_entry_id=je.id,
-            account_id=revenue_account.id,
-            debit=Decimal("0"),
-            credit=amount_dec,
-        )
-
-        db.session.add_all([line1, line2])
-        # مفيش commit هنا؛ الـ Route نفسه هو اللي بيعمل commit
-    except Exception:
-        traceback.print_exc()
-
-
-def create_journal_for_cash_receipt(receipt: CashReceipt):
-    """
-    ينشئ قيد يومية لسند تحصيل نقدي:
-    من حـ/ الصندوق (مدين)
-    إلى حـ/ حساب السائقين (دائن)
-    """
-    try:
-        if not receipt or not receipt.amount or receipt.amount <= 0:
-            return
-
-        cash_account = Account.query.filter_by(name="الصندوق").first()
-        driver_account = Account.query.filter_by(name="حساب السائقين").first()
-        if not cash_account or not driver_account:
-            # لو الحسابات غير موجودة ما نوقفش إضافة السند، فقط نتخطى القيد
-            return
-
-        je = JournalEntry(
-            date=receipt.date or datetime.utcnow(),
-            description=receipt.description or f"سند تحصيل نقدي رقم {receipt.id}",
-            ref_authorization_id=receipt.ref_authorization_id,
-            ref_receipt_id=receipt.id,
-        )
-        db.session.add(je)
-        db.session.flush()
-
-        amount_dec = Decimal(str(receipt.amount))
-
-        # من حـ/ الصندوق (مدين)
-        line1 = JournalLine(
-            journal_entry_id=je.id,
-            account_id=cash_account.id,
-            debit=amount_dec,
-            credit=Decimal("0"),
-        )
-
-        # إلى حـ/ حساب السائقين (دائن)
-        line2 = JournalLine(
-            journal_entry_id=je.id,
-            account_id=driver_account.id,
-            debit=Decimal("0"),
-            credit=amount_dec,
-        )
-
-        db.session.add_all([line1, line2])
-        # الـ commit في الـ Route
-    except Exception:
-        traceback.print_exc()
 
 
 # ---------------- APIs ----------------
@@ -826,6 +894,48 @@ def accounts_api():
     return jsonify({"message": "✅ تم إضافة الحساب بنجاح", "account": acc.to_dict()}), 201
 
 
+@app.route("/api/accounts/driver", methods=["POST"])
+def create_driver_account_api():
+    """
+    إنشاء حساب فرعي لسائق داخل شجرة حساب "حساب السائقين".
+    تُستخدم من صفحة drivers.html بعد إضافة السائق.
+    """
+    data = request.get_json() or {}
+
+    driver_id = data.get("driver_id")
+    if not driver_id:
+        return jsonify({"error": "driver_id مطلوب"}), 400
+
+    driver = Driver.query.get(driver_id)
+    if not driver:
+        return jsonify({"error": "السائق غير موجود في قاعدة البيانات"}), 404
+
+    # لو الحساب موجود مسبقاً، نرجّعه بدل ما نكرّره
+    existing = Account.query.filter_by(related_driver_id=driver.id).first()
+    if existing:
+        return jsonify(
+            {
+                "message": "✅ الحساب الخاص بالسائق موجود بالفعل",
+                "account": existing.to_dict(),
+                "already_exists": True,
+            }
+        ), 200
+
+    try:
+        acc = ensure_driver_sub_account(driver)
+        db.session.commit()
+        return jsonify(
+            {
+                "message": "✅ تم إنشاء حساب فرعي للسائق في شجرة الحسابات",
+                "account": acc.to_dict(),
+            }
+        ), 201
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({"error": f"DB error: {str(e)}"}), 500
+
+
 # ----- Ledger API -----
 @app.route("/api/accounts/<int:account_id>/ledger", methods=["GET"])
 def get_account_ledger(account_id):
@@ -946,7 +1056,7 @@ def journal_entries_api():
 def receipts_api():
     """
     GET  → يرجع قائمة سندات التحصيل النقدي.
-    POST → إنشاء سند تحصيل نقدي جديد + قيد محاسبي (من /receipt.html مستقبلاً).
+    POST → إنشاء سند تحصيل نقدي جديد + قيد محاسبي (من /receipt.html).
     """
     if request.method == "GET":
         receipts = CashReceipt.query.order_by(CashReceipt.date.desc(), CashReceipt.id.desc()).all()

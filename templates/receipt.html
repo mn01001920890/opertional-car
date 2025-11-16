@@ -325,6 +325,27 @@
       font-weight: 800;
       color: #16a34a;
     }
+
+    /* 🖨️ تنسيق للطباعة */
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .top-bar {
+        display: none;
+      }
+
+      .page-content {
+        padding-top: 16px;
+      }
+
+      .btn-primary,
+      .btn-secondary,
+      #statusBar {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 
@@ -343,6 +364,9 @@
     <p class="subtitle">
       استخدم هذه الشاشة لتسجيل سداد نقدي من السائق عن تفويض واحد أو أكثر، وسيتم إنشاء
       <strong>قيد يومية تلقائيًا</strong> من حـ/ الصندوق إلى حـ/ حساب السائقين.
+      <br>
+      لو فتحت الشاشة من السيارات المؤجرة بعد الإقفال، سيتم تعبئة <strong>التفويض</strong> و
+      <strong>المبلغ</strong> تلقائيًا من بيانات الإقفال.
     </p>
 
     <div class="layout">
@@ -388,7 +412,9 @@
                 <option value="">بدون ربط بتفويض محدد</option>
               </select>
               <div class="hint">
-                لو فتحت الشاشة من رابط مثل: <code>?authorization_id=123</code> سيتم اختيار التفويض تلقائيًا.
+                لو فتحت الشاشة من رابط مثل:
+                <code>?authorization_id=123&amp;amount=1450</code> سيتم اختيار التفويض
+                وملء المبلغ تلقائيًا.
               </div>
             </div>
 
@@ -501,19 +527,20 @@
   <script>
     let allDrivers = [];
     let allAuthorizations = [];
+    const urlParams = new URLSearchParams(window.location.search); // ⭐ استخدام بارامترات الرابط
 
     // 🔹 تهيئة الصفحة
     document.addEventListener("DOMContentLoaded", () => {
       setDefaultDateTime();
       loadDrivers();
       loadAuthorizations();
+      prefillAmountFromURL(); // ⭐ تعبئة المبلغ من URL لو موجود
     });
 
     // ضبط التاريخ الحالي في input datetime-local
     function setDefaultDateTime() {
       const input = document.getElementById("receiptDate");
       const now = new Date();
-      const pad = (n) => String(n).padStart(2, "0");
       const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
       const iso = local.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
       input.value = iso;
@@ -536,6 +563,9 @@
           opt.textContent = d.name || ("سائق #" + d.id);
           select.appendChild(opt);
         });
+
+        // لو في driver_id في الرابط
+        preselectDriverFromURL();
       } catch (err) {
         console.error(err);
         showStatus("تعذر تحميل قائمة السائقين من الخادم.", true);
@@ -553,6 +583,7 @@
         populateAuthSelect();
         // دعم فتح الصفحة بـ ?authorization_id=123
         preselectAuthorizationFromURL();
+        updateSummary();
       } catch (err) {
         console.error(err);
         showStatus("تعذر تحميل قائمة التفويضات من الخادم.", true);
@@ -569,7 +600,9 @@
       if (chosenDriverId) {
         const driver = allDrivers.find(d => String(d.id) === String(chosenDriverId));
         if (driver) {
-          filtered = allAuthorizations.filter(a => (a.driver_name || "").trim() === (driver.name || "").trim());
+          filtered = allAuthorizations.filter(
+            a => (a.driver_name || "").trim() === (driver.name || "").trim()
+          );
         }
       }
 
@@ -603,30 +636,47 @@
     }
 
     function onAuthChange() {
-      // اقترح بيان تلقائي بناءً على التفويض
+      // اقترح بيان ومبلغ تلقائي بناءً على التفويض
       const authSelect = document.getElementById("authSelect");
       const authId = authSelect.value;
       const descInput = document.getElementById("description");
+      const amountInput = document.getElementById("amount");
 
       const auth = allAuthorizations.find(a => String(a.id) === String(authId));
       if (auth) {
         const from = auth.issue_date || "";
         const to = auth.end_date || auth.planned_end_date || "";
         const car = auth.car_number || "";
-        const baseText = `سداد عن تفويض رقم ${auth.id} عن سيارة ${car} عن الفترة من ${from} حتى ${to}`;
-        // لو البيان فاضي أو كان نص افتراضي قديم نبدله
+        const baseText =
+          `سداد عن تفويض رقم ${auth.id} عن سيارة ${car} عن الفترة من ${from} حتى ${to}`;
+
+        // البيان
         if (!descInput.value.trim() || descInput.value.startsWith("سداد عن تفويض رقم")) {
           descInput.value = baseText;
+        }
+
+        // لو المبلغ فاضي، نحاول نملأه من closed_amount أو planned_amount
+        if (!amountInput.value.trim()) {
+          let suggested = null;
+
+          if (auth.closed_amount != null && !Number.isNaN(Number(auth.closed_amount))) {
+            suggested = Number(auth.closed_amount);
+          } else if (auth.planned_amount != null && !Number.isNaN(Number(auth.planned_amount))) {
+            suggested = Number(auth.planned_amount);
+          }
+
+          if (suggested != null) {
+            amountInput.value = suggested.toFixed(2);
+          }
         }
       }
 
       updateSummary();
     }
 
-    // قراءة authorization_id من URL إن وجد
+    // قراءة authorization_id و amount و driver_id من URL
     function preselectAuthorizationFromURL() {
-      const params = new URLSearchParams(window.location.search);
-      const authId = params.get("authorization_id");
+      const authId = urlParams.get("authorization_id");
       if (!authId) return;
 
       const authSelect = document.getElementById("authSelect");
@@ -640,13 +690,44 @@
         // نحاول نضبط السائق تلقائيًا من التفويض
         const auth = allAuthorizations.find(a => String(a.id) === String(authId));
         if (auth && auth.driver_name) {
-          const driver = allDrivers.find(d => (d.name || "").trim() === (auth.driver_name || "").trim());
+          const driver = allDrivers.find(
+            d => (d.name || "").trim() === (auth.driver_name || "").trim()
+          );
           if (driver) {
             const driverSelect = document.getElementById("driverSelect");
             driverSelect.value = driver.id;
             document.getElementById("driverName").value = driver.name || "";
           }
         }
+      }
+    }
+
+    function preselectDriverFromURL() {
+      const driverId = urlParams.get("driver_id");
+      if (!driverId) return;
+
+      const driverSelect = document.getElementById("driverSelect");
+      const opt = Array.from(driverSelect.options).find(
+        o => String(o.value) === String(driverId)
+      );
+      if (opt) {
+        driverSelect.value = driverId;
+        const driver = allDrivers.find(d => String(d.id) === String(driverId));
+        if (driver) {
+          document.getElementById("driverName").value = driver.name || "";
+        }
+      }
+    }
+
+    // تعبئة المبلغ من URL لو موجود (?amount=...)
+    function prefillAmountFromURL() {
+      const amountParam = urlParams.get("amount");
+      if (!amountParam) return;
+
+      const amountInput = document.getElementById("amount");
+      const num = Number(amountParam);
+      if (!Number.isNaN(num)) {
+        amountInput.value = num.toFixed(2);
       }
     }
 
@@ -702,8 +783,18 @@
         const days = a.rental_days != null ? a.rental_days : null;
         document.getElementById("sumAuthDays").textContent = days != null ? `${days} يوم` : "—";
 
-        const plannedAmount =
-          a.planned_amount != null ? `${a.planned_amount.toFixed ? a.planned_amount.toFixed(2) : a.planned_amount} ريال` : "—";
+        let plannedAmount = "—";
+        if (a.planned_amount != null) {
+          const val = a.planned_amount.toFixed
+            ? a.planned_amount.toFixed(2)
+            : a.planned_amount;
+          plannedAmount = `${val} ريال`;
+        } else if (a.closed_amount != null) {
+          const val = a.closed_amount.toFixed
+            ? a.closed_amount.toFixed(2)
+            : a.closed_amount;
+          plannedAmount = `${val} ريال`;
+        }
         document.getElementById("sumAuthPlannedAmount").textContent = plannedAmount;
 
         const status = (a.status || "").trim() || "غير معروف";
@@ -715,8 +806,14 @@
     // عرض رسالة حالة (نجاح / خطأ)
     function showStatus(message, isError = false) {
       const bar = document.getElementById("statusBar");
-      bar.textContent = message || "";
+      if (!message) {
+        bar.textContent = "";
+        bar.style.display = "none";
+        return;
+      }
+      bar.textContent = message;
       bar.className = "status-bar " + (isError ? "err" : "ok");
+      bar.style.display = "block";
     }
 
     // إرسال بيانات السند إلى /api/receipts

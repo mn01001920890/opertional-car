@@ -19,9 +19,10 @@
       margin: 0;
       background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
       color: #fff;
+      min-height: 100vh;
     }
 
-    /* 🔝 شريط علوي ثابت + زر رجوع */
+    /* 🔝 شريط علوي ثابت + أزرار تنقّل */
     .top-bar {
       position: fixed;
       top: 0;
@@ -34,6 +35,14 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .back-btn {
@@ -51,6 +60,7 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
       transition: 0.2s ease;
       white-space: nowrap;
+      text-decoration: none;
     }
 
     .back-btn:hover {
@@ -131,7 +141,7 @@
     .auth-table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1000px;
+      min-width: 1100px;
     }
 
     .auth-table thead {
@@ -210,9 +220,13 @@
 
   <!-- 🔝 الهيدر الثابت -->
   <header class="top-bar">
-    <button class="back-btn" onclick="location.href='/'">
-      🏠 رجوع
-    </button>
+    <div class="nav-group">
+      <button class="back-btn" onclick="location.href='/'">🏠 الرئيسية</button>
+      <button class="back-btn" onclick="location.href='/cars'">🚗 السيارات</button>
+      <button class="back-btn" onclick="location.href='/drivers'">🧑‍✈️ السائقون</button>
+      <button class="back-btn" onclick="location.href='/authorizations'">📄 التفويضات</button>
+      <button class="back-btn" onclick="location.href='/operations'">🧾 العمليات</button>
+    </div>
     <h1 class="page-title">📜 التفويضات المقفلة (أرشيف)</h1>
   </header>
 
@@ -222,12 +236,12 @@
 
     <!-- 🔍 البحث -->
     <div class="search-box">
-      <span class="search-label">ابحث برقم السيارة أو رقم رخصة السائق</span>
+      <span class="search-label">ابحث برقم السيارة أو رقم رخصة السائق أو اسم السائق</span>
       <input
         id="searchInput"
         class="search-input"
         type="text"
-        placeholder="مثال: 123ABC أو رقم الرخصة"
+        placeholder="مثال: 123ABC أو رقم الرخصة أو اسم السائق"
         oninput="applyFilter()"
       />
     </div>
@@ -238,6 +252,7 @@
         <thead>
           <tr>
             <th>السائق</th>
+            <th>رقم رخصة السائق</th>
             <th>رقم السيارة</th>
             <th>الموديل</th>
             <th>النوع</th>
@@ -305,7 +320,7 @@
       const cardsBox  = document.getElementById("authCards");
       const summary   = document.getElementById("summary");
 
-      tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+      tableBody.innerHTML = "<tr><td colspan='13' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
       cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
       summary.textContent = "";
 
@@ -315,7 +330,7 @@
         const data = await res.json();
 
         if (!Array.isArray(data)) {
-          tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>⚠️ لم يتم العثور على بيانات.</td></tr>";
+          tableBody.innerHTML = "<tr><td colspan='13' style='text-align:center'>⚠️ لم يتم العثور على بيانات.</td></tr>";
           cardsBox.innerHTML  = "<p style='text-align:center'>⚠️ لم يتم العثور على بيانات.</p>";
           return;
         }
@@ -324,7 +339,7 @@
         applyFilter();
       }catch(err){
         console.error(err);
-        tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='13' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>❌ حدث خطأ أثناء التحميل.</p>";
       }
     }
@@ -336,9 +351,10 @@
       let filtered = closedAuthorizations;
       if (term){
         filtered = closedAuthorizations.filter(it => {
-          const car = (it.car_number || "").toLowerCase();
-          const lic = (it.driver_license_no || "").toLowerCase();
-          return car.includes(term) || lic.includes(term);
+          const car   = (it.car_number || "").toLowerCase();
+          const lic   = (it.driver_license_no || "").toLowerCase();
+          const name  = (it.driver_name || "").toLowerCase();
+          return car.includes(term) || lic.includes(term) || name.includes(term);
         });
       }
 
@@ -356,7 +372,7 @@
       summary.textContent = `إجمالي التفويضات المقفلة: ${totalClosed} — المعروضة الآن: ${countShown}`;
 
       if (!list || list.length === 0) {
-        tableBody.innerHTML = "<tr><td colspan='12' style='text-align:center'>⚪ لا توجد تفويضات مطابقة لنتيجة البحث.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='13' style='text-align:center'>⚪ لا توجد تفويضات مطابقة لنتيجة البحث.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>⚪ لا توجد تفويضات مطابقة لنتيجة البحث.</p>";
         return;
       }
@@ -397,6 +413,7 @@
                 ${item.driver_name || "—"}
               </span>
             </td>
+            <td>${item.driver_license_no || "—"}</td>
             <td>
               <span class="link" onclick="goCar('${encodeURIComponent(carSafe)}')">
                 ${item.car_number || "—"}
@@ -453,6 +470,11 @@
             </div>
 
             <div class="row">
+              <span class="label">رقم رخصة السائق:</span>
+              ${item.driver_license_no || "—"}
+            </div>
+
+            <div class="row">
               <span class="label">رقم السيارة:</span>
               <span class="link" onclick="goCar('${encodeURIComponent(carSafe)}')">
                 ${item.car_number || "—"}
@@ -472,11 +494,6 @@
             <div class="row">
               <span class="label">التكلفة الإجمالية:</span>
               <span class="cost-text">${costText}</span>
-            </div>
-
-            <div class="row">
-              <span class="label">رقم رخصة السائق:</span>
-              ${item.driver_license_no || "—"}
             </div>
 
             <div class="row">

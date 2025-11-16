@@ -68,7 +68,14 @@
       color: #e5e7eb;
     }
 
-    .btn-back {
+    .top-buttons {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .btn-back,
+    .btn-nav {
       padding: 8px 14px;
       border-radius: 999px;
       border: 1px solid rgba(148,163,184,0.6);
@@ -81,9 +88,11 @@
       gap: 6px;
       transition: 0.2s ease;
       text-decoration: none;
+      white-space: nowrap;
     }
 
-    .btn-back:hover {
+    .btn-back:hover,
+    .btn-nav:hover {
       background: rgba(15,23,42,1);
       transform: translateY(-1px);
     }
@@ -267,6 +276,12 @@
       font-size: 0.78rem;
       color:#9ca3af;
     }
+
+    /* تظليل صف عند الفوكس من URL */
+    .row-highlight {
+      outline: 2px solid #facc15;
+      box-shadow: 0 0 0 2px rgba(250,204,21,0.5);
+    }
   </style>
 </head>
 
@@ -280,10 +295,28 @@
           عرض كل العمليات المحاسبية تحت بعضها سواء كانت ناتجة عن إقفال تفويض، سند تحصيل نقدي، أو قيد يومية.
         </p>
       </div>
-      <a href="/" class="btn-back">
-        <span>🏠</span>
-        <span>الرجوع للوحة الرئيسية</span>
-      </a>
+      <div class="top-buttons">
+        <a href="/" class="btn-back">
+          <span>🏠</span>
+          <span>الرئيسية</span>
+        </a>
+        <a href="/accounts" class="btn-nav">
+          <span>📒</span>
+          <span>دليل الحسابات</span>
+        </a>
+        <a href="/ledger" class="btn-nav">
+          <span>📑</span>
+          <span>دفتر الأستاذ</span>
+        </a>
+        <a href="/general" class="btn-nav">
+          <span>📓</span>
+          <span>اليومية العامة</span>
+        </a>
+        <a href="/receipt" class="btn-nav">
+          <span>🧾</span>
+          <span>سند تحصيل</span>
+        </a>
+      </div>
     </div>
 
     <div class="layout">
@@ -322,7 +355,7 @@
 
           <div class="hint">
             • يتم تجميع العمليات من: إقفال التفويضات، سندات التحصيل النقدي، وقيود اليومية اليدوية.<br/>
-            • لاحقًا يمكن إضافة زر لفتح تفاصيل العملية أو طباعة سند مستقل لكل عملية.
+            • يمكنك الدخول على الصفحة من روابط أخرى مع فلاتر جاهزة باستخدام باراميترات URL (type / from / to / q / auth_id / receipt_id / journal_id).
           </div>
         </div>
       </div>
@@ -365,6 +398,8 @@
   </div>
 
   <script>
+    const urlParams = new URLSearchParams(window.location.search);
+
     const filterType = document.getElementById("filterType");
     const filterFromDate = document.getElementById("filterFromDate");
     const filterToDate = document.getElementById("filterToDate");
@@ -377,8 +412,8 @@
 
     function parseDateStr(dateStr) {
       if (!dateStr) return null;
-      // الشكل من الـ API: "YYYY-MM-DD HH:MM:SS"
       try {
+        // الشكل من الـ API: "YYYY-MM-DD HH:MM:SS"
         return new Date(dateStr.replace(" ", "T"));
       } catch {
         return null;
@@ -389,7 +424,6 @@
       if (!dateStr) return "—";
       const d = parseDateStr(dateStr);
       if (!d || isNaN(d.getTime())) return dateStr;
-      // تنسيق بسيط: YYYY-MM-DD HH:MM
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
@@ -437,8 +471,11 @@
       const car = op.car_number || "—";
       const desc = op.description || "—";
 
+      // id فريد للصف علشان لما نيجي نعمل highlight من URL
+      const rowId = `op-row-${op.source}-${op.id}`;
+
       return `
-        <tr>
+        <tr id="${rowId}">
           <td>${index + 1}</td>
           <td>${dateStr}</td>
           <td>${typePill(op.type)}</td>
@@ -475,15 +512,12 @@
       }
 
       filteredOperations = operations.filter(op => {
-        // نوع العملية
         if (typeVal !== "all" && op.type !== typeVal) return false;
 
-        // الفلتر الزمني
         const opDate = parseDateStr(op.date);
         if (fromDate && opDate && opDate < fromDate) return false;
         if (toDate && opDate && opDate > toDate) return false;
 
-        // البحث النصي
         if (searchVal) {
           const haystack = (
             (op.description || "") +
@@ -522,11 +556,13 @@
       });
 
       operationsCount.textContent = `${filteredOperations.length} عملية`;
+
+      // بعد ما نرسم الجدول نشوف لو في focus من URL
+      focusRowFromURL();
     }
 
     async function loadOperations() {
       try {
-        // نحمّل 3 مصادر في نفس الوقت
         const [authRes, receiptsRes, journalRes] = await Promise.all([
           fetch("/api/authorizations/closed"),
           fetch("/api/receipts"),
@@ -547,13 +583,14 @@
 
         // 1) عمليات إقفال التفويضات
         (auths || []).forEach(a => {
-          // نستخدم تاريخ الإقفال إن وجد، وإلا تاريخ النهاية، وإلا تاريخ الإصدار
           const opDate = a.close_date || a.end_date || a.issue_date;
           const amount = a.closed_amount != null && a.closed_amount !== undefined
             ? a.closed_amount
             : a.planned_amount;
 
           ops.push({
+            id: a.id,
+            source: "auth",
             type: "auth_close",
             date: opDate,
             ref: `AUTH-${a.id}`,
@@ -568,6 +605,8 @@
         // 2) سندات التحصيل النقدي
         (receipts || []).forEach(r => {
           ops.push({
+            id: r.id,
+            source: "receipt",
             type: "receipt",
             date: r.date,
             ref: `RCPT-${r.id}`,
@@ -597,6 +636,8 @@
           }
 
           ops.push({
+            id: je.id,
+            source: "journal",
             type: "journal",
             date: je.date,
             ref: `JE-${je.id}`,
@@ -618,9 +659,9 @@
         });
 
         operations = ops;
-        filteredOperations = ops.slice();
-        renderOperationsTable();
-        operationsCount.textContent = `${filteredOperations.length} عملية`;
+        // نطبّق فلاتر أولية من URL قبل أول render
+        applyInitialURLFilters();
+        applyFilters();
       } catch (err) {
         console.error(err);
         operationsTableBody.innerHTML = `
@@ -634,12 +675,65 @@
       }
     }
 
-    // ربط الفلاتر
+    function applyInitialURLFilters() {
+      const typeParam = urlParams.get("type");
+      const fromParam = urlParams.get("from");
+      const toParam = urlParams.get("to");
+      const qParam = urlParams.get("q");
+
+      if (typeParam && ["auth_close","receipt","journal","all"].includes(typeParam)) {
+        filterType.value = typeParam;
+      }
+
+      if (fromParam) {
+        filterFromDate.value = fromParam;
+      }
+      if (toParam) {
+        filterToDate.value = toParam;
+      }
+      if (qParam) {
+        filterSearch.value = qParam;
+      }
+    }
+
+    function focusRowFromURL() {
+      // نحاول نحدد صف معيّن من خلال auth_id أو receipt_id أو journal_id
+      const authId = urlParams.get("auth_id");
+      const receiptId = urlParams.get("receipt_id");
+      const journalId = urlParams.get("journal_id");
+
+      let targetSource = null;
+      let targetId = null;
+
+      if (authId) {
+        targetSource = "auth";
+        targetId = authId;
+      } else if (receiptId) {
+        targetSource = "receipt";
+        targetId = receiptId;
+      } else if (journalId) {
+        targetSource = "journal";
+        targetId = journalId;
+      }
+
+      if (!targetSource || !targetId) return;
+
+      const rowDomId = `op-row-${targetSource}-${targetId}`;
+      const rowEl = document.getElementById(rowDomId);
+      if (rowEl) {
+        rowEl.classList.add("row-highlight");
+        rowEl.scrollIntoView({ behavior:"smooth", block:"center" });
+        setTimeout(() => {
+          rowEl.classList.remove("row-highlight");
+        }, 3500);
+      }
+    }
+
+    // ربط الفلاتر مع الدالة
     filterType.addEventListener("change", applyFilters);
     filterFromDate.addEventListener("change", applyFilters);
     filterToDate.addEventListener("change", applyFilters);
     filterSearch.addEventListener("input", () => {
-      // نسيب المستخدم يكتب بحرّية بدون إعادة تحميل من السيرفر
       applyFilters();
     });
 

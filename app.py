@@ -13,13 +13,14 @@ import traceback
 app = Flask(__name__)
 
 # ---------------- Favicon ----------------
-@app.route('/favicon.ico')
+@app.route("/favicon.ico")
 def favicon():
     return send_from_directory(
         os.path.join(app.root_path),
-        'favicon.ico',
-        mimetype='image/vnd.microsoft.icon'
+        "favicon.ico",
+        mimetype="image/vnd.microsoft.icon",
     )
+
 
 # ---------------- DB Config (Vercel/Neon) ----------------
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
@@ -54,20 +55,32 @@ def get_friday_end(base_dt: datetime) -> datetime:
 # ---------------- Models ----------------
 class Authorization(db.Model):
     __tablename__ = "authorizations"
-    id          = db.Column(db.Integer, primary_key=True)
-    issue_date  = db.Column(db.DateTime, default=datetime.utcnow)  # تاريخ إصدار التفويض
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    issue_date = db.Column(db.DateTime, default=datetime.utcnow)  # تاريخ إصدار التفويض
     driver_name = db.Column(db.String(100), nullable=False)
     driver_license_no = db.Column(db.String(60))  # رقم رخصة السائق (للبحث السريع)
-    car_number  = db.Column(db.String(50),  nullable=False)
-    car_model   = db.Column(db.String(50))
-    car_type    = db.Column(db.String(50))
-    start_date  = db.Column(db.DateTime)          # تاريخ بداية التفويض (فعلي)
-    daily_rent  = db.Column(db.Numeric(10, 2))
-    details     = db.Column(db.Text)
-    status      = db.Column(db.String(50))        # مؤجرة / منتهية
+
+    # 🔹 ربط التفويض بسائق محدد
+    driver_id = db.Column(db.Integer, db.ForeignKey("drivers.id"), nullable=True)
+
+    car_number = db.Column(db.String(50), nullable=False)
+    car_model = db.Column(db.String(50))
+    car_type = db.Column(db.String(50))
+
+    start_date = db.Column(db.DateTime)  # تاريخ بداية التفويض (فعلي)
+    daily_rent = db.Column(db.Numeric(10, 2))
+    details = db.Column(db.Text)
+    status = db.Column(db.String(50))  # مؤجرة / منتهية
+
     # نستخدم end_date كتاريخ نهاية التفويض (الجمعة) وليس تاريخ الإقفال
-    end_date    = db.Column(db.DateTime, nullable=True)   # تاريخ نهاية التفويض (الجمعة)
-    close_date  = db.Column(db.DateTime, nullable=True)   # تاريخ الإقفال الفعلي (زر الإنهاء)
+    end_date = db.Column(db.DateTime, nullable=True)  # تاريخ نهاية التفويض (الجمعة)
+    close_date = db.Column(db.DateTime, nullable=True)  # تاريخ الإقفال الفعلي (زر الإنهاء)
+
+    # 🔹 قيمة التفويض النهائية + ملاحظة الإقفال
+    closed_amount = db.Column(db.Numeric(12, 2), nullable=True)
+    closing_note = db.Column(db.Text)
 
     def to_dict(self):
         """
@@ -84,7 +97,7 @@ class Authorization(db.Model):
         if base_start and self.end_date and self.daily_rent is not None:
             try:
                 start_d = base_start.date()
-                end_d   = self.end_date.date()
+                end_d = self.end_date.date()
                 days = (end_d - start_d).days + 1  # +1 عشان يشمل يوم البداية
                 if days < 0:
                     days = 0
@@ -99,33 +112,38 @@ class Authorization(db.Model):
             "issue_date": self.issue_date.strftime("%Y-%m-%d %H:%M:%S") if self.issue_date else "",
             "start_date": self.start_date.isoformat() if self.start_date else None,
             # نستخدم end_date كتاريخ نهاية الجمعة (planned_end_date)
-            "end_date":   self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else "",
+            "end_date": self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else "",
             "planned_end_date": self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else "",
             "close_date": self.close_date.strftime("%Y-%m-%d %H:%M:%S") if self.close_date else "",
             # بيانات السائق
             "driver_name": self.driver_name,
             "driver_license_no": self.driver_license_no,
+            "driver_id": self.driver_id,
             # بيانات السيارة
             "car_number": self.car_number,
-            "car_model":  self.car_model,
-            "car_type":   self.car_type,
+            "car_model": self.car_model,
+            "car_type": self.car_type,
             # مالية
             "daily_rent": float(self.daily_rent or 0),
             "details": self.details,
-            "status":  self.status,
+            "status": self.status,
             # معلومات مساعدة للحسابات
             "rental_days": rental_days,
-            "planned_amount": planned_amount
+            "planned_amount": planned_amount,
+            # بيانات الإقفال
+            "closed_amount": float(self.closed_amount or 0) if self.closed_amount is not None else None,
+            "closing_note": self.closing_note,
         }
 
 
 class Car(db.Model):
     __tablename__ = "cars"
-    id         = db.Column(db.Integer, primary_key=True)
-    plate      = db.Column(db.String(50), nullable=False)
-    model      = db.Column(db.String(80))
-    car_type   = db.Column(db.String(80))
-    status     = db.Column(db.String(50), default="متاحة")  # متاحة / مؤجرة / تحت الصيانة
+
+    id = db.Column(db.Integer, primary_key=True)
+    plate = db.Column(db.String(50), nullable=False)
+    model = db.Column(db.String(80))
+    car_type = db.Column(db.String(80))
+    status = db.Column(db.String(50), default="متاحة")  # متاحة / مؤجرة / تحت الصيانة
     daily_rent = db.Column(db.Numeric(10, 2))
 
     def to_dict(self):
@@ -135,23 +153,27 @@ class Car(db.Model):
             "model": self.model,
             "car_type": self.car_type,
             "status": self.status,
-            "daily_rent": float(self.daily_rent or 0)
+            "daily_rent": float(self.daily_rent or 0),
         }
 
 
 class Driver(db.Model):
     __tablename__ = "drivers"
-    id         = db.Column(db.Integer, primary_key=True)
-    name       = db.Column(db.String(100), nullable=False)
-    phone      = db.Column(db.String(50))
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(50))
     license_no = db.Column(db.String(60))
+
+    # 🔹 كل التفويضات المرتبطة بالسائق
+    authorizations = db.relationship("Authorization", backref="driver", lazy=True)
 
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
             "phone": self.phone,
-            "license_no": self.license_no
+            "license_no": self.license_no,
         }
 
 
@@ -162,14 +184,28 @@ class Account(db.Model):
     مثال: "حساب السائقين", "إيراد إيجار سيارات", "الصندوق"
     """
     __tablename__ = "accounts"
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False, unique=True)
     type = db.Column(db.String(50))  # asset / liability / revenue / expense ...
+
+    # 🔹 دعم شجرة الحسابات (حساب أب / فرعي)
+    parent_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=True)
+    is_group = db.Column(db.Boolean, default=False)
+
     related_driver_id = db.Column(db.Integer, db.ForeignKey("drivers.id"), nullable=True)
     related_car_id = db.Column(db.Integer, db.ForeignKey("cars.id"), nullable=True)
 
     related_driver = db.relationship("Driver", backref="accounts", lazy=True)
     related_car = db.relationship("Car", backref="accounts", lazy=True)
+
+    # 🔹 علاقة الأب / الأبناء داخل نفس الجدول
+    parent = db.relationship(
+        "Account",
+        remote_side=[id],
+        backref="children",
+        lazy=True,
+    )
 
     def to_dict(self):
         return {
@@ -178,6 +214,8 @@ class Account(db.Model):
             "type": self.type,
             "related_driver_id": self.related_driver_id,
             "related_car_id": self.related_car_id,
+            "parent_id": self.parent_id,
+            "is_group": self.is_group,
         }
 
 
@@ -187,6 +225,7 @@ class CashReceipt(db.Model):
     يمثل قبض نقدي من السائق (أو العميل) عن تفويض معيّن.
     """
     __tablename__ = "cash_receipts"
+
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     driver_id = db.Column(db.Integer, db.ForeignKey("drivers.id"), nullable=True)
@@ -215,6 +254,7 @@ class JournalEntry(db.Model):
     رأس اليومية journal_entries
     """
     __tablename__ = "journal_entries"
+
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     description = db.Column(db.String(255))
@@ -242,6 +282,7 @@ class JournalLine(db.Model):
     بنود اليومية journal_lines
     """
     __tablename__ = "journal_lines"
+
     id = db.Column(db.Integer, primary_key=True)
     journal_entry_id = db.Column(db.Integer, db.ForeignKey("journal_entries.id"), nullable=False)
     account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
@@ -326,7 +367,9 @@ def api_health():
 
 @app.route("/api/debug/dburl")
 def api_debug_dburl():
-    return jsonify({"DATABASE_URL_present": bool(os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL"))})
+    return jsonify(
+        {"DATABASE_URL_present": bool(os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL"))}
+    )
 
 
 # ---------------- Accounting Helpers ----------------
@@ -437,7 +480,7 @@ def add_authorization():
 
         # 0) تحقق من الحقول الأساسية
         driver_name = (data.get("driver_name") or "").strip()
-        car_plate   = (data.get("car_number") or "").strip()
+        car_plate = (data.get("car_number") or "").strip()
         if not driver_name:
             return jsonify({"error": "برجاء اختيار السائق"}), 400
         if not car_plate:
@@ -452,8 +495,7 @@ def add_authorization():
 
         # 2) منع ازدواج التفويض المفتوح (بناء على close_date)
         open_auth = (
-            Authorization.query
-            .filter_by(car_number=car_plate)
+            Authorization.query.filter_by(car_number=car_plate)
             .filter(Authorization.close_date.is_(None))
             .first()
         )
@@ -473,7 +515,11 @@ def add_authorization():
             try:
                 start_date = datetime.fromisoformat(sd)
             except Exception:
-                return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601 مثل 2025-11-12T10:30"}), 400
+                return jsonify(
+                    {
+                        "error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601 مثل 2025-11-12T10:30",
+                    }
+                ), 400
         # لو ما فيش start_date نستخدم issue_date
         if not start_date:
             start_date = issue_date
@@ -483,7 +529,7 @@ def add_authorization():
 
         # 6) الموديل/النوع/الإيجار
         car_model = data.get("car_model") or car.model
-        car_type  = data.get("car_type") or car.car_type
+        car_type = data.get("car_type") or car.car_type
 
         # الإيجار اليومي: لو مبعوت استخدمه بعد تحويله لDecimal، وإلا خُد من العربية
         daily_rent = car.daily_rent
@@ -496,6 +542,7 @@ def add_authorization():
         new_auth = Authorization(
             driver_name=driver_name,
             driver_license_no=driver_license_no,
+            driver_id=driver_obj.id if driver_obj else None,
             car_number=car_plate,
             car_model=car_model,
             car_type=car_type,
@@ -504,18 +551,20 @@ def add_authorization():
             daily_rent=daily_rent,
             details=data.get("details"),
             status="مؤجرة",
-            end_date=planned_end,   # تاريخ الجمعة (planned_end_date)
-            close_date=None
+            end_date=planned_end,  # تاريخ الجمعة (planned_end_date)
+            close_date=None,
         )
 
         try:
             db.session.add(new_auth)
             car.status = "مؤجرة"
             db.session.commit()
-            return jsonify({
-                "message": "✅ Authorization added successfully",
-                "authorization": new_auth.to_dict()
-            }), 201
+            return jsonify(
+                {
+                    "message": "✅ Authorization added successfully",
+                    "authorization": new_auth.to_dict(),
+                }
+            ), 201
         except Exception as e:
             db.session.rollback()
             traceback.print_exc()
@@ -562,8 +611,7 @@ def get_authorizations():
 def get_closed_authorizations():
     """تفويضات مغلقة فقط (close_date IS NOT NULL)."""
     auths = (
-        Authorization.query
-        .filter(Authorization.close_date.is_not(None))
+        Authorization.query.filter(Authorization.close_date.is_not(None))
         .order_by(Authorization.id.desc())
         .all()
     )
@@ -574,8 +622,7 @@ def get_closed_authorizations():
 def get_active_authorizations():
     """تفويضات مفتوحة فقط (close_date IS NULL)."""
     auths = (
-        Authorization.query
-        .filter(Authorization.close_date.is_(None))
+        Authorization.query.filter(Authorization.close_date.is_(None))
         .order_by(Authorization.id.desc())
         .all()
     )
@@ -611,7 +658,7 @@ def end_authorization(auth_id):
         base_start = auth.start_date or auth.issue_date
         if base_start and auth.end_date and auth.daily_rent is not None:
             start_d = base_start.date()
-            end_d   = auth.end_date.date()
+            end_d = auth.end_date.date()
             days = (end_d - start_d).days + 1  # +1 عشان يشمل يوم البداية
             if days < 0:
                 days = 0
@@ -634,6 +681,7 @@ def end_authorization(auth_id):
         new_auth = Authorization(
             driver_name=auth.driver_name,
             driver_license_no=auth.driver_license_no,
+            driver_id=auth.driver_id,
             car_number=auth.car_number,
             car_model=auth.car_model,
             car_type=auth.car_type,
@@ -643,7 +691,7 @@ def end_authorization(auth_id):
             details=auth.details,
             status="مؤجرة",
             end_date=new_end,
-            close_date=None
+            close_date=None,
         )
         db.session.add(new_auth)
 
@@ -653,13 +701,15 @@ def end_authorization(auth_id):
 
         db.session.commit()
 
-        return jsonify({
-            "message": "✅ تم إنهاء التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد اليومية",
-            "closed_authorization": auth.to_dict(),
-            "new_authorization": new_auth.to_dict(),
-            "rental_days": rental_days,
-            "total_amount": total_amount
-        }), 200
+        return jsonify(
+            {
+                "message": "✅ تم إنهاء التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد اليومية",
+                "closed_authorization": auth.to_dict(),
+                "new_authorization": new_auth.to_dict(),
+                "rental_days": rental_days,
+                "total_amount": total_amount,
+            }
+        ), 200
 
     except Exception as e:
         db.session.rollback()
@@ -687,7 +737,7 @@ def add_car():
             model=data.get("model"),
             car_type=data.get("car_type"),
             daily_rent=Decimal(str(data.get("daily_rent"))) if data.get("daily_rent") else None,
-            status=data.get("status") or "متاحة"
+            status=data.get("status") or "متاحة",
         )
         db.session.add(car)
         db.session.commit()
@@ -702,15 +752,10 @@ def cars_status():
     cars = Car.query.all()
     total = len(cars)
     available = len([c for c in cars if (c.status or "").strip() == "متاحة"])
-    rented   = len([c for c in cars if (c.status or "").strip() == "مؤجرة"])
-    repair   = len([c for c in cars if (c.status or "").strip() == "تحت الصيانة"])
+    rented = len([c for c in cars if (c.status or "").strip() == "مؤجرة"])
+    repair = len([c for c in cars if (c.status or "").strip() == "تحت الصيانة"])
 
-    return jsonify({
-        "total": total,
-        "available": available,
-        "rented": rented,
-        "repair": repair
-    })
+    return jsonify({"total": total, "available": available, "rented": rented, "repair": repair})
 
 
 # ----- Drivers APIs -----
@@ -732,11 +777,7 @@ def add_driver():
         if existing:
             return jsonify({"error": "هذا السائق مسجَّل بالفعل"}), 400
 
-        new_driver = Driver(
-            name=name,
-            phone=data.get("phone"),
-            license_no=data.get("license_no")
-        )
+        new_driver = Driver(name=name, phone=data.get("phone"), license_no=data.get("license_no"))
         db.session.add(new_driver)
         db.session.commit()
         return jsonify({"message": "✅ Driver added", "driver": new_driver.to_dict()}), 201
@@ -772,6 +813,8 @@ def accounts_api():
         type=data.get("type"),
         related_driver_id=data.get("related_driver_id"),
         related_car_id=data.get("related_car_id"),
+        parent_id=data.get("parent_id"),
+        is_group=bool(data.get("is_group")) if data.get("is_group") is not None else False,
     )
     try:
         db.session.add(acc)
@@ -796,8 +839,7 @@ def get_account_ledger(account_id):
 
     # نرتّب حسب تاريخ القيد ثم رقم السطر
     lines = (
-        JournalLine.query
-        .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
+        JournalLine.query.join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
         .filter(JournalLine.account_id == account_id)
         .order_by(JournalEntry.date.asc(), JournalLine.id.asc())
         .all()
@@ -812,19 +854,18 @@ def get_account_ledger(account_id):
         credit = line.credit or Decimal("0")
         running_balance += debit - credit
 
-        ledger_rows.append({
-            "entry_id": je.id,
-            "date": je.date.strftime("%Y-%m-%d %H:%M:%S") if je.date else "",
-            "description": je.description,
-            "debit": float(debit or 0),
-            "credit": float(credit or 0),
-            "balance": float(running_balance),
-        })
+        ledger_rows.append(
+            {
+                "entry_id": je.id,
+                "date": je.date.strftime("%Y-%m-%d %H:%M:%S") if je.date else "",
+                "description": je.description,
+                "debit": float(debit or 0),
+                "credit": float(credit or 0),
+                "balance": float(running_balance),
+            }
+        )
 
-    return jsonify({
-        "account": account.to_dict(),
-        "lines": ledger_rows,
-    })
+    return jsonify({"account": account.to_dict(), "lines": ledger_rows})
 
 
 # ----- General Journal APIs (لليومية العامة) -----
@@ -872,8 +913,12 @@ def journal_entries_api():
             credit_val = ln.get("credit") or 0
 
             try:
-                debit_dec = Decimal(str(debit_val)) if debit_val not in (None, "", " ") else Decimal("0")
-                credit_dec = Decimal(str(credit_val)) if credit_val not in (None, "", " ") else Decimal("0")
+                debit_dec = (
+                    Decimal(str(debit_val)) if debit_val not in (None, "", " ") else Decimal("0")
+                )
+                credit_dec = (
+                    Decimal(str(credit_val)) if credit_val not in (None, "", " ") else Decimal("0")
+                )
             except (InvalidOperation, ValueError, TypeError):
                 continue
 
@@ -891,7 +936,9 @@ def journal_entries_api():
         traceback.print_exc()
         return jsonify({"error": f"DB error: {str(e)}"}), 500
 
-    return jsonify({"message": "✅ تم إنشاء قيد اليومية بنجاح", "journal_entry": je.to_dict(with_lines=True)}), 201
+    return jsonify(
+        {"message": "✅ تم إنشاء قيد اليومية بنجاح", "journal_entry": je.to_dict(with_lines=True)}
+    ), 201
 
 
 # ----- Cash Receipts APIs (سندات التحصيل النقدي) -----
@@ -966,10 +1013,12 @@ def receipts_api():
         create_journal_for_cash_receipt(receipt)
 
         db.session.commit()
-        return jsonify({
-            "message": "✅ تم إنشاء سند التحصيل النقدي وتسجيل القيد المحاسبي",
-            "receipt": receipt.to_dict()
-        }), 201
+        return jsonify(
+            {
+                "message": "✅ تم إنشاء سند التحصيل النقدي وتسجيل القيد المحاسبي",
+                "receipt": receipt.to_dict(),
+            }
+        ), 201
 
     except Exception as e:
         db.session.rollback()

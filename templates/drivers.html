@@ -9,8 +9,11 @@
     :root {
       --main-blue: #0d6efd;
       --main-purple: #6c63ff;
-      --card-radius: 12px;
-      --shadow: 0 4px 12px rgba(0,0,0,0.2);
+      --card-radius: 14px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.25);
+      --muted: #6b7280;
+      --success: #16a34a;
+      --danger: #dc2626;
     }
 
     * {
@@ -22,6 +25,7 @@
       margin: 0;
       background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
       color: #fff;
+      min-height: 100vh;
     }
 
     /* 🔝 شريط علوي ثابت + زر رجوع */
@@ -68,115 +72,331 @@
       font-weight: 700;
       flex: 1;
       text-align: center;
+      color: #fff;
+    }
+
+    .top-right-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .small-link-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(255,255,255,0.14);
+      color: #e5e7eb;
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .small-link-btn:hover {
+      background: rgba(255,255,255,0.26);
     }
 
     /* محتوى الصفحة */
     .page-content {
-      max-width: 1100px;
+      max-width: 1150px;
       margin: 0 auto;
       padding: 80px 16px 24px; /* space علشان الشريط الثابت */
     }
 
     h2 {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 6px;
       font-size: 24px;
       color: #fff;
     }
 
-    /* 🔍 البحث */
-    .search-box {
-      width: 100%;
-      margin-bottom: 15px;
+    .subtitle {
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.9;
+      margin-bottom: 16px;
     }
 
-    .search-box input {
+    /* شريط الأدوات: بحث + عداد */
+    .toolbar {
+      margin-bottom: 12px;
+    }
+
+    .toolbar-card {
+      background: rgba(255,255,255,0.96);
+      color: #111827;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .counter-pill {
+      border-radius: 999px;
+      padding: 6px 12px;
+      background: #ecfdf3;
+      color: #166534;
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .search-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .search-input {
       width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 16px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      padding: 7px 12px;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .search-input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 2px rgba(13,110,253,0.18);
+    }
+
+    .search-label {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      white-space: nowrap;
     }
 
     /* ➕ كارت إضافة سائق */
     .add-driver-card {
-      background: #fff;
-      color: #333;
-      padding: 12px;
+      background: rgba(255,255,255,0.98);
+      color: #111827;
+      padding: 14px 14px 10px;
       border-radius: var(--card-radius);
-      margin-bottom: 15px;
+      margin-bottom: 14px;
       box-shadow: var(--shadow);
     }
 
-    .add-driver-row {
+    .add-driver-header {
       display: flex;
-      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .add-driver-header-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .add-driver-header-note {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .add-driver-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
       gap: 8px;
     }
 
+    @media (max-width: 900px) {
+      .add-driver-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .add-driver-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .add-driver-row input {
-      flex: 1 1 150px;
-      min-width: 120px;
+      width: 100%;
       padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 14px;
+      border-radius: 9px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: 0.15s ease;
+    }
+
+    .add-driver-row input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.35);
     }
 
     #addDriverBtn {
-      background: var(--main-blue);
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
       color: #fff;
       border: none;
-      border-radius: 10px;
-      padding: 9px 14px;
+      border-radius: 999px;
+      padding: 9px 16px;
       cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: 700;
       white-space: nowrap;
       transition: 0.2s ease;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+      align-self: stretch;
     }
 
     #addDriverBtn:hover {
-      background: #004499;
       transform: translateY(-1px);
+      opacity: 0.96;
     }
 
     #dAddMsg {
       margin-top: 6px;
-      font-weight: bold;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-bar {
+      margin-top: 8px;
       font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      display: none;
+    }
+
+    .status-bar.ok {
+      display: block;
+      background: #ecfdf3;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-bar.err {
+      display: block;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
     }
 
     /* 🖥️ جدول للسائقين (للّاب) */
     .table-wrapper {
-      background: #fff;
+      background: rgba(255,255,255,0.98);
       border-radius: var(--card-radius);
       box-shadow: var(--shadow);
       overflow: hidden;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .drivers-table {
       width: 100%;
       border-collapse: collapse;
+      font-size: 13px;
     }
 
     .drivers-table thead {
-      background: var(--main-blue);
-      color: #fff;
+      background: #0f172a;
+      color: #e5e7eb;
     }
 
     .drivers-table th,
     .drivers-table td {
-      padding: 10px 12px;
+      padding: 8px 10px;
       text-align: center;
-      font-size: 14px;
-      border-bottom: 1px solid #eee;
-      color: #333;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
     }
 
-    .drivers-table tr:last-child td {
+    .drivers-table th {
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .drivers-table tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    .drivers-table tbody tr:nth-child(odd) {
+      background: #ffffff;
+    }
+
+    .drivers-table tbody tr:last-child td {
       border-bottom: none;
+    }
+
+    .td-notes {
+      max-width: 200px;
+      white-space: normal;
+      text-align: right;
+      font-size: 12px;
+    }
+
+    .td-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .btn-xs {
+      border-radius: 999px;
+      border: none;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-xs-primary {
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
+      color: #fff;
+    }
+
+    .btn-xs-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-xs-soft {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .btn-xs-soft:hover {
+      background: #dbeafe;
+    }
+
+    .btn-xs-plain {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    .btn-xs-plain:hover {
+      background: #e5e7eb;
     }
 
     /* 📱 كروت للموبايل */
@@ -185,40 +405,68 @@
     }
 
     .driver-card {
-      background: #fff;
-      color: #333;
-      padding: 15px;
-      border-radius: 14px;
-      margin-bottom: 15px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
-      transition: 0.3s;
+      background: rgba(255,255,255,0.98);
+      color: #111827;
+      padding: 12px 12px 10px;
+      border-radius: var(--card-radius);
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      transition: 0.25s ease;
+      border: 1px solid #e5e7eb;
+    }
+
+    .driver-card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .driver-card-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .driver-card-id {
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: #eff6ff;
+      color: #1d4ed8;
     }
 
     .row {
-      margin: 4px 0;
-      font-size: 14px;
+      margin: 3px 0;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
     }
 
     .label {
-      font-weight: bold;
-      color: var(--main-blue);
+      font-weight: 600;
+      color: var(--muted);
       margin-left: 4px;
     }
 
     .highlight {
-      border: 2px solid #ffcc00;
-      background: #fff6d1;
-      transform: scale(1.04);
+      border: 2px solid #facc15;
+      box-shadow: 0 0 0 2px rgba(250,204,21,0.5);
+      transform: translateY(-2px);
+    }
+
+    .card-actions {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
     }
 
     /* Responsive */
     @media (max-width: 768px) {
       .page-title {
         font-size: 16px;
-      }
-
-      .add-driver-row {
-        flex-direction: column;
       }
 
       .table-wrapper {
@@ -249,112 +497,258 @@
     <button class="back-btn" onclick="location.href='/'">
       🏠 رجوع
     </button>
+
     <h1 class="page-title">👤 إدارة السائقين</h1>
+
+    <div class="top-right-actions">
+      <button class="small-link-btn" onclick="location.href='/issue'">
+        ➕ إصدار تفويض جديد
+      </button>
+      <button class="small-link-btn" onclick="location.href='/rented'">
+        🚗 السيارات المؤجرة
+      </button>
+      <button class="small-link-btn" onclick="location.href='/receipt'">
+        🧾 سند تحصيل
+      </button>
+    </div>
   </header>
 
   <main class="page-content">
     <h2>قائمة السائقين</h2>
+    <p class="subtitle">
+      هذه الشاشة هي <strong>دليل السائقين</strong> المرتبطين بكل التفويضات وسندات التحصيل.
+      من هنا تضيف السائق مرة واحدة وتستخدمه في
+      <strong>إصدار التفويضات</strong> و <strong>سند التحصيل</strong>، ومع كل سائق جديد يتم إنشاء
+      <strong>حساب فرعي في شجرة الحسابات</strong> تلقائيًا.
+    </p>
 
-    <!-- بحث -->
-    <div class="search-box">
-      <input id="search" type="text" placeholder="🔍 ابحث باسم السائق..." oninput="filterDrivers()">
-    </div>
+    <!-- شريط الأدوات: بحث + عداد -->
+    <section class="toolbar">
+      <div class="toolbar-card">
+        <div class="counter-pill">
+          <span>إجمالي السائقين:</span>
+          <span id="driversCount">0</span>
+        </div>
+
+        <div class="search-group">
+          <span class="search-label">بحث بالاسم أو الجوال أو رقم الرخصة:</span>
+          <input
+            id="search"
+            type="text"
+            class="search-input"
+            placeholder="اكتب جزء من اسم السائق أو رقم الجوال أو الرخصة..."
+            oninput="filterDrivers()"
+          />
+        </div>
+
+        <span class="badge">
+          👤 كل سائق له حساب فرعي تلقائي في شجرة الحسابات (حساب السائقين)
+        </span>
+      </div>
+    </section>
 
     <!-- ➕ إضافة سائق جديد -->
-    <div class="add-driver-card">
+    <section class="add-driver-card">
+      <div class="add-driver-header">
+        <div>
+          <p class="add-driver-header-title">➕ إضافة سائق جديد</p>
+          <p class="add-driver-header-note">
+            أضف السائق مرة واحدة بالبيانات الأساسية ليُستخدم في التفويضات وسندات التحصيل، ويتم إنشاء حساب محاسبي له تلقائيًا.
+          </p>
+        </div>
+      </div>
+
       <div class="add-driver-row">
-        <input id="d_name"  placeholder="اسم السائق" />
-        <input id="d_phone" placeholder="الجوال" />
+        <input id="d_name"  placeholder="اسم السائق (إجباري)" />
+        <input id="d_phone" placeholder="رقم الجوال" />
         <input id="d_lic"   placeholder="رقم الرخصة" />
         <input id="d_note"  placeholder="ملاحظات (اختياري)" />
-        <button id="addDriverBtn">➕ إضافة سائق</button>
+        <button id="addDriverBtn">💾 حفظ السائق</button>
       </div>
       <div id="dAddMsg"></div>
-    </div>
+    </section>
 
     <!-- 🖥️ جدول (للّاب) -->
-    <div class="table-wrapper">
+    <section class="table-wrapper">
       <table class="drivers-table">
         <thead>
           <tr>
-            <th>الاسم</th>
+            <th>#</th>
+            <th>اسم السائق</th>
             <th>الجوال</th>
             <th>رقم الرخصة</th>
             <th>ملاحظات</th>
+            <th>إجراءات</th>
           </tr>
         </thead>
         <tbody id="driversTableBody">
           <!-- JS -->
         </tbody>
       </table>
-    </div>
+    </section>
 
     <!-- 📱 كروت (للموبايل) -->
-    <div class="card-list" id="driversCards"></div>
+    <section class="card-list" id="driversCards"></section>
 
+    <div id="statusBar" class="status-bar"></div>
   </main>
 
   <script>
+    let driversData = [];
+    let lastCreatedDriverId = null;
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadDrivers();
+    });
+
+    // 🔹 عرض رسالة حالة عامة
+    function showStatus(message, isError = false) {
+      const bar = document.getElementById("statusBar");
+      if (!message) {
+        bar.textContent = "";
+        bar.style.display = "none";
+        return;
+      }
+      bar.textContent = message;
+      bar.className = "status-bar " + (isError ? "err" : "ok");
+      bar.style.display = "block";
+    }
+
     // ➕ إضافة سائق جديد
-    document.getElementById("addDriverBtn").addEventListener("click", async ()=>{
-      const payload = {
-        name:       document.getElementById("d_name").value.trim(),
-        phone:      document.getElementById("d_phone").value.trim(),
-        license_no: document.getElementById("d_lic").value.trim(),
-        notes:      document.getElementById("d_note").value.trim()
-      };
+    document.getElementById("addDriverBtn").addEventListener("click", async () => {
+      const name  = document.getElementById("d_name").value.trim();
+      const phone = document.getElementById("d_phone").value.trim();
+      const lic   = document.getElementById("d_lic").value.trim();
+      const note  = document.getElementById("d_note").value.trim();
 
       const box = document.getElementById("dAddMsg");
-      box.style.color = "#000";
-      box.textContent = "⏳ جاري الإضافة...";
+      box.style.color = "#111827";
 
+      if (!name) {
+        box.textContent = "❌ اسم السائق مطلوب.";
+        box.style.color = "#b91c1c";
+        return;
+      }
+
+      const payload = {
+        name:       name,
+        phone:      phone || null,
+        license_no: lic   || null,
+        notes:      note  || null
+      };
+
+      box.textContent = "⏳ جاري حفظ السائق...";
       try {
         const res = await fetch("/api/drivers", {
-          method:"POST",
-          headers: {"Content-Type":"application/json"},
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
 
-        const data = await res.json();
-        if(res.ok){
-          box.style.color = "#0f5132";
-          box.textContent = "✅ تمت إضافة السائق";
+        let data = {};
+        try { data = await res.json(); } catch (_) {}
 
-          // إعادة تحميل القائمة
-          loadDrivers();
-
-          // تفريغ الحقول
-          document.getElementById("d_name").value  = "";
-          document.getElementById("d_phone").value = "";
-          document.getElementById("d_lic").value   = "";
-          document.getElementById("d_note").value  = "";
-        }else{
-          box.style.color = "#842029";
-          box.textContent = "❌ فشل: " + (data.error || "خطأ أثناء الإضافة");
+        if (!res.ok) {
+          box.style.color = "#b91c1c";
+          box.textContent = "❌ فشل: " + (data.error || "خطأ أثناء إضافة السائق.");
+          return;
         }
-      } catch(e){
-        box.style.color = "#842029";
-        box.textContent = "⚠️ مشكلة اتصال";
+
+        const driver = data; // نتوقع يرجع كائن السائق الجديد
+        lastCreatedDriverId = driver.id || null;
+
+        // ⭐⭐ هنا الربط مع موديول المحاسبة / accounts.html ⭐⭐
+        // نحاول إنشاء حساب فرعي للسائق في شجرة الحسابات عن طريق API خاص بالمحاسبة
+        createDriverAccount(driver).catch(err => {
+          console.warn("لم يتم إنشاء حساب محاسبي للسائق:", err);
+        });
+
+        box.style.color = "#166534";
+        box.textContent = "✅ تمت إضافة السائق وإنشاء حسابه المحاسبي (إن أمكن).";
+
+        // تفريغ الحقول
+        document.getElementById("d_name").value  = "";
+        document.getElementById("d_phone").value = "";
+        document.getElementById("d_lic").value   = "";
+        document.getElementById("d_note").value  = "";
+
+        // إعادة تحميل القائمة
+        await loadDrivers(true);
+      } catch (e) {
+        console.error(e);
+        box.style.color = "#b91c1c";
+        box.textContent = "⚠️ مشكلة اتصال بالخادم.";
       }
     });
 
-    let driversData = [];
+    // 🔗 دالة إنشاء حساب محاسبي فرعي للسائق في شجرة الحسابات
+    async function createDriverAccount(driver) {
+      if (!driver || !driver.id) return;
 
-    async function loadDrivers() {
-      const tableBody = document.getElementById("driversTableBody");
-      const cardsBox  = document.getElementById("driversCards");
+      // 👉 هنا نفترض إن عندك Endpoint في الباك إند:
+      // POST /api/accounts/driver
+      // وهو اللي فعليًا بيضيف حساب في جدول الحسابات تحت حساب "السائقين"
+      const payload = {
+        driver_id:   driver.id,
+        driver_name: driver.name,
+        phone:       driver.phone || null,
+        license_no:  driver.license_no || null
+        // ممكن تضيف حقول زيادة لو الباك إند محتاجها، زي parent_account_code لو حابب
+        // parent_code: "113000"  // مثال: كود حساب "السائقين" الرئيسي
+      };
 
-      tableBody.innerHTML = "<tr><td colspan='4' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
-      cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
+      const res = await fetch("/api/accounts/driver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-      const res = await fetch("/api/drivers");
-      const data = await res.json();
-      driversData = data;
-
-      renderDrivers(driversData);
-      autoFocusDriver();
+      // مش هنوقف الشاشة لو حصل خطأ، بس هنطبع في الـ console
+      if (!res.ok) {
+        let errMsg = "HTTP " + res.status;
+        try {
+          const data = await res.json();
+          if (data && data.error) errMsg = data.error;
+        } catch (_) {}
+        console.warn("خطأ في إنشاء حساب محاسبي للسائق:", errMsg);
+      }
     }
 
+    // 🔄 تحميل السائقين من الـ API
+    async function loadDrivers(keepStatus = false) {
+      const tableBody = document.getElementById("driversTableBody");
+      const cardsBox  = document.getElementById("driversCards");
+      const countEl   = document.getElementById("driversCount");
+
+      tableBody.innerHTML = "<tr><td colspan='6' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+      cardsBox.innerHTML  = "<p style='text-align:center; font-size:13px;'>⏳ جاري تحميل قائمة السائقين...</p>";
+      if (!keepStatus) {
+        showStatus("جارِ تحميل قائمة السائقين من الخادم...", false);
+      }
+
+      try {
+        const res = await fetch("/api/drivers");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        driversData = Array.isArray(data) ? data : [];
+
+        countEl.textContent = driversData.length;
+        renderDrivers(driversData);
+
+        // دعم ?driver_id= أو ?focus_id=
+        autoFocusDriverByIdFromURL();
+        showStatus(`تم تحميل ${driversData.length} سائق.`, false);
+      } catch (err) {
+        console.error(err);
+        showStatus("تعذر تحميل قائمة السائقين من الخادم. تأكد أن الباك إند يعمل.", true);
+        tableBody.innerHTML = "<tr><td colspan='6' style='text-align:center'>⚠️ خطأ في تحميل السائقين.</td></tr>";
+        cardsBox.innerHTML  = "<p style='text-align:center; font-size:13px;'>⚠️ خطأ في تحميل السائقين.</p>";
+      }
+    }
+
+    // 🎨 رسم الجدول + الكروت
     function renderDrivers(data) {
       const tableBody = document.getElementById("driversTableBody");
       const cardsBox  = document.getElementById("driversCards");
@@ -362,51 +756,104 @@
       tableBody.innerHTML = "";
       cardsBox.innerHTML  = "";
 
-      data.forEach(d => {
-        const safeId = d.name.replace(/\s+/g, '-').replace(/\W+/g,'-');
+      if (!data || data.length === 0) {
+        tableBody.innerHTML = "<tr><td colspan='6' style='text-align:center'>لا توجد بيانات سائقين حتى الآن.</td></tr>";
+        cardsBox.innerHTML  = "<p style='text-align:center; font-size:13px;'>لا توجد بيانات سائقين حتى الآن.</p>";
+        return;
+      }
+
+      data.forEach((d, index) => {
+        const safeId = d.id != null ? String(d.id) : (d.name || "").replace(/\s+/g, "-").replace(/\W+/g, "-");
         const rowId  = "driver-row-"  + safeId;
         const cardId = "driver-card-" + safeId;
 
-        // صف في الجدول
+        // 🖥️ صف في الجدول
         const tr = document.createElement("tr");
         tr.id = rowId;
         tr.innerHTML = `
-          <td>${d.name}</td>
+          <td>${d.id != null ? d.id : (index + 1)}</td>
+          <td>${d.name || "—"}</td>
           <td>${d.phone || "—"}</td>
           <td>${d.license_no || "—"}</td>
-          <td>${d.notes || "—"}</td>
+          <td class="td-notes">${d.notes || "—"}</td>
+          <td>
+            <div class="td-actions">
+              <button class="btn-xs btn-xs-primary" onclick="goToIssue(${d.id})">
+                ➕ تفويض
+              </button>
+              <button class="btn-xs btn-xs-soft" onclick="goToRented(${d.id})">
+                🚗 مؤجر
+              </button>
+              <button class="btn-xs btn-xs-plain" onclick="goToReceipt(${d.id})">
+                🧾 سند
+              </button>
+            </div>
+          </td>
         `;
         tableBody.appendChild(tr);
 
-        // كارت للموبايل
-        const card = document.createElement("div");
+        // 📱 كارت للموبايل
+        const card = document.createElement("article");
         card.className = "driver-card";
         card.id = cardId;
         card.innerHTML = `
-          <div class="row"><span class="label">الاسم:</span> ${d.name}</div>
-          <div class="row"><span class="label">الجوال:</span> ${d.phone || "—"}</div>
-          <div class="row"><span class="label">الرخصة:</span> ${d.license_no || "—"}</div>
-          <div class="row"><span class="label">ملاحظات:</span> ${d.notes || "—"}</div>
+          <div class="driver-card-header">
+            <span class="driver-card-name">${d.name || "بدون اسم"}</span>
+            <span class="driver-card-id">ID: ${d.id != null ? d.id : (index + 1)}</span>
+          </div>
+          <div class="row">
+            <span class="label">الجوال:</span>
+            <span>${d.phone || "—"}</span>
+          </div>
+          <div class="row">
+            <span class="label">رقم الرخصة:</span>
+            <span>${d.license_no || "—"}</span>
+          </div>
+          <div class="row">
+            <span class="label">ملاحظات:</span>
+            <span>${d.notes || "—"}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn-xs btn-xs-primary" onclick="goToIssue(${d.id})">
+              ➕ تفويض
+            </button>
+            <button class="btn-xs btn-xs-soft" onclick="goToRented(${d.id})">
+              🚗 مؤجر
+            </button>
+            <button class="btn-xs btn-xs-plain" onclick="goToReceipt(${d.id})">
+              🧾 سند
+            </button>
+          </div>
         `;
         cardsBox.appendChild(card);
       });
     }
 
+    // 🔍 فلترة حسب الاسم / الجوال / الرخصة
     function filterDrivers() {
       const term = document.getElementById("search").value.trim().toLowerCase();
-      const filtered = driversData.filter(d => d.name.toLowerCase().includes(term));
+      if (!term) {
+        renderDrivers(driversData);
+        return;
+      }
+      const filtered = driversData.filter(d => {
+        const name  = (d.name || "").toLowerCase();
+        const phone = (d.phone || "").toLowerCase();
+        const lic   = (d.license_no || "").toLowerCase();
+        return name.includes(term) || phone.includes(term) || lic.includes(term);
+      });
       renderDrivers(filtered);
     }
 
-    // تظليل سائق محدد حسب ?focus=الاسم
-    function autoFocusDriver() {
-      const params = new URLSearchParams(window.location.search);
-      let focusName = params.get("focus");
-      if (!focusName) return;
+    // ✨ تظليل سائق معيّن حسب ?driver_id أو ?focus_id
+    function autoFocusDriverByIdFromURL() {
+      const focusIdParam = urlParams.get("driver_id") || urlParams.get("focus_id");
+      if (!focusIdParam && !lastCreatedDriverId) return;
 
-      const safeId = focusName.replace(/\W+/g, '-');
-      const rowId  = "driver-row-"  + safeId;
-      const cardId = "driver-card-" + safeId;
+      const focusId = focusIdParam || lastCreatedDriverId;
+      const safeId  = String(focusId);
+      const rowId   = "driver-row-"  + safeId;
+      const cardId  = "driver-card-" + safeId;
 
       const rowEl  = document.getElementById(rowId);
       const cardEl = document.getElementById(cardId);
@@ -419,7 +866,22 @@
       }
     }
 
-    loadDrivers();
+    // 🔗 انتقالات سريعة بين الموديولات
+
+    function goToIssue(driverId) {
+      if (!driverId) return;
+      window.location.href = `/issue?driver_id=${driverId}`;
+    }
+
+    function goToRented(driverId) {
+      if (!driverId) return;
+      window.location.href = `/rented?driver_id=${driverId}`;
+    }
+
+    function goToReceipt(driverId) {
+      if (!driverId) return;
+      window.location.href = `/receipt?driver_id=${driverId}`;
+    }
   </script>
 </body>
 </html>

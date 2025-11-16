@@ -20,7 +20,7 @@
       color:var(--ink);
     }
 
-    /* 🔝 شريط علوي ثابت + زر رجوع */
+    /* 🔝 شريط علوي ثابت + أزرار تنقّل */
     .top-bar{
       position:fixed;
       top:0;
@@ -33,6 +33,14 @@
       display:flex;
       align-items:center;
       gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .nav-group{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
     }
 
     .back-btn{
@@ -50,6 +58,7 @@
       box-shadow:0 2px 6px rgba(0,0,0,0.25);
       transition:0.2s ease;
       white-space:nowrap;
+      text-decoration:none;
     }
 
     .back-btn:hover{
@@ -115,6 +124,7 @@
       font-size:14px;
       outline:none;
       transition:border-color .15s ease, box-shadow .15s ease;
+      font-family:inherit;
     }
 
     select:focus,input:focus,textarea:focus{
@@ -261,9 +271,13 @@
 
   <!-- 🔝 الهيدر الثابت -->
   <header class="top-bar">
-    <button class="back-btn" onclick="location.href='/'">
-      🏠 رجوع
-    </button>
+    <div class="nav-group">
+      <button class="back-btn" onclick="location.href='/'">🏠 الرئيسية</button>
+      <button class="back-btn" onclick="location.href='/cars'">🚗 السيارات</button>
+      <button class="back-btn" onclick="location.href='/drivers'">🧑‍✈️ السائقون</button>
+      <button class="back-btn" onclick="location.href='/authorizations'">📄 التفويضات</button>
+      <button class="back-btn" onclick="location.href='/operations'">🧾 العمليات</button>
+    </div>
     <h2 class="page-title">📝 إصدار تفويض جديد</h2>
   </header>
 
@@ -396,6 +410,7 @@
 
     let CARS = [];
     let DRIVERS = [];
+    const urlParams = new URLSearchParams(window.location.search);
 
     // ================== أدوات واجهة ==================
     function showAlert(msg, kind="err"){
@@ -423,6 +438,12 @@
 
     // datetime-local default = الآن
     function setDefaultStart(){
+      const startParam = urlParams.get("start") || urlParams.get("start_date");
+      if (startParam) {
+        // لو جاي من URL بنفترض إنه في فورمات datetime-local جاهز
+        startDate.value = startParam;
+        return;
+      }
       const now = new Date();
       const local = new Date(now.getTime() - now.getTimezoneOffset()*60000);
       startDate.value = local.toISOString().slice(0,16); // YYYY-MM-DDTHH:MM
@@ -441,9 +462,10 @@
       driverSelect.innerHTML = '<option value="">اختر السائق...</option>';
       DRIVERS.forEach(d=>{
         const opt = document.createElement("option");
-        opt.value = d.name;
-        opt.textContent = d.name;
-        opt.dataset.phone = d.phone || "";
+        opt.value = d.id;                           // نستخدم ID
+        opt.textContent = d.name || `سائق #${d.id}`;
+        opt.dataset.name    = d.name || "";
+        opt.dataset.phone   = d.phone || "";
         opt.dataset.license = d.license_no || "";
         driverSelect.appendChild(opt);
       });
@@ -454,9 +476,13 @@
       CARS = Array.isArray(data) ? data : [];
       carSelect.innerHTML = '<option value="">اختر السيارة...</option>';
       CARS.forEach(c=>{
+        const label = c.model
+          ? `${c.plate} — ${c.model}`
+          : c.plate;
         const opt = document.createElement("option");
-        opt.value = c.plate;
-        opt.textContent = c.plate;
+        opt.value = c.id; // نستخدم ID
+        opt.textContent = label;
+        opt.dataset.plate  = c.plate || "";
         opt.dataset.model  = c.model || "";
         opt.dataset.type   = c.car_type || "";
         opt.dataset.status = c.status || "";
@@ -544,6 +570,51 @@
       calcPanel.style.display = "block";
     }
 
+    // ================== Prefill من الـ URL ==================
+    function preselectFromURL(){
+      // السائق
+      const driverIdParam   = urlParams.get("driver_id");
+      const driverNameParam = urlParams.get("driver_name");
+      if (driverIdParam) {
+        const opt = Array.from(driverSelect.options).find(
+          o => String(o.value) === String(driverIdParam)
+        );
+        if (opt) {
+          driverSelect.value = opt.value;
+          driverSelect.dispatchEvent(new Event("change"));
+        }
+      } else if (driverNameParam) {
+        const opt = Array.from(driverSelect.options).find(
+          o => (o.dataset.name || "").trim() === driverNameParam.trim()
+        );
+        if (opt) {
+          driverSelect.value = opt.value;
+          driverSelect.dispatchEvent(new Event("change"));
+        }
+      }
+
+      // السيارة
+      const carIdParam   = urlParams.get("car_id");
+      const carNumParam  = urlParams.get("car_number") || urlParams.get("plate");
+      if (carIdParam) {
+        const opt = Array.from(carSelect.options).find(
+          o => String(o.value) === String(carIdParam)
+        );
+        if (opt) {
+          carSelect.value = opt.value;
+          carSelect.dispatchEvent(new Event("change"));
+        }
+      } else if (carNumParam) {
+        const opt = Array.from(carSelect.options).find(
+          o => (o.dataset.plate || "").trim() === carNumParam.trim()
+        );
+        if (opt) {
+          carSelect.value = opt.value;
+          carSelect.dispatchEvent(new Event("change"));
+        }
+      }
+    }
+
     // ================== إرسال النموذج ==================
     form.addEventListener("submit", async (e)=>{
       e.preventDefault();
@@ -559,9 +630,22 @@
         return;
       }
 
+      const driverOpt = driverSelect.selectedOptions[0];
+      const carOpt    = carSelect.selectedOptions[0];
+
       const payload = {
-        driver_name: driverSelect.value,
-        car_number:  carSelect.value,
+        // IDs (لو الباك إند بيدعمها)
+        driver_id: driverSelect.value ? Number(driverSelect.value) : null,
+        car_id:    carSelect.value    ? Number(carSelect.value)    : null,
+
+        // البيانات النصية fallback ومتوافقة مع الإصدارات القديمة
+        driver_name: driverOpt
+          ? (driverOpt.dataset.name || driverOpt.textContent || "").trim()
+          : null,
+        car_number:  carOpt
+          ? (carOpt.dataset.plate || carOpt.textContent || "").trim()
+          : null,
+
         start_date:  (startDate.value || "").trim(),
         details:     (details.value || "").trim()
       };
@@ -595,12 +679,12 @@
           const auth = data.authorization || null;
           showCalcSummary(auth);
 
-          // نسيب الاختيارات كما هي لو حابب يطلع منها قيد محاسبي على طول
-          // ولو حابب يبدأ تفويض جديد من الصفر ممكن يضغط "تفريغ"
+          // نسيب الاختيارات كما هي لو حابب يكمل على نفس السائق/السيارة
         } else {
           showAlert(data.error || "تعذّر حفظ التفويض.");
         }
       }catch(err){
+        console.error(err);
         showAlert("⚠️ خطأ في الاتصال بالخادم.");
       }
     });
@@ -610,7 +694,9 @@
       try{
         setDefaultStart();
         await Promise.all([loadDrivers(), loadCars()]);
+        preselectFromURL();
       }catch(e){
+        console.error(e);
         showAlert("⚠️ تعذّر تحميل قوائم السائقين والسيارات من الخادم.");
       }
     }

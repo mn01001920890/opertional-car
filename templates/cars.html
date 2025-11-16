@@ -11,6 +11,7 @@
       --main-purple: #6c63ff;
       --card-radius: 12px;
       --shadow: 0 4px 12px rgba(0,0,0,0.2);
+      --muted: #6b7280;
     }
 
     * {
@@ -18,13 +19,14 @@
     }
 
     body {
-      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
       margin: 0;
       background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
       color: #fff;
+      min-height: 100vh;
     }
 
-    /* 🔝 شريط علوي ثابت + زر رجوع */
+    /* 🔝 شريط علوي ثابت + مجموعة تنقّل */
     .top-bar {
       position: fixed;
       top: 0;
@@ -37,6 +39,14 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .back-btn {
@@ -54,6 +64,7 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
       transition: 0.2s ease;
       white-space: nowrap;
+      text-decoration: none;
     }
 
     .back-btn:hover {
@@ -68,6 +79,7 @@
       font-weight: 700;
       flex: 1;
       text-align: center;
+      color: #fff;
     }
 
     /* 🔹 محتوى الصفحة */
@@ -79,7 +91,7 @@
 
     h2 {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       font-size: 24px;
       color: #fff;
     }
@@ -91,10 +103,17 @@
 
     .search-box input {
       width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 16px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 2px rgba(13,110,253,0.2);
     }
 
     /* ➕ إضافة سيارة */
@@ -172,6 +191,7 @@
       font-size: 14px;
       border-bottom: 1px solid #eee;
       color: #333;
+      white-space: nowrap;
     }
 
     .cars-table tr:last-child td {
@@ -243,11 +263,15 @@
 
 <body>
 
-  <!-- 🔝 شريط علوي ثابت -->
+  <!-- 🔝 شريط علوي ثابت + تنقّل موحّد -->
   <header class="top-bar">
-    <button class="back-btn" onclick="location.href='/'">
-      🏠 رجوع
-    </button>
+    <div class="nav-group">
+      <button class="back-btn" onclick="location.href='/'">🏠 الرئيسية</button>
+      <button class="back-btn" onclick="location.href='/cars'">🚗 السيارات</button>
+      <button class="back-btn" onclick="location.href='/drivers'">🧑‍✈️ السائقون</button>
+      <button class="back-btn" onclick="location.href='/authorizations'">📄 التفويضات</button>
+      <button class="back-btn" onclick="location.href='/operations'">🧾 العمليات</button>
+    </div>
     <h1 class="page-title">🚗 إدارة السيارات</h1>
   </header>
 
@@ -256,7 +280,12 @@
 
     <!-- بحث -->
     <div class="search-box">
-      <input id="search" type="text" placeholder="🔍 ابحث برقم اللوحة..." oninput="filterCars()">
+      <input
+        id="search"
+        type="text"
+        placeholder="🔍 ابحث برقم اللوحة..."
+        oninput="filterCars()"
+      >
     </div>
 
     <!-- ➕ إضافة سيارة جديدة -->
@@ -295,12 +324,20 @@
   </main>
 
   <script>
+    // دالة موحّدة لتوليد ID آمن من رقم اللوحة
+    function makeSafeId(plate) {
+      return (plate || "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/\W+/g, "-");
+    }
+
     // ➕ إضافة سيارة جديدة
     document.getElementById("addCarBtn").addEventListener("click", async () => {
       const payload = {
-        plate:     document.getElementById("new_plate").value.trim(),
-        model:     document.getElementById("new_model").value.trim(),
-        car_type:  document.getElementById("new_type").value.trim(),
+        plate:      document.getElementById("new_plate").value.trim(),
+        model:      document.getElementById("new_model").value.trim(),
+        car_type:   document.getElementById("new_type").value.trim(),
         daily_rent: Number(document.getElementById("new_rent").value || 0),
         status: "متاحة"
       };
@@ -322,7 +359,7 @@
           box.textContent = "✅ تمت إضافة السيارة بنجاح";
 
           // إعادة تحميل القائمة
-          loadCars();
+          await loadCars();
 
           // تفريغ الحقول
           document.getElementById("new_plate").value = "";
@@ -350,7 +387,7 @@
 
       const res = await fetch("/api/cars");
       const data = await res.json();
-      carsData = data;
+      carsData = Array.isArray(data) ? data : [];
 
       renderCars(carsData);
       autoFocusCar();
@@ -364,7 +401,7 @@
       cardsBox.innerHTML  = "";
 
       data.forEach(c => {
-        const safeId = c.plate.replace(/\s+/g,'-').replace(/\W+/g,'-');
+        const safeId = makeSafeId(c.plate || "");
         const rowId  = "car-row-"  + safeId;
         const cardId = "car-card-" + safeId;
 
@@ -398,25 +435,30 @@
     function filterCars() {
       const term = document.getElementById("search").value.trim().toLowerCase();
       const filtered = carsData.filter(c =>
-        c.plate.toLowerCase().includes(term)
+        (c.plate || "").toLowerCase().includes(term)
       );
       renderCars(filtered);
     }
 
-    // تظليل سيارة محددة حسب ?focus=plate
+    // تظليل سيارة محددة حسب ?focus=plate (جاية من /authorizations, /closed, ... إلخ)
     function autoFocusCar() {
       const params = new URLSearchParams(window.location.search);
       let focusPlate = params.get("focus");
       if (!focusPlate) return;
 
-      const safeId = focusPlate.replace(/\W+/g,'-');
+      try {
+        focusPlate = decodeURIComponent(focusPlate);
+      } catch (e) {
+        // لو مش متكوّد عادي يكمل
+      }
+
+      const safeId = makeSafeId(focusPlate);
       const rowId  = "car-row-"  + safeId;
       const cardId = "car-card-" + safeId;
 
       const rowEl  = document.getElementById(rowId);
       const cardEl = document.getElementById(cardId);
 
-      // نحاول نعمل focus في الجدول أو الكارت حسب اللي ظاهر
       const targetEl = rowEl || cardEl;
       if (targetEl) {
         targetEl.classList.add("highlight");

@@ -26,11 +26,70 @@
       font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
       background: linear-gradient(135deg, var(--bg1), var(--bg2));
       color: var(--ink);
-      display: flex;
-      justify-content: center;
-      padding: 16px;
     }
 
+    /* 🔝 شريط علوي ثابت + تنقّل موحّد */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: none;
+      background: #ffffff;
+      color: var(--bg1);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg1);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+      color: #f9fafb;
+    }
+
+    @media (max-width: 700px) {
+      .page-title {
+        font-size: 0.95rem;
+      }
+    }
+
+    /* 📦 الحاوية الرئيسية */
     .container {
       width: 100%;
       max-width: 1100px;
@@ -41,6 +100,7 @@
       padding: 20px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.35);
       color: #f9fafb;
+      margin: 80px auto 16px; /* مساحة تحت الهيدر الثابت */
     }
 
     .header {
@@ -64,26 +124,6 @@
       margin: 4px 0 0;
       font-size: 0.9rem;
       color: #e5e7eb;
-    }
-
-    .btn-back {
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(148,163,184,0.6);
-      background: rgba(15,23,42,0.85);
-      color: #e5e7eb;
-      cursor: pointer;
-      font-size: 0.9rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: 0.2s ease;
-      text-decoration: none;
-    }
-
-    .btn-back:hover {
-      background: rgba(15,23,42,1);
-      transform: translateY(-1px);
     }
 
     .layout {
@@ -334,8 +374,19 @@
 </head>
 
 <body>
+  <!-- 🔝 الهيدر الثابت -->
+  <header class="top-bar">
+    <div class="nav-group">
+      <button class="nav-btn" onclick="location.href='/'">🏠 الرئيسية</button>
+      <button class="nav-btn" onclick="location.href='/operations'">🧾 العمليات اليومية</button>
+      <button class="nav-btn" onclick="location.href='/receipt'">💸 سندات التحصيل</button>
+      <button class="nav-btn" onclick="location.href='/authorizations'">📄 التفويضات</button>
+    </div>
+    <h1 class="page-title">📒 دليل الحسابات (Chart of Accounts)</h1>
+  </header>
+
   <div class="container">
-    <!-- Header -->
+    <!-- Header داخل الكارت -->
     <div class="header">
       <div class="title-group">
         <h1>📒 دليل الحسابات</h1>
@@ -343,10 +394,6 @@
           إعداد شجرة الحسابات: أصول / التزامات / إيراد / مصروفات، مع إمكانية إضافة حسابات فرعية مثل حسابات السائقين.
         </p>
       </div>
-      <a href="/" class="btn-back">
-        <span>🏠</span>
-        <span>الرجوع للوحة الرئيسية</span>
-      </a>
     </div>
 
     <div class="layout">
@@ -383,7 +430,7 @@
                   <option value="">بدون (حساب من المستوى الأول)</option>
                 </select>
                 <div class="hint">
-                  مثال: &quot;حسابات السائقين&quot; يكون أب لـ &quot;سائق: أحمد علي&quot;.
+                  مثال: "حسابات السائقين" يكون أب لـ "سائق: أحمد علي".
                 </div>
               </div>
 
@@ -444,7 +491,7 @@
           </div>
           <div class="hint" style="margin-top:8px;">
             ملاحظات:
-            <br/>• يفضّل تثبيت أسماء الحسابات الأساسية مثل &quot;الأصول&quot;، &quot;الالتزامات&quot;، &quot;إيراد إيجار سيارات&quot;، &quot;حسابات السائقين&quot;.
+            <br/>• يفضّل تثبيت أسماء الحسابات الأساسية مثل "الأصول"، "الالتزامات"، "إيراد إيجار سيارات"، "حسابات السائقين".
             <br/>• يمكنك لاحقًا ربط حسابات السائقين الفرعية بالسائقين من شاشة السائقين.
           </div>
         </div>
@@ -554,7 +601,6 @@
       parentSelect.innerHTML = `<option value="">بدون (حساب من المستوى الأول)</option>`;
       if (!accounts || accounts.length === 0) return;
 
-      // ترتيب بسيط حسب الاسم لتسهيل الاختيار
       const sorted = [...accounts].sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
 
       sorted.forEach(acc => {
@@ -583,7 +629,6 @@
       const map = buildAccountsMap(accounts);
       accountsCount.textContent = `${accounts.length} حساب/حسابات`;
 
-      // ممكن نرتّب الحسابات بحيث الأب يظهر قبل الأبناء (تقريبًا)
       const sorted = [...accounts].sort((a, b) => {
         const depthA = getDepth(a, map);
         const depthB = getDepth(b, map);

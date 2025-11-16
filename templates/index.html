@@ -27,7 +27,7 @@
       flex-direction: column;
     }
 
-    /* 🔝 شريط علوي ثابت */
+    /* 🔝 شريط علوي ثابت + أزرار تنقّل موحّدة */
     .top-bar {
       position: fixed;
       top: 0;
@@ -39,20 +39,58 @@
       padding: 10px 16px;
       display: flex;
       align-items: center;
-      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      background: #ffffff;
+      color: var(--main-blue);
+      border: none;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      white-space: nowrap;
+      transition: 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      background: var(--main-blue);
+      color: #fff;
+      transform: translateY(-1px);
     }
 
     .page-title {
       margin: 0;
-      font-size: 20px;
+      font-size: 1rem;
       font-weight: 700;
       text-align: center;
+      flex: 1;
+    }
+
+    @media (max-width: 700px) {
+      .page-title {
+        font-size: 0.95rem;
+      }
     }
 
     /* محتوى الصفحة */
     .page-content {
       flex: 1;
-      padding: 80px 16px 60px; /* مساحة للهيدر والفوتر */
+      padding: 90px 16px 60px; /* مساحة للهيدر والفوتر */
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -130,10 +168,6 @@
 
     /* 📱 موبايل / تابلت */
     @media (max-width: 600px) {
-      .page-title {
-        font-size: 18px;
-      }
-
       h1 {
         font-size: 22px;
       }
@@ -152,7 +186,13 @@
 
   <!-- 🔝 الهيدر الثابت -->
   <header class="top-bar">
-    <h1 class="page-title">🚘 نظام إدارة التفويضات</h1>
+    <div class="nav-group">
+      <button class="nav-btn" onclick="goTo('/')">🏠 الرئيسية</button>
+      <button class="nav-btn" onclick="goTo('/rented')">🚗 السيارات المؤجرة</button>
+      <button class="nav-btn" onclick="goTo('/cars-status')">📊 حالة السيارات</button>
+      <button class="nav-btn" onclick="goTo('/operations')">🧾 كل العمليات</button>
+    </div>
+    <h1 class="page-title">🚘 نظام إدارة التفويضات وتأجير السيارات</h1>
   </header>
 
   <main class="page-content">
@@ -212,14 +252,13 @@
           📓 اليومية العامة
         </button>
 
-       <button class="menu-btn" onclick="goTo('/receipt')">
+        <button class="menu-btn" onclick="goTo('/receipt')">
           🧾 سند تحصيل نقدي جديد
         </button>
 
-       <button class="menu-btn" onclick="goTo('/operations')">
-          🧾 كل العمليات 
+        <button class="menu-btn" onclick="goTo('/operations')">
+          🧾 كل العمليات
         </button>
-
       </div>
     </section>
   </main>
@@ -236,4 +275,3 @@
 
 </body>
 </html>
-

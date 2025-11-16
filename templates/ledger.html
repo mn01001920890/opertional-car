@@ -81,7 +81,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: 0.2s ease;
+      transition: 0.2s.ease;
       text-decoration: none;
     }
 
@@ -655,7 +655,7 @@
         const res = await fetch("/api/accounts");
         if (!res.ok) throw new Error("error");
         const data = await res.json();
-        allAccounts = data || [];
+        allAccounts = Array.isArray(data) ? data : [];
         accountsCountHint.textContent = `${allAccounts.length} حساب/حسابات متاحة`;
         populateAccountsSelect();
       } catch (err) {
@@ -681,7 +681,6 @@
         accountSelect.appendChild(opt);
       });
 
-      // لو الحساب القديم لسه موجود في الفلترة نخليه selected
       const exists = list.some(acc => String(acc.id) === String(currentValue));
       if (exists) {
         accountSelect.value = currentValue;
@@ -706,7 +705,6 @@
       const id = Number(accountSelect.value || 0);
       currentAccount = allAccounts.find(acc => acc.id === id) || null;
       updateAccountInfoBox();
-      // مسح الجدول عند تغيير الحساب
       currentLedgerRaw = [];
       currentLedgerFiltered = [];
       renderLedger();
@@ -731,7 +729,6 @@
     }
 
     function parseDateStringToDateObj(dateString) {
-      // dateString expected "YYYY-MM-DD HH:MM:SS"
       if (!dateString) return null;
       const parts = dateString.split(" ");
       const datePart = parts[0];
@@ -764,12 +761,10 @@
       }
 
       currentLedgerFiltered = currentLedgerRaw.filter(row => {
-        // فلتر التاريخ
         const rowDate = parseDateStringToDateObj(row.date);
         if (fromDateObj && rowDate && rowDate < fromDateObj) return false;
         if (toDateObj && rowDate && rowDate > toDateObj) return false;
 
-        // فلتر النص
         if (textFilterVal) {
           const haystack = (row.description || "").toLowerCase();
           if (!haystack.includes(textFilterVal)) return false;
@@ -868,6 +863,7 @@
         }
         return;
       }
+
       currentAccount = allAccounts.find(a => a.id === accId) || null;
       updateAccountInfoBox();
 
@@ -899,8 +895,16 @@
           return;
         }
 
+        // لو الـ backend رجع account مع lines نحدّث بيانات الحساب من هناك
+        if (data.account) {
+          const fromAll = allAccounts.find(a => a.id === data.account.id);
+          currentAccount = fromAll || data.account;
+          updateAccountInfoBox();
+        }
+
         currentLedgerRaw = data.lines || [];
         applyFilters();
+
         if (!currentLedgerRaw.length) {
           showMessage("لا توجد حركات مسجَّلة لهذا الحساب حتى الآن.", "success");
         } else if (!autoFromURL) {
@@ -938,7 +942,6 @@
 
     // ✅ تهيئة الفلاتر بناءً على باراميترات URL القادمة من صفحة العمليات
     function applyInitialURLFilters() {
-      // account_id أو acc_id
       const accIdParam = urlParams.get("account_id") || urlParams.get("acc_id");
       if (accIdParam) {
         accountSelect.value = String(accIdParam);
@@ -947,14 +950,12 @@
         updateAccountInfoBox();
       }
 
-      // from / to (YYYY-MM-DD)
       const fromParam = urlParams.get("from");
       const toParam = urlParams.get("to");
       if (fromParam) fromDateInput.value = fromParam;
       if (toParam) toDateInput.value = toParam;
       updatePrintDateRange(fromParam || "", toParam || "");
 
-      // لو account_id موجود نحمّل الكشف أوتوماتيك
       if (accIdParam) {
         loadLedgerForSelectedAccount(true);
       }

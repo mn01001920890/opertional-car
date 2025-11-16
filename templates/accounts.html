@@ -170,6 +170,18 @@
       color: #9ca3af;
     }
 
+    .field-inline {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .field-inline {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .actions {
       margin-top: 8px;
       display: flex;
@@ -279,6 +291,34 @@
     .pill-type.revenue { border-color:#38bdf8; color:#bae6fd; }
     .pill-type.expense { border-color:#f97373; color:#fecaca; }
 
+    .pill-struct {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid rgba(148,163,184,0.7);
+      color: #e5e7eb;
+    }
+
+    .pill-struct.group {
+      border-color:#eab308;
+      color:#fef9c3;
+    }
+
+    .pill-struct.detail {
+      border-color:#a855f7;
+      color:#e9d5ff;
+    }
+
+    .tree-name {
+      font-family: inherit;
+      font-size: 0.85rem;
+    }
+
+    .tree-indent {
+      opacity: 0.7;
+      font-size: 0.78rem;
+    }
+
     .empty-state {
       text-align: center;
       padding: 12px 4px;
@@ -299,7 +339,9 @@
     <div class="header">
       <div class="title-group">
         <h1>📒 دليل الحسابات</h1>
-        <p>إضافة الحسابات الأساسية (مثلاً: حساب السائقين، إيراد إيجار سيارات) وربطها بالموديول المحاسبي.</p>
+        <p>
+          إعداد شجرة الحسابات: أصول / التزامات / إيراد / مصروفات، مع إمكانية إضافة حسابات فرعية مثل حسابات السائقين.
+        </p>
       </div>
       <a href="/" class="btn-back">
         <span>🏠</span>
@@ -311,19 +353,19 @@
       <!-- Form card -->
       <div class="card">
         <div class="card-header">
-          <h2>➕ إضافة حساب جديد</h2>
-          <span class="badge">دليل الحسابات</span>
+          <h2>➕ إضافة / بناء حساب جديد</h2>
+          <span class="badge">شجرة الحسابات</span>
         </div>
         <div class="card-body">
           <form id="accountForm">
             <div class="field">
               <label for="accName">اسم الحساب</label>
-              <input id="accName" type="text" placeholder="مثال: حساب السائقين / إيراد إيجار سيارات" />
+              <input id="accName" type="text" placeholder="مثال: الأصول / حسابات السائقين / سائق: أحمد علي" />
               <div class="hint">هذا الاسم سيظهر في اليومية ودفتر الأستاذ كما هو.</div>
             </div>
 
             <div class="field">
-              <label for="accType">نوع الحساب</label>
+              <label for="accType">النوع المحاسبي (تصنيف القوائم)</label>
               <select id="accType">
                 <option value="">اختر نوع الحساب</option>
                 <option value="asset">أصل (Asset)</option>
@@ -331,21 +373,32 @@
                 <option value="revenue">إيراد (Revenue)</option>
                 <option value="expense">مصروف (Expense)</option>
               </select>
-              <div class="hint">التصنيف يساعدك بعدين لو حبيت تعمل تقارير أقوى.</div>
+              <div class="hint">مثال: الأصول / حسابات السائقين / الصندوق كلها من نوع أصل (Asset).</div>
             </div>
 
-            <!-- لو حبيت نضيف ربط بسائق/سيارة بعدين نرجع نفتحهم -->
-            <!--
-            <div class="field">
-              <label for="driverId">ربط بسائق (اختياري)</label>
-              <input id="driverId" type="text" placeholder="ID السائق إن احتجته لاحقًا" />
-            </div>
+            <div class="field-inline">
+              <div class="field">
+                <label for="parentAccount">الحساب الأب (اختياري)</label>
+                <select id="parentAccount">
+                  <option value="">بدون (حساب من المستوى الأول)</option>
+                </select>
+                <div class="hint">
+                  مثال: &quot;حسابات السائقين&quot; يكون أب لـ &quot;سائق: أحمد علي&quot;.
+                </div>
+              </div>
 
-            <div class="field">
-              <label for="carId">ربط بسيارة (اختياري)</label>
-              <input id="carId" type="text" placeholder="ID السيارة إن احتجته لاحقًا" />
+              <div class="field">
+                <label for="isGroup">هيكل الحساب</label>
+                <select id="isGroup">
+                  <option value="">اختر نوع الهيكل</option>
+                  <option value="group">حساب رئيسي / مجموعة (Group)</option>
+                  <option value="detail">حساب تفصيلي (Detail)</option>
+                </select>
+                <div class="hint">
+                  الحساب الرئيسي تُفتح تحته حسابات فرعية، أما التفصيلي يُستخدم مباشرة في القيود.
+                </div>
+              </div>
             </div>
-            -->
 
             <div class="actions">
               <button type="submit" class="btn btn-primary">
@@ -364,23 +417,25 @@
       <!-- Table card -->
       <div class="card">
         <div class="card-header">
-          <h2>📋 قائمة الحسابات المسجّلة</h2>
+          <h2>📋 شجرة الحسابات</h2>
           <span class="badge-count" id="accountsCount">—</span>
         </div>
         <div class="card-body">
-          <div style="max-height: 340px; overflow: auto; border-radius: 10px; border: 1px solid rgba(55,65,81,0.7);">
+          <div style="max-height: 360px; overflow: auto; border-radius: 10px; border: 1px solid rgba(55,65,81,0.7);">
             <table>
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>اسم الحساب</th>
-                  <th>النوع</th>
+                  <th>اسم الحساب (هرمي)</th>
+                  <th>النوع المحاسبي</th>
+                  <th>الحساب الأب</th>
+                  <th>الهيكل</th>
                   <th>ID داخلي</th>
                 </tr>
               </thead>
               <tbody id="accountsTableBody">
                 <tr>
-                  <td colspan="4" class="empty-state">
+                  <td colspan="6" class="empty-state">
                     جاري تحميل الحسابات...
                   </td>
                 </tr>
@@ -389,7 +444,8 @@
           </div>
           <div class="hint" style="margin-top:8px;">
             ملاحظات:
-            <br/>• لا تقلق لو عدّلت الحسابات لاحقًا، المهم إن أسماء الحسابات الأساسية تفضل ثابتة للاستخدام في القيود الآلية.
+            <br/>• يفضّل تثبيت أسماء الحسابات الأساسية مثل &quot;الأصول&quot;، &quot;الالتزامات&quot;، &quot;إيراد إيجار سيارات&quot;، &quot;حسابات السائقين&quot;.
+            <br/>• يمكنك لاحقًا ربط حسابات السائقين الفرعية بالسائقين من شاشة السائقين.
           </div>
         </div>
       </div>
@@ -400,10 +456,14 @@
     const form = document.getElementById("accountForm");
     const accNameInput = document.getElementById("accName");
     const accTypeSelect = document.getElementById("accType");
+    const parentSelect = document.getElementById("parentAccount");
+    const isGroupSelect = document.getElementById("isGroup");
     const formMessage = document.getElementById("formMessage");
     const resetBtn = document.getElementById("btnReset");
     const tableBody = document.getElementById("accountsTableBody");
     const accountsCount = document.getElementById("accountsCount");
+
+    let accountsCache = [];
 
     function showMessage(text, type = "success") {
       formMessage.textContent = text;
@@ -427,8 +487,44 @@
     }
 
     function typePillClass(type) {
-      if (!type) return "";
+      if (!type) return "pill-type";
       return "pill-type " + type;
+    }
+
+    function structLabel(is_group) {
+      if (is_group === true) return "مجموعة (Group)";
+      if (is_group === false) return "تفصيلي (Detail)";
+      return "غير محدد";
+    }
+
+    function structClass(is_group) {
+      if (is_group === true) return "pill-struct group";
+      if (is_group === false) return "pill-struct detail";
+      return "pill-struct";
+    }
+
+    function buildAccountsMap(accounts) {
+      const map = {};
+      (accounts || []).forEach(acc => {
+        map[acc.id] = acc;
+      });
+      return map;
+    }
+
+    function getDepth(acc, map, maxDepth = 5) {
+      let depth = 0;
+      let current = acc;
+      while (current && current.parent_id && depth < maxDepth) {
+        current = map[current.parent_id];
+        depth++;
+      }
+      return depth;
+    }
+
+    function formatTreeName(acc, depth) {
+      const indentUnits = "&nbsp;&nbsp;&nbsp;".repeat(depth);
+      const branch = depth > 0 ? "<span class='tree-indent'>↳</span>&nbsp;" : "";
+      return `<span class="tree-name">${indentUnits}${branch}${acc.name}</span>`;
     }
 
     async function loadAccounts() {
@@ -438,11 +534,14 @@
           throw new Error("خطأ في تحميل الحسابات");
         }
         const data = await res.json();
-        renderAccountsTable(data);
+        accountsCache = data || [];
+        renderAccountsTable(accountsCache);
+        fillParentSelect(accountsCache);
       } catch (err) {
+        console.error(err);
         tableBody.innerHTML = `
           <tr>
-            <td colspan="4" class="empty-state">
+            <td colspan="6" class="empty-state">
               ⚠️ حدث خطأ أثناء تحميل الحسابات، حاول تحديث الصفحة.
             </td>
           </tr>
@@ -451,12 +550,29 @@
       }
     }
 
+    function fillParentSelect(accounts) {
+      parentSelect.innerHTML = `<option value="">بدون (حساب من المستوى الأول)</option>`;
+      if (!accounts || accounts.length === 0) return;
+
+      // ترتيب بسيط حسب الاسم لتسهيل الاختيار
+      const sorted = [...accounts].sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
+
+      sorted.forEach(acc => {
+        const opt = document.createElement("option");
+        const typeText = acc.type ? ` - ${typeLabel(acc.type)}` : "";
+        const groupText = acc.is_group ? " (مجموعة)" : "";
+        opt.value = acc.id;
+        opt.innerText = `${acc.name}${typeText}${groupText}`;
+        parentSelect.appendChild(opt);
+      });
+    }
+
     function renderAccountsTable(accounts) {
       if (!accounts || accounts.length === 0) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="4" class="empty-state">
-              لا توجد حسابات مسجَّلة حتى الآن. أضف أول حساب من النموذج على اليسار.
+            <td colspan="6" class="empty-state">
+              لا توجد حسابات مسجَّلة حتى الآن. ابدأ بإنشاء الأصول / الالتزامات / الإيراد / المصروفات كحسابات رئيسية.
             </td>
           </tr>
         `;
@@ -464,15 +580,29 @@
         return;
       }
 
+      const map = buildAccountsMap(accounts);
       accountsCount.textContent = `${accounts.length} حساب/حسابات`;
 
+      // ممكن نرتّب الحسابات بحيث الأب يظهر قبل الأبناء (تقريبًا)
+      const sorted = [...accounts].sort((a, b) => {
+        const depthA = getDepth(a, map);
+        const depthB = getDepth(b, map);
+        if (depthA !== depthB) return depthA - depthB;
+        return (a.name || "").localeCompare(b.name || "", "ar");
+      });
+
       tableBody.innerHTML = "";
-      accounts.forEach((acc, index) => {
+      sorted.forEach((acc, index) => {
+        const depth = getDepth(acc, map);
+        const parentName = acc.parent_id && map[acc.parent_id] ? map[acc.parent_id].name : " — ";
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${index + 1}</td>
-          <td>${acc.name}</td>
+          <td>${formatTreeName(acc, depth)}</td>
           <td><span class="${typePillClass(acc.type)}">${typeLabel(acc.type)}</span></td>
+          <td>${parentName}</td>
+          <td><span class="${structClass(acc.is_group)}">${structLabel(acc.is_group)}</span></td>
           <td>${acc.id}</td>
         `;
         tableBody.appendChild(tr);
@@ -485,6 +615,8 @@
 
       const name = accNameInput.value.trim();
       const type = accTypeSelect.value;
+      let parent_id = parentSelect.value || null;
+      const structValue = isGroupSelect.value;
 
       if (!name) {
         showMessage("اسم الحساب مطلوب.", "error");
@@ -492,15 +624,36 @@
       }
 
       if (!type) {
-        showMessage("من فضلك اختر نوع الحساب.", "error");
+        showMessage("من فضلك اختر النوع المحاسبي للحساب.", "error");
         return;
       }
+
+      if (!structValue) {
+        showMessage("من فضلك اختر هل الحساب مجموعة أم تفصيلي.", "error");
+        return;
+      }
+
+      if (parent_id) {
+        parent_id = parseInt(parent_id, 10);
+        if (Number.isNaN(parent_id)) {
+          parent_id = null;
+        }
+      }
+
+      let is_group = null;
+      if (structValue === "group") is_group = true;
+      else if (structValue === "detail") is_group = false;
 
       try {
         const res = await fetch("/api/accounts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, type })
+          body: JSON.stringify({
+            name,
+            type,
+            parent_id,
+            is_group
+          })
         });
 
         const data = await res.json();
@@ -513,8 +666,12 @@
         showMessage("✅ تم إضافة الحساب بنجاح.", "success");
         accNameInput.value = "";
         accTypeSelect.value = "";
+        parentSelect.value = "";
+        isGroupSelect.value = "";
+        accNameInput.focus();
         await loadAccounts();
       } catch (err) {
+        console.error(err);
         showMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error");
       }
     });
@@ -522,6 +679,8 @@
     resetBtn.addEventListener("click", () => {
       accNameInput.value = "";
       accTypeSelect.value = "";
+      parentSelect.value = "";
+      isGroupSelect.value = "";
       clearMessage();
       accNameInput.focus();
     });

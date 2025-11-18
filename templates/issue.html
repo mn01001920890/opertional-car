@@ -198,7 +198,7 @@
       display:block;
       background:#e9f8f0;
       color:#055e33;
-      border:1px solid #b6f0د1;
+      border:1px solid #b6f0d1;
     }
 
     .alert.err{
@@ -291,7 +291,6 @@
       <form id="issueForm">
         <!-- السائق -->
         <label for="driverSearch">السائق</label>
-        <!-- حقل الكتابة للبحث بالاسم / الرخصة / الجوال -->
         <input id="driverSearch" type="text" placeholder="اكتب اسم السائق أو رقم الرخصة أو الجوال للبحث..." autocomplete="off" />
         <select id="driverSelect" required style="margin-top:6px;">
           <option value="">اختر السائق...</option>
@@ -300,7 +299,6 @@
 
         <!-- السيارة -->
         <label for="carSearch">السيارة</label>
-        <!-- حقل الكتابة للبحث برقم اللوحة / الموديل / النوع -->
         <input id="carSearch" type="text" placeholder="اكتب رقم السيارة أو الموديل أو النوع للبحث..." autocomplete="off" />
         <select id="carSelect" required style="margin-top:6px;">
           <option value="">اختر السيارة...</option>
@@ -496,59 +494,53 @@
       });
     }
 
-    // ================== فلترة القوائم عند الكتابة ==================
+    // ================== فلترة القوائم عند الكتابة (بدون اختيار أوتوماتيك) ==================
     function filterDriverOptions(term){
-      const t = term.trim().toLowerCase();
-      let firstMatch = null;
+      const t = (term || "").trim().toLowerCase();
       Array.from(driverSelect.options).forEach(opt=>{
         if(!opt.value){ opt.hidden=false; return; }
-        const name = opt.dataset.name || "";
-        const lic  = opt.dataset.license || "";
-        const phone= opt.dataset.phone || "";
+        const name  = opt.dataset.name    || "";
+        const lic   = opt.dataset.license || "";
+        const phone = opt.dataset.phone   || "";
         const combined = `${name} ${lic} ${phone}`.toLowerCase();
-        const match = t === "" || combined.includes(t);
+        const match = !t || combined.includes(t);
         opt.hidden = !match;
-        if(match && !firstMatch) firstMatch = opt;
       });
-
-      if(firstMatch && t){
-        driverSelect.value = firstMatch.value;
-        driverSelect.dispatchEvent(new Event("change"));
-      }else if(!t){
-        driverSelect.value = "";
-        driverSelect.dispatchEvent(new Event("change"));
-      }
+      // مفيش تغيير لقيمة الـ select هنا
     }
 
     function filterCarOptions(term){
-      const t = term.trim().toLowerCase();
-      let firstMatch = null;
+      const t = (term || "").trim().toLowerCase();
       Array.from(carSelect.options).forEach(opt=>{
         if(!opt.value){ opt.hidden=false; return; }
         const plate = opt.dataset.plate || "";
         const model = opt.dataset.model || "";
         const type  = opt.dataset.type  || "";
         const combined = `${plate} ${model} ${type}`.toLowerCase();
-        const match = t === "" || combined.includes(t);
+        const match = !t || combined.includes(t);
         opt.hidden = !match;
-        if(match && !firstMatch) firstMatch = opt;
       });
-
-      if(firstMatch && t){
-        carSelect.value = firstMatch.value;
-        carSelect.dispatchEvent(new Event("change"));
-      }else if(!t){
-        carSelect.value = "";
-        carSelect.dispatchEvent(new Event("change"));
-      }
+      // مفيش تغيير لقيمة الـ select هنا
     }
 
+    // لما أكتب في خانة البحث → فلترة + إلغاء الاختيار الحالي
     driverSearch.addEventListener("input", ()=>{
       filterDriverOptions(driverSearch.value);
+      driverSelect.value = "";
+      driverInfo.style.display = "none";
+      driverInfo.textContent = "";
+      clearAlert();
     });
 
     carSearch.addEventListener("input", ()=>{
       filterCarOptions(carSearch.value);
+      carSelect.value = "";
+      carModel.value = "";
+      carType.value  = "";
+      dailyRent.value = "";
+      carHint.style.display = "none";
+      carHint.textContent   = "";
+      clearAlert();
     });
 
     // لما أختار من القائمة، رجّع اسم السائق/رقم السيارة في الخانة
@@ -760,8 +752,7 @@
         setDefaultStart();
         await Promise.all([loadDrivers(), loadCars()]);
         preselectFromURL();
-
-        // بعد تحميل البيانات، فعل فلترة مبدئية فاضية (كلهم ظاهرين)
+        // فلترة مبدئية (كل الخيارات ظاهرة)
         filterDriverOptions("");
         filterCarOptions("");
       }catch(e){

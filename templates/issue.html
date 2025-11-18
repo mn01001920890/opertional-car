@@ -198,7 +198,7 @@
       display:block;
       background:#e9f8f0;
       color:#055e33;
-      border:1px solid #b6f0d1;
+      border:1px solid #b6f0د1;
     }
 
     .alert.err{
@@ -290,15 +290,19 @@
 
       <form id="issueForm">
         <!-- السائق -->
-        <label for="driverSelect">السائق</label>
-        <select id="driverSelect" required>
+        <label for="driverSearch">السائق</label>
+        <!-- حقل الكتابة للبحث بالاسم / الرخصة / الجوال -->
+        <input id="driverSearch" type="text" placeholder="اكتب اسم السائق أو رقم الرخصة أو الجوال للبحث..." autocomplete="off" />
+        <select id="driverSelect" required style="margin-top:6px;">
           <option value="">اختر السائق...</option>
         </select>
         <div id="driverInfo" class="hint" style="display:none"></div>
 
         <!-- السيارة -->
-        <label for="carSelect">السيارة</label>
-        <select id="carSelect" required>
+        <label for="carSearch">السيارة</label>
+        <!-- حقل الكتابة للبحث برقم اللوحة / الموديل / النوع -->
+        <input id="carSearch" type="text" placeholder="اكتب رقم السيارة أو الموديل أو النوع للبحث..." autocomplete="off" />
+        <select id="carSelect" required style="margin-top:6px;">
           <option value="">اختر السيارة...</option>
         </select>
 
@@ -390,7 +394,9 @@
     const alertBox     = document.getElementById("alertBox");
     const form         = document.getElementById("issueForm");
     const driverSelect = document.getElementById("driverSelect");
+    const driverSearch = document.getElementById("driverSearch");
     const carSelect    = document.getElementById("carSelect");
+    const carSearch    = document.getElementById("carSearch");
     const carModel     = document.getElementById("carModel");
     const carType      = document.getElementById("carType");
     const dailyRent    = document.getElementById("dailyRent");
@@ -440,7 +446,6 @@
     function setDefaultStart(){
       const startParam = urlParams.get("start") || urlParams.get("start_date");
       if (startParam) {
-        // لو جاي من URL بنفترض إنه في فورمات datetime-local جاهز
         startDate.value = startParam;
         return;
       }
@@ -491,7 +496,62 @@
       });
     }
 
-    // ================== تفاعلات المستخدم ==================
+    // ================== فلترة القوائم عند الكتابة ==================
+    function filterDriverOptions(term){
+      const t = term.trim().toLowerCase();
+      let firstMatch = null;
+      Array.from(driverSelect.options).forEach(opt=>{
+        if(!opt.value){ opt.hidden=false; return; }
+        const name = opt.dataset.name || "";
+        const lic  = opt.dataset.license || "";
+        const phone= opt.dataset.phone || "";
+        const combined = `${name} ${lic} ${phone}`.toLowerCase();
+        const match = t === "" || combined.includes(t);
+        opt.hidden = !match;
+        if(match && !firstMatch) firstMatch = opt;
+      });
+
+      if(firstMatch && t){
+        driverSelect.value = firstMatch.value;
+        driverSelect.dispatchEvent(new Event("change"));
+      }else if(!t){
+        driverSelect.value = "";
+        driverSelect.dispatchEvent(new Event("change"));
+      }
+    }
+
+    function filterCarOptions(term){
+      const t = term.trim().toLowerCase();
+      let firstMatch = null;
+      Array.from(carSelect.options).forEach(opt=>{
+        if(!opt.value){ opt.hidden=false; return; }
+        const plate = opt.dataset.plate || "";
+        const model = opt.dataset.model || "";
+        const type  = opt.dataset.type  || "";
+        const combined = `${plate} ${model} ${type}`.toLowerCase();
+        const match = t === "" || combined.includes(t);
+        opt.hidden = !match;
+        if(match && !firstMatch) firstMatch = opt;
+      });
+
+      if(firstMatch && t){
+        carSelect.value = firstMatch.value;
+        carSelect.dispatchEvent(new Event("change"));
+      }else if(!t){
+        carSelect.value = "";
+        carSelect.dispatchEvent(new Event("change"));
+      }
+    }
+
+    driverSearch.addEventListener("input", ()=>{
+      filterDriverOptions(driverSearch.value);
+    });
+
+    carSearch.addEventListener("input", ()=>{
+      filterCarOptions(carSearch.value);
+    });
+
+    // لما أختار من القائمة، رجّع اسم السائق/رقم السيارة في الخانة
     driverSelect.addEventListener("change", ()=>{
       const opt = driverSelect.selectedOptions[0];
       if(opt && opt.value){
@@ -499,6 +559,9 @@
         const lic   = opt.dataset.license || "بدون رقم رخصة";
         driverInfo.style.display = "block";
         driverInfo.textContent = `📞 ${phone} • رخصة: ${lic}`;
+
+        // نعرض الاسم في خانة البحث
+        driverSearch.value = opt.dataset.name || opt.textContent || "";
       }else{
         driverInfo.style.display = "none";
         driverInfo.textContent = "";
@@ -513,6 +576,9 @@
         carType.value  = opt.dataset.type  || "";
         const rent   = opt.dataset.rent;
         const status = (opt.dataset.status || "").trim();
+
+        // نعرض رقم السيارة في خانة البحث
+        carSearch.value = opt.dataset.plate || "";
 
         if(status && status !== "متاحة"){
           carHint.style.display="block";
@@ -542,9 +608,14 @@
       carHint.style.display="none";
       carModel.value = "";
       carType.value  = "";
+      driverSearch.value = "";
+      carSearch.value = "";
       calcPanel.style.display="none";
       clearAlert();
       setDefaultStart();
+      // رجّع كل الاختيارات ظاهرة
+      filterDriverOptions("");
+      filterCarOptions("");
     });
 
     // ================== عرض ملخص الجمعة + التكلفة ==================
@@ -615,47 +686,6 @@
       }
     }
 
-    // ================== بحث بالكتابة داخل الـ select (اسم / رخصة / رقم سيارة) ==================
-    function attachTypeAhead(selectEl, getLabel) {
-      let buffer = "";
-      let timer  = null;
-
-      selectEl.addEventListener("keydown", (e) => {
-        // تجاهل الأسهم، التاب، إنتر، إلخ
-        if (e.key === "ArrowUp" || e.key === "ArrowDown" ||
-            e.key === "Tab" || e.key === "Enter" ||
-            e.key === "Escape") {
-          return;
-        }
-
-        if (e.key === "Backspace") {
-          buffer = buffer.slice(0, -1);
-        } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          buffer += e.key.toLowerCase();
-        } else {
-          return;
-        }
-
-        e.preventDefault(); // ما نخليش البراوزر يعمل البحث الافتراضي
-
-        const term = buffer.trim();
-        if (!term) return;
-
-        const options = Array.from(selectEl.options).filter(o => o.value !== "");
-        const found = options.find(o =>
-          getLabel(o).toLowerCase().includes(term)
-        );
-
-        if (found) {
-          selectEl.value = found.value;
-          selectEl.dispatchEvent(new Event("change"));
-        }
-
-        if (timer) clearTimeout(timer);
-        timer = setTimeout(() => { buffer = ""; }, 800); // يمسح الكتابة بعد 0.8 ثانية سكون
-      });
-    }
-
     // ================== إرسال النموذج ==================
     form.addEventListener("submit", async (e)=>{
       e.preventDefault();
@@ -675,11 +705,9 @@
       const carOpt    = carSelect.selectedOptions[0];
 
       const payload = {
-        // IDs (لو الباك إند بيدعمها)
         driver_id: driverSelect.value ? Number(driverSelect.value) : null,
         car_id:    carSelect.value    ? Number(carSelect.value)    : null,
 
-        // البيانات النصية fallback ومتوافقة مع الإصدارات القديمة
         driver_name: driverOpt
           ? (driverOpt.dataset.name || driverOpt.textContent || "").trim()
           : null,
@@ -715,12 +743,8 @@
 
         if (res.ok) {
           showAlert("✅ تم حفظ التفويض بنجاح، وتم احتساب نهاية الجمعة المحاسبية.", "ok");
-
-          // عرض ملخص الجمعة والتكلفة بناء على رد الباك إند
           const auth = data.authorization || null;
           showCalcSummary(auth);
-
-          // نسيب الاختيارات كما هي لو حابب يكمل على نفس السائق/السيارة
         } else {
           showAlert(data.error || "تعذّر حفظ التفويض.");
         }
@@ -737,16 +761,9 @@
         await Promise.all([loadDrivers(), loadCars()]);
         preselectFromURL();
 
-        // 👉 تفعيل البحث بالكتابة داخل القوائم المنسدلة
-        attachTypeAhead(
-          driverSelect,
-          opt => `${opt.dataset.name || opt.textContent || ""} ${opt.dataset.license || ""} ${opt.dataset.phone || ""}`
-        );
-        attachTypeAhead(
-          carSelect,
-          opt => `${opt.dataset.plate || ""} ${opt.dataset.model || ""} ${opt.dataset.type || ""}`
-        );
-
+        // بعد تحميل البيانات، فعل فلترة مبدئية فاضية (كلهم ظاهرين)
+        filterDriverOptions("");
+        filterCarOptions("");
       }catch(e){
         console.error(e);
         showAlert("⚠️ تعذّر تحميل قوائم السائقين والسيارات من الخادم.");

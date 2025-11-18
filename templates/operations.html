@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <title>🧾 صفحة العمليات</title>
+  <title>🧾 صفحة العمليات (دفتر القيود)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
@@ -209,6 +209,7 @@
       border-bottom: 1px solid rgba(55,65,81,0.7);
       text-align: right;
       white-space: nowrap;
+      vertical-align: top;
     }
 
     th {
@@ -257,7 +258,7 @@
       color:#bae6fd;
     }
 
-    .pill-op.journal {
+    .pill-op.manual {
       border-color:#a855f7;
       color:#e9d5ff;
     }
@@ -266,7 +267,7 @@
       font-family: "SF Mono","Cascadia Code",monospace;
     }
 
-    .ref {
+    .ref-main {
       font-family: "SF Mono","Cascadia Code",monospace;
       font-size: 0.8rem;
       color:#e5e7eb;
@@ -274,6 +275,17 @@
 
     .subtext {
       font-size: 0.78rem;
+      color:#9ca3af;
+    }
+
+    .acc-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color:#e5e7eb;
+    }
+
+    .acc-code {
+      font-size: 0.75rem;
       color:#9ca3af;
     }
 
@@ -290,9 +302,9 @@
     <!-- Header -->
     <div class="header">
       <div class="title-group">
-        <h1>🧾 صفحة العمليات</h1>
+        <h1>🧾 صفحة العمليات (قيود اليومية)</h1>
         <p>
-          عرض كل العمليات المحاسبية تحت بعضها سواء كانت ناتجة عن إقفال تفويض، سند تحصيل نقدي، أو قيد يومية.
+          هنا يظهر كل <strong>القيود المحاسبية</strong> (مدين/دائن) الناتجة عن: إقفال التفويض، سند التحصيل النقدي، أو القيود اليدوية من اليومية العامة.
         </p>
       </div>
       <div class="top-buttons">
@@ -320,20 +332,21 @@
     </div>
 
     <div class="layout">
+      <!-- فلاتر -->
       <div class="card">
         <div class="card-header">
-          <h2>🔍 فلاتر العمليات</h2>
+          <h2>🔍 فلاتر القيود</h2>
           <span class="badge-count" id="operationsCount">—</span>
         </div>
         <div class="card-body">
           <div class="filters">
             <div>
-              <label for="filterType">نوع العملية</label>
+              <label for="filterType">مصدر العملية</label>
               <select id="filterType">
                 <option value="all">الكل</option>
                 <option value="auth_close">إقفال تفويض</option>
                 <option value="receipt">سند تحصيل نقدي</option>
-                <option value="journal">قيد يومية</option>
+                <option value="manual">قيد يدوي من اليومية</option>
               </select>
             </div>
 
@@ -348,22 +361,24 @@
             </div>
 
             <div>
-              <label for="filterSearch">بحث (سائق / سيارة / وصف)</label>
-              <input type="text" id="filterSearch" placeholder="اكتب جزء من الاسم أو رقم السيارة أو كلمة من البيان" />
+              <label for="filterSearch">بحث (حساب / سائق / وصف / مرجع)</label>
+              <input type="text" id="filterSearch" placeholder="اكتب جزء من اسم الحساب أو السائق أو كلمة من البيان أو رقم المرجع" />
             </div>
           </div>
 
           <div class="hint">
-            • يتم تجميع العمليات من: إقفال التفويضات، سندات التحصيل النقدي، وقيود اليومية اليدوية.<br/>
-            • يمكنك الدخول على الصفحة من روابط أخرى مع فلاتر جاهزة باستخدام باراميترات URL (type / from / to / q / auth_id / receipt_id / journal_id).
+            • كل سطر هنا يمثل <strong>قيد يومية كامل (مدين + دائن)</strong> قادم من إقفال التفويض أو سند التحصيل أو قيد يدوي.<br/>
+            • يمكنك فتح الصفحة من روابط أخرى مع فلاتر جاهزة باستخدام باراميترات URL مثل:
+            <code>?type=receipt&amp;journal_id=15</code> أو <code>?auth_id=10</code> أو <code>?receipt_id=3</code>.
           </div>
         </div>
       </div>
 
+      <!-- جدول العمليات -->
       <div class="card">
         <div class="card-header">
-          <h2>📋 قائمة العمليات</h2>
-          <span class="badge">Operations Log</span>
+          <h2>📋 قائمة القيود المحاسبية</h2>
+          <span class="badge">Journal Operations Log</span>
         </div>
         <div class="card-body">
           <div style="max-height: 420px; overflow: auto; border-radius: 10px; border: 1px solid rgba(55,65,81,0.7);">
@@ -373,24 +388,24 @@
                   <th>#</th>
                   <th>التاريخ</th>
                   <th>نوع العملية</th>
-                  <th>المرجع</th>
-                  <th>الوصف</th>
-                  <th>السائق</th>
-                  <th>السيارة</th>
+                  <th>الأرقام (عملية / مرجع)</th>
+                  <th>الحساب المدين</th>
+                  <th>الحساب الدائن</th>
                   <th>المبلغ</th>
+                  <th>وصف مختصر</th>
                 </tr>
               </thead>
               <tbody id="operationsTableBody">
                 <tr>
                   <td colspan="8" class="empty-state">
-                    جاري تحميل العمليات...
+                    جاري تحميل القيود...
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div class="hint" style="margin-top:8px;">
-            الترتيب الافتراضي من الأحدث إلى الأقدم. يمكنك تضييق النتائج باستخدام الفلاتر بالأعلى.
+            الترتيب الافتراضي من الأحدث إلى الأقدم. الفلاتر بالأعلى تضيق النتائج حسب المصدر أو التاريخ أو البحث.
           </div>
         </div>
       </div>
@@ -400,20 +415,20 @@
   <script>
     const urlParams = new URLSearchParams(window.location.search);
 
-    const filterType = document.getElementById("filterType");
-    const filterFromDate = document.getElementById("filterFromDate");
-    const filterToDate = document.getElementById("filterToDate");
-    const filterSearch = document.getElementById("filterSearch");
+    const filterType      = document.getElementById("filterType");
+    const filterFromDate  = document.getElementById("filterFromDate");
+    const filterToDate    = document.getElementById("filterToDate");
+    const filterSearch    = document.getElementById("filterSearch");
     const operationsTableBody = document.getElementById("operationsTableBody");
     const operationsCount = document.getElementById("operationsCount");
 
-    let operations = [];      // كل العمليات الموحّدة
+    let operations = [];      // كل القيود بعد الماب
     let filteredOperations = [];
 
     function parseDateStr(dateStr) {
       if (!dateStr) return null;
       try {
-        // الشكل من الـ API: "YYYY-MM-DD HH:MM:SS"
+        // نفترض الشكل: "YYYY-MM-DD HH:MM:SS"
         return new Date(dateStr.replace(" ", "T"));
       } catch {
         return null;
@@ -439,70 +454,97 @@
       return num.toLocaleString("ar-EG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function typePill(opType) {
+    function typePill(sourceType) {
       let cls = "pill-op";
       let label = "";
       let icon = "";
 
-      if (opType === "auth_close") {
+      if (sourceType === "auth_close") {
         cls += " auth";
         label = "إقفال تفويض";
         icon = "🚗";
-      } else if (opType === "receipt") {
+      } else if (sourceType === "receipt") {
         cls += " receipt";
         label = "سند تحصيل نقدي";
         icon = "💵";
-      } else if (opType === "journal") {
-        cls += " journal";
-        label = "قيد يومية";
+      } else { // manual / غيره
+        cls += " manual";
+        label = "قيد يدوي";
         icon = "📘";
-      } else {
-        label = "عملية";
-        icon = "📝";
       }
 
       return `<span class="${cls}"><span>${icon}</span><span>${label}</span></span>`;
     }
 
     function buildOperationsRow(op, index) {
-      const dateStr = formatDateForDisplay(op.date);
+      const dateStr   = formatDateForDisplay(op.date);
       const amountStr = formatAmount(op.amount);
-      const driver = op.driver_name || "—";
-      const car = op.car_number || "—";
-      const desc = op.description || "—";
 
-      // id فريد للصف علشان لما نيجي نعمل highlight من URL
-      const rowId = `op-row-${op.source}-${op.id}`;
+      const rowId = `op-row-${op.id}`;
+
+      const debitHtml = op.debit
+        ? `
+          <div class="acc-name">${op.debit.account_name || "—"}</div>
+          <div class="acc-code">${op.debit.account_code || ""}</div>
+          <div class="subtext">مدين: ${formatAmount(op.debit.amount)}</div>
+        `
+        : "—";
+
+      const creditHtml = op.credit
+        ? `
+          <div class="acc-name">${op.credit.account_name || "—"}</div>
+          <div class="acc-code">${op.credit.account_code || ""}</div>
+          <div class="subtext">دائن: ${formatAmount(op.credit.amount)}</div>
+        `
+        : "—";
+
+      let refSub = "";
+      if (op.source_type === "auth_close" && op.ref_authorization_id) {
+        refSub = `تفويض #${op.ref_authorization_id}`;
+      } else if (op.source_type === "receipt" && op.ref_receipt_id) {
+        refSub = `سند تحصيل #${op.ref_receipt_id}`;
+      } else if (op.source_type === "manual" && op.manual_ref) {
+        refSub = `مرجع يدوي #${op.manual_ref}`;
+      }
+
+      const refHtml = `
+        <div class="ref-main">OP-${op.id}</div>
+        ${refSub ? `<div class="subtext">${refSub}</div>` : ""}
+      `;
+
+      const descShort = op.description || "—";
 
       return `
         <tr id="${rowId}">
           <td>${index + 1}</td>
           <td>${dateStr}</td>
-          <td>${typePill(op.type)}</td>
-          <td><span class="ref">${op.ref || "—"}</span></td>
+          <td>${typePill(op.source_type)}</td>
+          <td>${refHtml}</td>
+          <td>${debitHtml}</td>
+          <td>${creditHtml}</td>
+          <td class="amount-cell">${amountStr}</td>
           <td>
-            ${desc}
+            ${descShort}
             ${
-              op.extra
-                ? `<div class="subtext">${op.extra}</div>`
+              op.driver_name || op.car_number
+                ? `<div class="subtext">${
+                    op.driver_name ? "سائق: " + op.driver_name : ""
+                  } ${op.car_number ? " | سيارة: " + op.car_number : ""}</div>`
                 : ""
             }
           </td>
-          <td>${driver}</td>
-          <td>${car}</td>
-          <td class="amount-cell">${amountStr}</td>
         </tr>
       `;
     }
 
     function applyFilters() {
-      const typeVal = filterType.value;
-      const fromVal = filterFromDate.value; // "YYYY-MM-DD"
-      const toVal = filterToDate.value;
-      const searchVal = (filterSearch.value || "").trim().toLowerCase();
+      const typeVal    = filterType.value;
+      const fromVal    = filterFromDate.value;
+      const toVal      = filterToDate.value;
+      const searchVal  = (filterSearch.value || "").trim().toLowerCase();
 
       let fromDate = null;
-      let toDate = null;
+      let toDate   = null;
 
       if (fromVal) {
         fromDate = new Date(fromVal + "T00:00:00");
@@ -512,7 +554,7 @@
       }
 
       filteredOperations = operations.filter(op => {
-        if (typeVal !== "all" && op.type !== typeVal) return false;
+        if (typeVal !== "all" && op.source_type !== typeVal) return false;
 
         const opDate = parseDateStr(op.date);
         if (fromDate && opDate && opDate < fromDate) return false;
@@ -520,13 +562,12 @@
 
         if (searchVal) {
           const haystack = (
-            (op.description || "") +
-            " " +
-            (op.driver_name || "") +
-            " " +
-            (op.car_number || "") +
-            " " +
-            (op.ref || "")
+            (op.description || "") + " " +
+            (op.driver_name || "") + " " +
+            (op.car_number || "") + " " +
+            (op.ref_text || "") + " " +
+            (op.debit ? (op.debit.account_name || "") + " " + (op.debit.account_code || "") : "") + " " +
+            (op.credit ? (op.credit.account_name || "") + " " + (op.credit.account_code || "") : "")
           ).toLowerCase();
           if (!haystack.includes(searchVal)) return false;
         }
@@ -542,11 +583,11 @@
         operationsTableBody.innerHTML = `
           <tr>
             <td colspan="8" class="empty-state">
-              لا توجد عمليات مطابقة للفلاتر الحالية.
+              لا توجد قيود مطابقة للفلاتر الحالية.
             </td>
           </tr>
         `;
-        operationsCount.textContent = "0 عملية";
+        operationsCount.textContent = "0 قيد";
         return;
       }
 
@@ -555,110 +596,92 @@
         operationsTableBody.insertAdjacentHTML("beforeend", buildOperationsRow(op, idx));
       });
 
-      operationsCount.textContent = `${filteredOperations.length} عملية`;
+      operationsCount.textContent = `${filteredOperations.length} قيد`;
 
-      // بعد ما نرسم الجدول نشوف لو في focus من URL
+      // بعد الرسم نحاول نحدد صف معيّن من URL
       focusRowFromURL();
+    }
+
+    function mapJournalEntriesToOps(journalEntries) {
+      const ops = [];
+
+      (journalEntries || []).forEach(je => {
+        const source_type_raw = je.source_type || je.source || "manual";
+        let source_type = "manual";
+        if (source_type_raw === "auth_close" || source_type_raw === "authorization") {
+          source_type = "auth_close";
+        } else if (source_type_raw === "receipt") {
+          source_type = "receipt";
+        }
+
+        let debitLine  = null;
+        let creditLine = null;
+        if (Array.isArray(je.lines)) {
+          je.lines.forEach(ln => {
+            const d = Number(ln.debit || 0);
+            const c = Number(ln.credit || 0);
+            if (d > 0 && !debitLine)  debitLine  = { 
+              account_code: ln.account_code || ln.code || "", 
+              account_name: ln.account_name || ln.name || "", 
+              amount: d 
+            };
+            if (c > 0 && !creditLine) creditLine = { 
+              account_code: ln.account_code || ln.code || "", 
+              account_name: ln.account_name || ln.name || "", 
+              amount: c 
+            };
+          });
+        }
+
+        const amount =
+          debitLine ? debitLine.amount :
+          (creditLine ? creditLine.amount : null);
+
+        let refText = `OP-${je.id}`;
+        if (source_type === "auth_close" && je.ref_authorization_id) {
+          refText += ` | AUTH-${je.ref_authorization_id}`;
+        } else if (source_type === "receipt" && je.ref_receipt_id) {
+          refText += ` | RCPT-${je.ref_receipt_id}`;
+        }
+
+        ops.push({
+          id: je.id,
+          date: je.date,
+          description: je.description || "",
+          source_type,
+          ref_authorization_id: je.ref_authorization_id || null,
+          ref_receipt_id: je.ref_receipt_id || null,
+          manual_ref: je.manual_ref || null,
+          driver_name: je.driver_name || "",
+          car_number: je.car_number || "",
+          debit: debitLine,
+          credit: creditLine,
+          amount,
+          ref_text: refText
+        });
+      });
+
+      // ترتيب من الأحدث للأقدم
+      ops.sort((a, b) => {
+        const da = parseDateStr(a.date);
+        const db = parseDateStr(b.date);
+        const na = da ? da.getTime() : 0;
+        const nb = db ? db.getTime() : 0;
+        return nb - na;
+      });
+
+      return ops;
     }
 
     async function loadOperations() {
       try {
-        const [authRes, receiptsRes, journalRes] = await Promise.all([
-          fetch("/api/authorizations/closed"),
-          fetch("/api/receipts"),
-          fetch("/api/journal_entries"),
-        ]);
+        // الآن نعتمد فقط على قيود اليومية من الـ API
+        const res = await fetch("/api/journal_entries");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const journalEntries = await res.json();
 
-        if (!authRes.ok || !receiptsRes.ok || !journalRes.ok) {
-          throw new Error("خطأ في تحميل بيانات العمليات");
-        }
+        operations = mapJournalEntriesToOps(journalEntries);
 
-        const [auths, receipts, journalEntries] = await Promise.all([
-          authRes.json(),
-          receiptsRes.json(),
-          journalRes.json(),
-        ]);
-
-        const ops = [];
-
-        // 1) عمليات إقفال التفويضات
-        (auths || []).forEach(a => {
-          const opDate = a.close_date || a.end_date || a.issue_date;
-          const amount = a.closed_amount != null && a.closed_amount !== undefined
-            ? a.closed_amount
-            : a.planned_amount;
-
-          ops.push({
-            id: a.id,
-            source: "auth",
-            type: "auth_close",
-            date: opDate,
-            ref: `AUTH-${a.id}`,
-            description: a.details || `إقفال تفويض للسيارة ${a.car_number || ""}`.trim(),
-            extra: `سائق: ${a.driver_name || "غير محدد"}`,
-            driver_name: a.driver_name,
-            car_number: a.car_number,
-            amount: amount
-          });
-        });
-
-        // 2) سندات التحصيل النقدي
-        (receipts || []).forEach(r => {
-          ops.push({
-            id: r.id,
-            source: "receipt",
-            type: "receipt",
-            date: r.date,
-            ref: `RCPT-${r.id}`,
-            description: r.description || "سند تحصيل نقدي",
-            extra: r.ref_authorization_id ? `عن تفويض رقم ${r.ref_authorization_id}` : "",
-            driver_name: r.driver_name,
-            car_number: "",
-            amount: r.amount
-          });
-        });
-
-        // 3) قيود اليومية (يدوي + أوتوماتيك)
-        (journalEntries || []).forEach(je => {
-          let totalDebit = 0;
-          if (Array.isArray(je.lines)) {
-            je.lines.forEach(ln => {
-              if (ln.debit) totalDebit += Number(ln.debit) || 0;
-            });
-          }
-
-          let desc = je.description || "قيد يومية";
-          let extra = "";
-          if (je.ref_authorization_id) {
-            extra = `مرتبط بتفويض رقم ${je.ref_authorization_id}`;
-          } else if (je.ref_receipt_id) {
-            extra = `مرتبط بسند تحصيل رقم ${je.ref_receipt_id}`;
-          }
-
-          ops.push({
-            id: je.id,
-            source: "journal",
-            type: "journal",
-            date: je.date,
-            ref: `JE-${je.id}`,
-            description: desc,
-            extra: extra,
-            driver_name: "",
-            car_number: "",
-            amount: totalDebit || null
-          });
-        });
-
-        // ترتيب من الأحدث للأقدم
-        ops.sort((a, b) => {
-          const da = parseDateStr(a.date);
-          const db = parseDateStr(b.date);
-          const na = da ? da.getTime() : 0;
-          const nb = db ? db.getTime() : 0;
-          return nb - na;
-        });
-
-        operations = ops;
         // نطبّق فلاتر أولية من URL قبل أول render
         applyInitialURLFilters();
         applyFilters();
@@ -667,7 +690,7 @@
         operationsTableBody.innerHTML = `
           <tr>
             <td colspan="8" class="empty-state">
-              ⚠️ حدث خطأ أثناء تحميل العمليات، حاول تحديث الصفحة.
+              ⚠️ حدث خطأ أثناء تحميل القيود، حاول تحديث الصفحة.
             </td>
           </tr>
         `;
@@ -678,47 +701,44 @@
     function applyInitialURLFilters() {
       const typeParam = urlParams.get("type");
       const fromParam = urlParams.get("from");
-      const toParam = urlParams.get("to");
-      const qParam = urlParams.get("q");
+      const toParam   = urlParams.get("to");
+      const qParam    = urlParams.get("q");
 
-      if (typeParam && ["auth_close","receipt","journal","all"].includes(typeParam)) {
+      if (typeParam && ["auth_close","receipt","manual","all"].includes(typeParam)) {
         filterType.value = typeParam;
       }
 
-      if (fromParam) {
-        filterFromDate.value = fromParam;
-      }
-      if (toParam) {
-        filterToDate.value = toParam;
-      }
-      if (qParam) {
-        filterSearch.value = qParam;
-      }
+      if (fromParam) filterFromDate.value = fromParam;
+      if (toParam)   filterToDate.value   = toParam;
+      if (qParam)    filterSearch.value   = qParam;
     }
 
     function focusRowFromURL() {
-      // نحاول نحدد صف معيّن من خلال auth_id أو receipt_id أو journal_id
-      const authId = urlParams.get("auth_id");
+      const authId    = urlParams.get("auth_id");
       const receiptId = urlParams.get("receipt_id");
       const journalId = urlParams.get("journal_id");
 
-      let targetSource = null;
-      let targetId = null;
+      let targetOp = null;
 
-      if (authId) {
-        targetSource = "auth";
-        targetId = authId;
+      if (journalId) {
+        targetOp = filteredOperations.find(
+          op => String(op.id) === String(journalId)
+        );
+      } else if (authId) {
+        targetOp = filteredOperations.find(
+          op => op.source_type === "auth_close" &&
+                String(op.ref_authorization_id) === String(authId)
+        );
       } else if (receiptId) {
-        targetSource = "receipt";
-        targetId = receiptId;
-      } else if (journalId) {
-        targetSource = "journal";
-        targetId = journalId;
+        targetOp = filteredOperations.find(
+          op => op.source_type === "receipt" &&
+                String(op.ref_receipt_id) === String(receiptId)
+        );
       }
 
-      if (!targetSource || !targetId) return;
+      if (!targetOp) return;
 
-      const rowDomId = `op-row-${targetSource}-${targetId}`;
+      const rowDomId = `op-row-${targetOp.id}`;
       const rowEl = document.getElementById(rowDomId);
       if (rowEl) {
         rowEl.classList.add("row-highlight");
@@ -729,13 +749,11 @@
       }
     }
 
-    // ربط الفلاتر مع الدالة
+    // ربط الفلاتر
     filterType.addEventListener("change", applyFilters);
     filterFromDate.addEventListener("change", applyFilters);
     filterToDate.addEventListener("change", applyFilters);
-    filterSearch.addEventListener("input", () => {
-      applyFilters();
-    });
+    filterSearch.addEventListener("input", applyFilters);
 
     // أول ما الصفحة تفتح
     loadOperations();

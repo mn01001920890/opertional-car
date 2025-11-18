@@ -402,7 +402,7 @@
               <select id="driverSelect" onchange="onDriverChange()" style="margin-top:6px;">
                 <option value="">اختر السائق من القائمة</option>
               </select>
-              <div class="hint">يتم تحميل قائمة السائقين تلقائيًا من قاعدة البيانات ويمكنك البحث بالاسم أو الرخصة.</div>
+              <div class="hint">يمكنك الكتابة بالأعلى للبحث، ثم اختيار السائق من القائمة المنسدلة.</div>
             </div>
 
             <!-- اسم السائق (حُر) -->
@@ -534,9 +534,9 @@
   <script>
     let allDrivers = [];
     let allAuthorizations = [];
-    const urlParams = new URLSearchParams(window.location.search); // ⭐ استخدام بارامترات الرابط
+    const urlParams = new URLSearchParams(window.location.search);
 
-    // مراجع لبعض العناصر
+    // 🧩 مراجع لعناصر البحث والقوائم
     const driverSearch = document.getElementById("driverSearch");
     const driverSelect = document.getElementById("driverSelect");
     const authSearch   = document.getElementById("authSearch");
@@ -547,23 +547,34 @@
       setDefaultDateTime();
       loadDrivers();
       loadAuthorizations();
-      prefillAmountFromURL(); // ⭐ تعبئة المبلغ من URL لو موجود
+      prefillAmountFromURL();
 
-      // تفعيل فلترة مبدئية (كلهم ظاهرين)
-      filterDriverOptions("");
-      filterAuthOptions("");
+      // ربط أحداث البحث
+      driverSearch.addEventListener("input", () => {
+        filterDriverOptions(driverSearch.value);
+        // لما يغيّر البحث بنفسه، نفرّغ الاختيار لحد ما يختار من القائمة
+        driverSelect.value = "";
+        updateSummary();
+      });
+
+      authSearch.addEventListener("input", () => {
+        // القائمة أصلًا معمولة من populateAuthSelect
+        filterAuthOptions(authSearch.value);
+        authSelect.value = "";
+        updateSummary();
+      });
     });
 
-    // ضبط التاريخ الحالي في input datetime-local
+    // ضبط التاريخ الحالي
     function setDefaultDateTime() {
       const input = document.getElementById("receiptDate");
       const now = new Date();
       const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-      const iso = local.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
+      const iso = local.toISOString().slice(0, 16);
       input.value = iso;
     }
 
-    // تحميل السائقين من /api/drivers
+    // تحميل السائقين
     async function loadDrivers() {
       try {
         const res = await fetch("/api/drivers");
@@ -577,17 +588,13 @@
           const opt = document.createElement("option");
           opt.value = d.id;
           opt.textContent = d.name || ("سائق #" + d.id);
-          // 🛈 نحفظ البيانات في data-* عشان نقدر نبحث بالاسم/الرخصة/الجوال
           opt.dataset.name    = d.name || "";
           opt.dataset.license = d.license_no || "";
           opt.dataset.phone   = d.phone || "";
           driverSelect.appendChild(opt);
         });
 
-        // لو في driver_id في الرابط
         preselectDriverFromURL();
-
-        // بعد التحميل نفعل الفلترة الحالية (لو المستخدم كاتب حاجة)
         filterDriverOptions(driverSearch.value || "");
       } catch (err) {
         console.error(err);
@@ -595,7 +602,7 @@
       }
     }
 
-    // تحميل التفويضات من /api/authorizations
+    // تحميل التفويضات
     async function loadAuthorizations() {
       try {
         const res = await fetch("/api/authorizations");
@@ -604,7 +611,6 @@
         allAuthorizations = Array.isArray(data) ? data : [];
 
         populateAuthSelect();
-        // دعم فتح الصفحة بـ ?authorization_id=123
         preselectAuthorizationFromURL();
         updateSummary();
       } catch (err) {
@@ -616,7 +622,6 @@
     function populateAuthSelect() {
       const chosenDriverId = driverSelect.value;
 
-      // نحدد التفويضات اللي تخص السائق المختار، لو موجود
       let filtered = allAuthorizations;
       if (chosenDriverId) {
         const driver = allDrivers.find(d => String(d.id) === String(chosenDriverId));
@@ -638,21 +643,18 @@
         const opt = document.createElement("option");
         opt.value = a.id;
         opt.textContent = text;
-        // 🛈 بيانات إضافية للبحث
         opt.dataset.authId = a.id;
         opt.dataset.car    = car;
         opt.dataset.status = status;
         authSelect.appendChild(opt);
       });
 
-      // نطبق الفلترة بالبحث اللي مكتوب حاليًا
       filterAuthOptions(authSearch.value || "");
     }
 
-    // ========= فلترة القوائم عند الكتابة =========
+    // 🔎 فلترة قائمة السائقين بناءً على ما يُكتب في خانة البحث
     function filterDriverOptions(term) {
       const t = (term || "").trim().toLowerCase();
-      let firstMatch = null;
 
       Array.from(driverSelect.options).forEach(opt => {
         if (!opt.value) {
@@ -663,24 +665,14 @@
         const lic   = opt.dataset.license || "";
         const phone = opt.dataset.phone   || "";
         const combined = `${name} ${lic} ${phone}`.toLowerCase();
-        const match = t === "" || combined.includes(t);
+        const match = !t || combined.includes(t);
         opt.hidden = !match;
-        if (match && !firstMatch) firstMatch = opt;
       });
-
-      if (firstMatch && t) {
-        driverSelect.value = firstMatch.value;
-        onDriverChange();
-      } else if (!t) {
-        // لو فضيت البحث نرجّع الاختيار فاضي
-        driverSelect.value = "";
-        onDriverChange();
-      }
     }
 
+    // 🔎 فلترة التفويضات
     function filterAuthOptions(term) {
       const t = (term || "").trim().toLowerCase();
-      let firstMatch = null;
 
       Array.from(authSelect.options).forEach(opt => {
         if (!opt.value) {
@@ -692,29 +684,12 @@
         const status = opt.dataset.status || "";
         const text   = opt.textContent    || "";
         const combined = `${id} ${car} ${status} ${text}`.toLowerCase();
-        const match = t === "" || combined.includes(t);
+        const match = !t || combined.includes(t);
         opt.hidden = !match;
-        if (match && !firstMatch) firstMatch = opt;
       });
-
-      if (firstMatch && t) {
-        authSelect.value = firstMatch.value;
-        onAuthChange();
-      } else if (!t) {
-        authSelect.value = "";
-        onAuthChange();
-      }
     }
 
-    driverSearch.addEventListener("input", () => {
-      filterDriverOptions(driverSearch.value);
-    });
-
-    authSearch.addEventListener("input", () => {
-      filterAuthOptions(authSearch.value);
-    });
-
-    // ========= تغيير السائق =========
+    // تغيير السائق
     function onDriverChange() {
       const id = driverSelect.value;
       const driverNameInput = document.getElementById("driverName");
@@ -722,17 +697,14 @@
       const driver = allDrivers.find(d => String(d.id) === String(id));
       if (driver) {
         driverNameInput.value = driver.name || "";
-        // نرجّع الاسم في خانة البحث
-        driverSearch.value = driver.name || driverSearch.value;
       }
 
       populateAuthSelect();
       updateSummary();
     }
 
-    // ========= تغيير التفويض =========
+    // تغيير التفويض
     function onAuthChange() {
-      // اقترح بيان ومبلغ تلقائي بناءً على التفويض
       const authId = authSelect.value;
       const descInput = document.getElementById("description");
       const amountInput = document.getElementById("amount");
@@ -745,15 +717,10 @@
         const baseText =
           `سداد عن تفويض رقم ${auth.id} عن سيارة ${car} عن الفترة من ${from} حتى ${to}`;
 
-        // البيان
         if (!descInput.value.trim() || descInput.value.startsWith("سداد عن تفويض رقم")) {
           descInput.value = baseText;
         }
 
-        // خانة البحث الخاصة بالتفويض (نحط فيها رقم التفويض أو السيارة)
-        authSearch.value = `#${auth.id} ${car}`;
-
-        // لو المبلغ فاضي، نحاول نملأه من closed_amount أو planned_amount
         if (!amountInput.value.trim()) {
           let suggested = null;
 
@@ -772,7 +739,7 @@
       updateSummary();
     }
 
-    // قراءة authorization_id و amount و driver_id من URL
+    // اختيار التفويض من URL
     function preselectAuthorizationFromURL() {
       const authId = urlParams.get("authorization_id");
       if (!authId) return;
@@ -784,7 +751,6 @@
         authSelect.value = authId;
         onAuthChange();
 
-        // نحاول نضبط السائق تلقائيًا من التفويض
         const auth = allAuthorizations.find(a => String(a.id) === String(authId));
         if (auth && auth.driver_name) {
           const driver = allDrivers.find(
@@ -794,6 +760,7 @@
             driverSelect.value = driver.id;
             document.getElementById("driverName").value = driver.name || "";
             driverSearch.value = driver.name || "";
+            filterDriverOptions(driverSearch.value);
           }
         }
       }
@@ -812,11 +779,12 @@
         if (driver) {
           document.getElementById("driverName").value = driver.name || "";
           driverSearch.value = driver.name || "";
+          filterDriverOptions(driverSearch.value);
         }
       }
     }
 
-    // تعبئة المبلغ من URL لو موجود (?amount=...)
+    // تعبئة المبلغ من URL
     function prefillAmountFromURL() {
       const amountParam = urlParams.get("amount");
       if (!amountParam) return;
@@ -828,7 +796,7 @@
       }
     }
 
-    // تحديث ملخص السائق/التفويض في الكارت الجانبي
+    // ملخص السائق/التفويض
     function updateSummary() {
       const driverId = driverSelect.value;
       const authId = authSelect.value;
@@ -848,12 +816,10 @@
       summaryEmpty.style.display = "none";
       summaryContent.style.display = "block";
 
-      // سائق
       document.getElementById("sumDriverName").textContent = d ? (d.name || "—") : "—";
       document.getElementById("sumDriverLicense").textContent = d ? (d.license_no || "—") : "—";
       document.getElementById("sumDriverPhone").textContent = d ? (d.phone || "—") : "—";
 
-      // تفويض
       const pill = document.getElementById("sumAuthStatusPill");
       if (!a) {
         document.getElementById("sumAuthId").textContent = "—";
@@ -898,7 +864,7 @@
       }
     }
 
-    // عرض رسالة حالة (نجاح / خطأ)
+    // رسالة حالة (نجاح/خطأ)
     function showStatus(message, isError = false) {
       const bar = document.getElementById("statusBar");
       if (!message) {
@@ -911,7 +877,7 @@
       bar.style.display = "block";
     }
 
-    // إرسال بيانات السند إلى /api/receipts
+    // إرسال بيانات السند
     async function submitReceipt(e) {
       e.preventDefault();
       showStatus("");
@@ -955,7 +921,6 @@
           return;
         }
 
-        // لو الباك إند بيرجع receipt.id نعرض لينك لصفحة العمليات
         let extraLink = "";
         if (data.receipt && data.receipt.id) {
           const opsUrl = `/operations?type=receipt&receipt_id=${data.receipt.id}`;

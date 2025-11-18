@@ -397,11 +397,12 @@
 
             <!-- السائق -->
             <div class="form-group">
-              <label for="driverSelect">السائق</label>
-              <select id="driverSelect" onchange="onDriverChange()">
+              <label for="driverSearch">السائق</label>
+              <input id="driverSearch" type="text" placeholder="اكتب اسم السائق أو رقم الرخصة أو الجوال للبحث..." autocomplete="off" />
+              <select id="driverSelect" onchange="onDriverChange()" style="margin-top:6px;">
                 <option value="">اختر السائق من القائمة</option>
               </select>
-              <div class="hint">يتم تحميل قائمة السائقين تلقائيًا من قاعدة البيانات.</div>
+              <div class="hint">يتم تحميل قائمة السائقين تلقائيًا من قاعدة البيانات ويمكنك البحث بالاسم أو الرخصة.</div>
             </div>
 
             <!-- اسم السائق (حُر) -->
@@ -412,8 +413,9 @@
 
             <!-- اختيار تفويض -->
             <div class="form-group">
-              <label for="authSelect">التفويض (اختياري)</label>
-              <select id="authSelect" onchange="onAuthChange()">
+              <label for="authSearch">التفويض (اختياري)</label>
+              <input id="authSearch" type="text" placeholder="اكتب رقم التفويض أو رقم السيارة للبحث..." autocomplete="off" />
+              <select id="authSelect" onchange="onAuthChange()" style="margin-top:6px;">
                 <option value="">بدون ربط بتفويض محدد</option>
               </select>
               <div class="hint">
@@ -534,12 +536,22 @@
     let allAuthorizations = [];
     const urlParams = new URLSearchParams(window.location.search); // ⭐ استخدام بارامترات الرابط
 
+    // مراجع لبعض العناصر
+    const driverSearch = document.getElementById("driverSearch");
+    const driverSelect = document.getElementById("driverSelect");
+    const authSearch   = document.getElementById("authSearch");
+    const authSelect   = document.getElementById("authSelect");
+
     // 🔹 تهيئة الصفحة
     document.addEventListener("DOMContentLoaded", () => {
       setDefaultDateTime();
       loadDrivers();
       loadAuthorizations();
       prefillAmountFromURL(); // ⭐ تعبئة المبلغ من URL لو موجود
+
+      // تفعيل فلترة مبدئية (كلهم ظاهرين)
+      filterDriverOptions("");
+      filterAuthOptions("");
     });
 
     // ضبط التاريخ الحالي في input datetime-local
@@ -559,18 +571,24 @@
         const data = await res.json();
         allDrivers = Array.isArray(data) ? data : [];
 
-        const select = document.getElementById("driverSelect");
-        select.innerHTML = '<option value="">اختر السائق من القائمة</option>';
+        driverSelect.innerHTML = '<option value="">اختر السائق من القائمة</option>';
 
         allDrivers.forEach(d => {
           const opt = document.createElement("option");
           opt.value = d.id;
           opt.textContent = d.name || ("سائق #" + d.id);
-          select.appendChild(opt);
+          // 🛈 نحفظ البيانات في data-* عشان نقدر نبحث بالاسم/الرخصة/الجوال
+          opt.dataset.name    = d.name || "";
+          opt.dataset.license = d.license_no || "";
+          opt.dataset.phone   = d.phone || "";
+          driverSelect.appendChild(opt);
         });
 
         // لو في driver_id في الرابط
         preselectDriverFromURL();
+
+        // بعد التحميل نفعل الفلترة الحالية (لو المستخدم كاتب حاجة)
+        filterDriverOptions(driverSearch.value || "");
       } catch (err) {
         console.error(err);
         showStatus("تعذر تحميل قائمة السائقين من الخادم.", true);
@@ -596,8 +614,6 @@
     }
 
     function populateAuthSelect() {
-      const select = document.getElementById("authSelect");
-      const driverSelect = document.getElementById("driverSelect");
       const chosenDriverId = driverSelect.value;
 
       // نحدد التفويضات اللي تخص السائق المختار، لو موجود
@@ -611,38 +627,112 @@
         }
       }
 
-      select.innerHTML = '<option value="">بدون ربط بتفويض محدد</option>';
+      authSelect.innerHTML = '<option value="">بدون ربط بتفويض محدد</option>';
 
       filtered.forEach(a => {
         const issue = a.issue_date || "";
-        const car = a.car_number || "";
+        const car   = a.car_number || "";
         const status = (a.status || "").trim() || "غير معروف";
         const text =
           `تفويض #${a.id} - سيارة ${car} - من ${issue} - حالة: ${status}`;
         const opt = document.createElement("option");
         opt.value = a.id;
         opt.textContent = text;
-        select.appendChild(opt);
+        // 🛈 بيانات إضافية للبحث
+        opt.dataset.authId = a.id;
+        opt.dataset.car    = car;
+        opt.dataset.status = status;
+        authSelect.appendChild(opt);
       });
+
+      // نطبق الفلترة بالبحث اللي مكتوب حاليًا
+      filterAuthOptions(authSearch.value || "");
     }
 
+    // ========= فلترة القوائم عند الكتابة =========
+    function filterDriverOptions(term) {
+      const t = (term || "").trim().toLowerCase();
+      let firstMatch = null;
+
+      Array.from(driverSelect.options).forEach(opt => {
+        if (!opt.value) {
+          opt.hidden = false;
+          return;
+        }
+        const name  = opt.dataset.name    || "";
+        const lic   = opt.dataset.license || "";
+        const phone = opt.dataset.phone   || "";
+        const combined = `${name} ${lic} ${phone}`.toLowerCase();
+        const match = t === "" || combined.includes(t);
+        opt.hidden = !match;
+        if (match && !firstMatch) firstMatch = opt;
+      });
+
+      if (firstMatch && t) {
+        driverSelect.value = firstMatch.value;
+        onDriverChange();
+      } else if (!t) {
+        // لو فضيت البحث نرجّع الاختيار فاضي
+        driverSelect.value = "";
+        onDriverChange();
+      }
+    }
+
+    function filterAuthOptions(term) {
+      const t = (term || "").trim().toLowerCase();
+      let firstMatch = null;
+
+      Array.from(authSelect.options).forEach(opt => {
+        if (!opt.value) {
+          opt.hidden = false;
+          return;
+        }
+        const id     = (opt.dataset.authId || opt.value || "").toString();
+        const car    = opt.dataset.car    || "";
+        const status = opt.dataset.status || "";
+        const text   = opt.textContent    || "";
+        const combined = `${id} ${car} ${status} ${text}`.toLowerCase();
+        const match = t === "" || combined.includes(t);
+        opt.hidden = !match;
+        if (match && !firstMatch) firstMatch = opt;
+      });
+
+      if (firstMatch && t) {
+        authSelect.value = firstMatch.value;
+        onAuthChange();
+      } else if (!t) {
+        authSelect.value = "";
+        onAuthChange();
+      }
+    }
+
+    driverSearch.addEventListener("input", () => {
+      filterDriverOptions(driverSearch.value);
+    });
+
+    authSearch.addEventListener("input", () => {
+      filterAuthOptions(authSearch.value);
+    });
+
+    // ========= تغيير السائق =========
     function onDriverChange() {
-      const driverSelect = document.getElementById("driverSelect");
       const id = driverSelect.value;
       const driverNameInput = document.getElementById("driverName");
 
       const driver = allDrivers.find(d => String(d.id) === String(id));
       if (driver) {
         driverNameInput.value = driver.name || "";
+        // نرجّع الاسم في خانة البحث
+        driverSearch.value = driver.name || driverSearch.value;
       }
 
       populateAuthSelect();
       updateSummary();
     }
 
+    // ========= تغيير التفويض =========
     function onAuthChange() {
       // اقترح بيان ومبلغ تلقائي بناءً على التفويض
-      const authSelect = document.getElementById("authSelect");
       const authId = authSelect.value;
       const descInput = document.getElementById("description");
       const amountInput = document.getElementById("amount");
@@ -659,6 +749,9 @@
         if (!descInput.value.trim() || descInput.value.startsWith("سداد عن تفويض رقم")) {
           descInput.value = baseText;
         }
+
+        // خانة البحث الخاصة بالتفويض (نحط فيها رقم التفويض أو السيارة)
+        authSearch.value = `#${auth.id} ${car}`;
 
         // لو المبلغ فاضي، نحاول نملأه من closed_amount أو planned_amount
         if (!amountInput.value.trim()) {
@@ -684,7 +777,6 @@
       const authId = urlParams.get("authorization_id");
       if (!authId) return;
 
-      const authSelect = document.getElementById("authSelect");
       const option = Array.from(authSelect.options).find(
         opt => String(opt.value) === String(authId)
       );
@@ -699,9 +791,9 @@
             d => (d.name || "").trim() === (auth.driver_name || "").trim()
           );
           if (driver) {
-            const driverSelect = document.getElementById("driverSelect");
             driverSelect.value = driver.id;
             document.getElementById("driverName").value = driver.name || "";
+            driverSearch.value = driver.name || "";
           }
         }
       }
@@ -711,7 +803,6 @@
       const driverId = urlParams.get("driver_id");
       if (!driverId) return;
 
-      const driverSelect = document.getElementById("driverSelect");
       const opt = Array.from(driverSelect.options).find(
         o => String(o.value) === String(driverId)
       );
@@ -720,6 +811,7 @@
         const driver = allDrivers.find(d => String(d.id) === String(driverId));
         if (driver) {
           document.getElementById("driverName").value = driver.name || "";
+          driverSearch.value = driver.name || "";
         }
       }
     }
@@ -738,9 +830,7 @@
 
     // تحديث ملخص السائق/التفويض في الكارت الجانبي
     function updateSummary() {
-      const driverSelect = document.getElementById("driverSelect");
       const driverId = driverSelect.value;
-      const authSelect = document.getElementById("authSelect");
       const authId = authSelect.value;
 
       const summaryEmpty = document.getElementById("summaryEmpty");
@@ -826,14 +916,12 @@
       e.preventDefault();
       showStatus("");
 
-      const driverSelect = document.getElementById("driverSelect");
-      const driverId = driverSelect.value || null;
+      const driverId   = driverSelect.value || null;
       const driverName = (document.getElementById("driverName").value || "").trim();
-      const authSelect = document.getElementById("authSelect");
-      const authId = authSelect.value || null;
-      const amountStr = (document.getElementById("amount").value || "").trim();
-      const desc = (document.getElementById("description").value || "").trim();
-      const dateVal = (document.getElementById("receiptDate").value || "").trim();
+      const authId     = authSelect.value || null;
+      const amountStr  = (document.getElementById("amount").value || "").trim();
+      const desc       = (document.getElementById("description").value || "").trim();
+      const dateVal    = (document.getElementById("receiptDate").value || "").trim();
 
       if (!amountStr) {
         showStatus("قيمة المبلغ مطلوبة لتسجيل سند التحصيل.", true);
@@ -880,9 +968,6 @@
           false
         );
 
-        // ممكن بعد النجاح تفرّغ المبلغ فقط وتبقي باقي البيانات لتسجيل سند آخر لنفس السائق
-        // document.getElementById("amount").value = "";
-        // document.getElementById("description").value = data.receipt ? (data.receipt.description || "") : desc;
       } catch (err) {
         console.error(err);
         showStatus("⚠️ تعذر الاتصال بالخادم. تأكد أن الباك إند يعمل ثم أعد المحاولة.", true);

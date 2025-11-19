@@ -264,12 +264,54 @@ class JournalEntry(db.Model):
     receipt = db.relationship("CashReceipt", backref="journal_entries", lazy=True)
 
     def to_dict(self, with_lines: bool = False):
+        """
+        تم توسيع الـ dict عشان نخدم صفحة العمليات:
+        - source_type: auth_close / receipt / manual
+        - driver_name / car_number لو متاحة من التفويض أو السند
+        - ref_text: نص عربي بسيط يوضح المرجع
+        """
+        # تحديد نوع المصدر
+        source_type = "manual"
+        ref_text = "قيد يدوي"
+
+        if self.ref_receipt_id:
+            source_type = "receipt"
+            if self.ref_authorization_id:
+                ref_text = f"سند تحصيل رقم {self.ref_receipt_id} عن تفويض رقم {self.ref_authorization_id}"
+            else:
+                ref_text = f"سند تحصيل رقم {self.ref_receipt_id}"
+        elif self.ref_authorization_id:
+            source_type = "auth_close"
+            ref_text = f"تفويض رقم {self.ref_authorization_id}"
+
+        # محاولة جلب اسم السائق ورقم السيارة من العلاقات
+        driver_name = None
+        car_number = None
+
+        auth = self.authorization
+        receipt = self.receipt
+
+        if auth:
+            driver_name = auth.driver_name
+            car_number = auth.car_number
+        elif receipt:
+            # من السند نفسه
+            driver_name = receipt.driver_name or (receipt.driver.name if receipt.driver else None)
+            # لو السند مربوط بتفويض نجيب رقم العربية
+            if receipt.authorization:
+                car_number = receipt.authorization.car_number
+
         base = {
             "id": self.id,
             "date": self.date.strftime("%Y-%m-%d %H:%M:%S") if self.date else "",
             "description": self.description,
             "ref_authorization_id": self.ref_authorization_id,
             "ref_receipt_id": self.ref_receipt_id,
+            # الحقول الجديدة لصفحة العمليات
+            "source_type": source_type,     # auth_close / receipt / manual
+            "driver_name": driver_name,     # لو متوفر
+            "car_number": car_number,       # لو متوفر
+            "ref_text": ref_text,           # نص المرجع بالعربي
         }
         if with_lines:
             base["lines"] = [ln.to_dict() for ln in self.lines]
@@ -982,7 +1024,7 @@ def get_account_ledger(account_id):
 @app.route("/api/journal_entries", methods=["GET", "POST"])
 def journal_entries_api():
     """
-    GET  → قائمة بسيطة بقيود اليومية (تستخدمها صفحة general.html)
+    GET  → قائمة بسيطة بقيود اليومية (تستخدمها صفحة general.html و operations.html)
     POST → إنشاء قيد يدوي (من صفحة اليومية العامة)
     """
     if request.method == "GET":
@@ -1049,6 +1091,23 @@ def journal_entries_api():
     return jsonify(
         {"message": "✅ تم إنشاء قيد اليومية بنجاح", "journal_entry": je.to_dict(with_lines=True)}
     ), 201
+
+
+# 🔹 API جديد: قيود يدوية فقط (بدون تفويض وبدون سند تحصيل)
+@app.route("/api/journal_entries/manual", methods=["GET"])
+def manual_journal_entries_api():
+    """
+    يرجع فقط القيود اليدوية (التي ليس لها ref_authorization_id ولا ref_receipt_id)
+    لاستخدامها في صفحة عرض القيود اليدوية.
+    """
+    entries = (
+        JournalEntry.query
+        .filter(JournalEntry.ref_authorization_id.is_(None))
+        .filter(JournalEntry.ref_receipt_id.is_(None))
+        .order_by(JournalEntry.date.desc(), JournalEntry.id.desc())
+        .all()
+    )
+    return jsonify([e.to_dict(with_lines=True) for e in entries])
 
 
 # ----- Cash Receipts APIs (سندات التحصيل النقدي) -----

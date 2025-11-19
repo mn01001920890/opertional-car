@@ -385,7 +385,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th># رقم القيد</th>
                   <th>التاريخ</th>
                   <th>نوع العملية</th>
                   <th>الأرقام (عملية / مرجع)</th>
@@ -498,25 +498,30 @@
         `
         : "—";
 
-      let refSub = "";
-      if (op.source_type === "auth_close" && op.ref_authorization_id) {
-        refSub = `تفويض #${op.ref_authorization_id}`;
-      } else if (op.source_type === "receipt" && op.ref_receipt_id) {
-        refSub = `سند تحصيل #${op.ref_receipt_id}`;
-      } else if (op.source_type === "manual" && op.manual_ref) {
-        refSub = `مرجع يدوي #${op.manual_ref}`;
+      const mainRef = `قيد #${op.id}`;
+      let subRef = op.ref_text || "";
+
+      // لو ref_text فاضي نعمل فallback حسب المصدر والـ IDs
+      if (!subRef) {
+        if (op.source_type === "auth_close" && op.ref_authorization_id) {
+          subRef = `تفويض #${op.ref_authorization_id}`;
+        } else if (op.source_type === "receipt" && op.ref_receipt_id) {
+          subRef = `سند تحصيل #${op.ref_receipt_id}`;
+        } else if (op.source_type === "manual") {
+          subRef = "قيد يدوي";
+        }
       }
 
       const refHtml = `
-        <div class="ref-main">OP-${op.id}</div>
-        ${refSub ? `<div class="subtext">${refSub}</div>` : ""}
+        <div class="ref-main">${mainRef}</div>
+        ${subRef ? `<div class="subtext">${subRef}</div>` : ""}
       `;
 
       const descShort = op.description || "—";
 
       return `
         <tr id="${rowId}">
-          <td>${index + 1}</td>
+          <td>${op.id}</td>
           <td>${dateStr}</td>
           <td>${typePill(op.source_type)}</td>
           <td>${refHtml}</td>
@@ -529,7 +534,9 @@
               op.driver_name || op.car_number
                 ? `<div class="subtext">${
                     op.driver_name ? "سائق: " + op.driver_name : ""
-                  } ${op.car_number ? " | سيارة: " + op.car_number : ""}</div>`
+                  }${op.driver_name && op.car_number ? " | " : ""}${
+                    op.car_number ? "سيارة: " + op.car_number : ""
+                  }</div>`
                 : ""
             }
           </td>
@@ -620,14 +627,19 @@
           je.lines.forEach(ln => {
             const d = Number(ln.debit || 0);
             const c = Number(ln.credit || 0);
+
+            // نحاول نستنتج كود واسم الحساب لو مش مبعوتين من الـ API
+            const accCode = ln.account_code || ln.code || (ln.account_id ? ("#" + ln.account_id) : "");
+            const accName = ln.account_name || ln.name || (ln.account_id ? ("حساب رقم " + ln.account_id) : "");
+
             if (d > 0 && !debitLine)  debitLine  = { 
-              account_code: ln.account_code || ln.code || "", 
-              account_name: ln.account_name || ln.name || "", 
+              account_code: accCode, 
+              account_name: accName, 
               amount: d 
             };
             if (c > 0 && !creditLine) creditLine = { 
-              account_code: ln.account_code || ln.code || "", 
-              account_name: ln.account_name || ln.name || "", 
+              account_code: accCode, 
+              account_name: accName, 
               amount: c 
             };
           });
@@ -637,11 +649,17 @@
           debitLine ? debitLine.amount :
           (creditLine ? creditLine.amount : null);
 
-        let refText = `OP-${je.id}`;
-        if (source_type === "auth_close" && je.ref_authorization_id) {
-          refText += ` | AUTH-${je.ref_authorization_id}`;
-        } else if (source_type === "receipt" && je.ref_receipt_id) {
-          refText += ` | RCPT-${je.ref_receipt_id}`;
+        // نستخدم ref_text من الباك إند لو متاحة
+        let refText = je.ref_text || "";
+        if (!refText) {
+          // fallback بسيط
+          if (source_type === "auth_close" && je.ref_authorization_id) {
+            refText = `تفويض رقم ${je.ref_authorization_id}`;
+          } else if (source_type === "receipt" && je.ref_receipt_id) {
+            refText = `سند تحصيل رقم ${je.ref_receipt_id}`;
+          } else {
+            refText = "قيد يدوي";
+          }
         }
 
         ops.push({
@@ -651,7 +669,6 @@
           source_type,
           ref_authorization_id: je.ref_authorization_id || null,
           ref_receipt_id: je.ref_receipt_id || null,
-          manual_ref: je.manual_ref || null,
           driver_name: je.driver_name || "",
           car_number: je.car_number || "",
           debit: debitLine,
@@ -675,7 +692,7 @@
 
     async function loadOperations() {
       try {
-        // الآن نعتمد فقط على قيود اليومية من الـ API
+        // نعتمد فقط على قيود اليومية من الـ API
         const res = await fetch("/api/journal_entries");
         if (!res.ok) throw new Error("HTTP " + res.status);
         const journalEntries = await res.json();

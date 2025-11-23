@@ -889,13 +889,26 @@
       const desc       = (document.getElementById("description").value || "").trim();
       const dateVal    = (document.getElementById("receiptDate").value || "").trim();
 
+      // تحقق من المبلغ
       if (!amountStr) {
         showStatus("قيمة المبلغ مطلوبة لتسجيل سند التحصيل.", true);
         return;
       }
 
+      const amountNum = Number(amountStr);
+      if (Number.isNaN(amountNum) || amountNum <= 0) {
+        showStatus("قيمة المبلغ غير صحيحة، يجب أن تكون رقمًا أكبر من صفر.", true);
+        return;
+      }
+
+      // تحقق من وجود سائق (id أو اسم يدوي)
+      if (!driverId && !driverName) {
+        showStatus("يجب اختيار سائق أو كتابة اسم السائق قبل حفظ السند.", true);
+        return;
+      }
+
       const payload = {
-        amount: amountStr,
+        amount: amountNum,
         driver_id: driverId ? Number(driverId) : null,
         driver_name: driverName || null,
         authorization_id: authId ? Number(authId) : null,

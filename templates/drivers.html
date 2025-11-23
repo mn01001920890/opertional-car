@@ -23,7 +23,7 @@
     }
 
     body {
-      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
       margin: 0;
       background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
       color: #fff;
@@ -114,6 +114,76 @@
       font-size: 14px;
       opacity: 0.9;
       margin-bottom: 16px;
+    }
+
+    /* ➕ كرت إضافة سائق جديد */
+    .add-driver-card {
+      background: rgba(255,255,255,0.97);
+      color: var(--text-dark);
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      padding: 10px 12px 12px;
+      margin-bottom: 14px;
+    }
+
+    .add-driver-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #0f172a;
+    }
+
+    .add-driver-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .add-driver-row input {
+      flex: 1 1 140px;
+      min-width: 120px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .add-driver-row input:focus {
+      border-color: var(--main-blue);
+      box-shadow: 0 0 0 2px rgba(13,110,253,0.18);
+    }
+
+    #addDriverBtn {
+      background: linear-gradient(135deg, var(--main-blue), var(--main-purple));
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.2s ease;
+    }
+
+    #addDriverBtn:hover {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+
+    #driverAddMsg {
+      font-size: 12px;
+      margin-top: 4px;
+      min-height: 16px;
     }
 
     /* 🔹 أدوات البحث */
@@ -223,7 +293,7 @@
       .driver-card { display: none; }
     }
 
-    /* ✅ أزرار */
+    /* ✅ أزرار صغيرة للإجراءات */
     .btn-xs {
       border-radius: 999px;
       border: none;
@@ -266,13 +336,31 @@
 
   <main class="page-content">
     <h2>قائمة السائقين</h2>
-    <p class="subtitle">عرض جميع السائقين المسجلين في النظام.</p>
+    <p class="subtitle">إضافة سائق جديد مع إنشاء حساب تفصيلي له في دليل الحسابات، ثم عرض جميع السائقين المسجلين في النظام.</p>
 
+    <!-- ➕ إضافة سائق جديد + إنشاء حساب في دليل الحسابات -->
+    <div class="add-driver-card">
+      <div class="add-driver-title">
+        <span>➕ إضافة سائق جديد (مع إنشاء حساب في شجرة "حساب السائقين")</span>
+      </div>
+      <div class="add-driver-row">
+        <input id="new_driver_name" placeholder="اسم السائق *" />
+        <input id="new_driver_phone" placeholder="الجوال" />
+        <input id="new_driver_license" placeholder="رقم الرخصة" />
+        <button id="addDriverBtn">
+          ➕ إضافة السائق وإنشاء حساب
+        </button>
+      </div>
+      <div id="driverAddMsg"></div>
+    </div>
+
+    <!-- شريط بحث + عدّاد -->
     <div class="toolbar-card">
       <div class="counter-pill">إجمالي السائقين: <span id="driversCount">0</span></div>
       <input id="search" class="search-input" placeholder="🔍 بحث بالاسم أو الجوال..." oninput="filterDrivers()" />
     </div>
 
+    <!-- جدول لسطح المكتب -->
     <section class="table-wrapper">
       <table class="drivers-table">
         <thead>
@@ -289,20 +377,31 @@
       </table>
     </section>
 
+    <!-- كروت للموبايل -->
     <div id="driversCards"></div>
   </main>
 
   <script>
     let driversData = [];
 
-    document.addEventListener("DOMContentLoaded", loadDrivers);
+    document.addEventListener("DOMContentLoaded", () => {
+      loadDrivers();
+
+      const addBtn = document.getElementById("addDriverBtn");
+      addBtn.addEventListener("click", handleAddDriver);
+    });
 
     async function loadDrivers() {
-      const res = await fetch("/api/drivers");
-      const data = await res.json();
-      driversData = data;
-      document.getElementById("driversCount").textContent = data.length;
-      renderDrivers(data);
+      try {
+        const res = await fetch("/api/drivers");
+        const data = await res.json();
+        driversData = Array.isArray(data) ? data : [];
+        document.getElementById("driversCount").textContent = driversData.length;
+        renderDrivers(driversData);
+      } catch (e) {
+        console.error("Error loading drivers", e);
+        document.getElementById("driversCount").textContent = "—";
+      }
     }
 
     function renderDrivers(list) {
@@ -318,7 +417,7 @@
             <td>${d.name}</td>
             <td>${d.phone || "—"}</td>
             <td>${d.license_no || "—"}</td>
-            <td>${d.notes || "—"}</td>
+            <td class="td-notes">${d.notes || "—"}</td>
             <td>
               <button class="btn-xs btn-xs-primary" onclick="goTo('/issue?driver_id=${d.id}')">تفويض</button>
               <button class="btn-xs btn-xs-soft" onclick="goTo('/rented?driver_id=${d.id}')">مؤجر</button>
@@ -333,7 +432,7 @@
             <div>📞 ${d.phone || "—"}</div>
             <div>🚘 رخصة: ${d.license_no || "—"}</div>
             <div>📝 ${d.notes || "—"}</div>
-            <div class="card-actions">
+            <div class="card-actions" style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
               <button class="btn-xs btn-xs-primary" onclick="goTo('/issue?driver_id=${d.id}')">تفويض</button>
               <button class="btn-xs btn-xs-soft" onclick="goTo('/rented?driver_id=${d.id}')">مؤجر</button>
               <button class="btn-xs btn-xs-plain" onclick="goTo('/receipt?driver_id=${d.id}')">سند</button>
@@ -346,7 +445,7 @@
     function filterDrivers() {
       const q = document.getElementById("search").value.toLowerCase();
       const filtered = driversData.filter(d =>
-        d.name.toLowerCase().includes(q) ||
+        (d.name || "").toLowerCase().includes(q) ||
         (d.phone || "").toLowerCase().includes(q) ||
         (d.license_no || "").toLowerCase().includes(q)
       );
@@ -355,6 +454,91 @@
 
     function goTo(url) {
       window.location.href = url;
+    }
+
+    async function handleAddDriver() {
+      const nameInput = document.getElementById("new_driver_name");
+      const phoneInput = document.getElementById("new_driver_phone");
+      const licenseInput = document.getElementById("new_driver_license");
+      const msgBox = document.getElementById("driverAddMsg");
+
+      const name = (nameInput.value || "").trim();
+      const phone = (phoneInput.value || "").trim();
+      const licenseNo = (licenseInput.value || "").trim();
+
+      if (!name) {
+        msgBox.style.color = "#b91c1c";
+        msgBox.textContent = "❌ اسم السائق مطلوب.";
+        return;
+      }
+
+      msgBox.style.color = "#111827";
+      msgBox.textContent = "⏳ جاري إضافة السائق وإنشاء الحساب...";
+
+      try {
+        // 1) إضافة السائق نفسه
+        const res = await fetch("/api/drivers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name,
+            phone: phone || null,
+            license_no: licenseNo || null
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          msgBox.style.color = "#b91c1c";
+          msgBox.textContent = "❌ فشل إضافة السائق: " + (data.error || "حدث خطأ غير معروف");
+          return;
+        }
+
+        const driver = data.driver || data; // احتياط لو الـ API رجع فورم مختلف
+        const driverId = driver.id;
+
+        let accountMessage = "";
+        // 2) إنشاء حساب تفصيلي للسائق تحت "حساب السائقين"
+        if (driverId) {
+          try {
+            const accRes = await fetch("/api/accounts/driver", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ driver_id: driverId })
+            });
+            const accData = await accRes.json();
+
+            if (accRes.ok) {
+              if (accData.already_exists) {
+                accountMessage = " (الحساب الخاص بالسائق كان موجود مسبقًا في دليل الحسابات).";
+              } else {
+                accountMessage = " وتم إنشاء حساب تفصيلي للسائق في شجرة 'حساب السائقين'.";
+              }
+            } else {
+              accountMessage = " ولكن لم يتم إنشاء الحساب المحاسبي للسائق: " + (accData.error || "خطأ غير معروف");
+            }
+          } catch (err) {
+            console.error("Error creating driver account", err);
+            accountMessage = " ولكن تعذّر الاتصال لإنشاء الحساب المحاسبي للسائق.";
+          }
+        }
+
+        msgBox.style.color = "#166534";
+        msgBox.textContent = "✅ تم إضافة السائق بنجاح." + accountMessage;
+
+        // تنظيف الحقول
+        nameInput.value = "";
+        phoneInput.value = "";
+        licenseInput.value = "";
+
+        // إعادة تحميل قائمة السائقين
+        await loadDrivers();
+      } catch (err) {
+        console.error("Error adding driver", err);
+        msgBox.style.color = "#b91c1c";
+        msgBox.textContent = "⚠️ تعذّر الاتصال بالخادم. حاول مرة أخرى.";
+      }
     }
   </script>
 </body>

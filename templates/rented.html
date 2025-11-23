@@ -933,14 +933,14 @@
       }
     }
 
-    // عرض رسالة حالة
+    // ✅ عرض رسالة حالة (مع دعم HTML للينكات)
     function showStatus(message, isError = false) {
       const bar = document.getElementById("statusBar");
       if (!message) {
         bar.style.display = "none";
         return;
       }
-      bar.textContent = message;
+      bar.innerHTML = message; // ← هنا بدّلنا من textContent إلى innerHTML
       bar.className = "status-bar " + (isError ? "err" : "ok");
       bar.style.display = "block";
     }
@@ -1373,19 +1373,26 @@
             ? `، وقيمة التفويض المقفول: ${Number(totalAmount).toFixed(2)} ر.س`
             : "";
 
-        cancelCloseModal(); // إخفاء المودال
+        // ✅ تحديد رقم التفويض المقفول لاستخدامه في رابط صفحة العمليات
+        const closedAuthId =
+          (data.closed_authorization && data.closed_authorization.id) ||
+          pendingCloseAuth.id;
 
-        showStatus(
-          `✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي${msgExtra}.`,
-          false
-        );
+        const opsUrl = `/operations?type=auth_close&auth_id=${closedAuthId}`;
+        const linkHtml = `
+          <a href="${opsUrl}"
+             style="margin-right:8px;color:#1d4ed8;text-decoration:underline;font-weight:600;">
+            📄 عرض هذا القيد في صفحة العمليات
+          </a>
+        `;
 
-        // (اختياري لاحقًا) فتح سند تحصيل جاهز بناءً على مبلغ الإقفال:
-        // const closedAuthId =
-        //   (data.closed_authorization && data.closed_authorization.id) ||
-        //   pendingCloseAuth.id;
-        // window.location.href =
-        //   `/receipt?authorization_id=${closedAuthId}&amount=${encodeURIComponent(totalAmount)}`;
+        const htmlMessage = `✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي${msgExtra}.<br>${linkHtml}`;
+
+        // إخفاء المودال بعد الحساب
+        cancelCloseModal();
+
+        // ✅ عرض رسالة فيها لينك مباشر لصفحة العمليات
+        showStatus(htmlMessage, false);
 
       } catch (err) {
         console.error(err);

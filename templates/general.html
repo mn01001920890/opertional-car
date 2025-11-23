@@ -75,6 +75,12 @@
       transform: translateY(-1px);
     }
 
+    .nav-btn.active {
+      background: var(--bg1);
+      color:#fff;
+      box-shadow: 0 0 0 1px rgba(191,219,254,0.8);
+    }
+
     .page-title {
       margin: 0;
       font-size: 18px;
@@ -106,7 +112,7 @@
 
     .container {
       width: 100%;
-      max-width: 1200px;
+      max-width: 900px;
       background: radial-gradient(circle at top left, rgba(255,255,255,0.22), transparent 55%),
                   radial-gradient(circle at bottom right, rgba(15,23,42,0.6), transparent 55%),
                   #020617;
@@ -116,12 +122,7 @@
     }
 
     .header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
 
     .title-group h1 {
@@ -138,16 +139,20 @@
       color: #e5e7eb;
     }
 
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.35fr);
-      gap: 18px;
+    .small-note-link {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
     }
 
-    @media (max-width: 960px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
+    .inline-link {
+      color:#bfdbfe;
+      text-decoration:underline;
+      cursor:pointer;
+    }
+
+    .inline-link:hover {
+      color:#f9fafb;
     }
 
     .card {
@@ -355,7 +360,7 @@
       border-radius: 10px;
       border: 1px solid var(--border);
       overflow: auto;
-      max-height: 220px;
+      max-height: 260px;
       background: rgba(15,23,42,0.85);
       margin-top: 4px;
     }
@@ -378,110 +383,20 @@
       color: #e5e7eb;
     }
 
-    .badge-count {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-
-    .entry-card {
-      border-radius: 10px;
-      border: 1px solid rgba(55,65,81,0.9);
-      padding: 8px 9px;
-      margin-bottom: 8px;
-      background: rgba(15,23,42,0.9);
-    }
-
-    .entry-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 6px;
-      font-size: 0.8rem;
-      margin-bottom: 4px;
-      flex-wrap:wrap;
-    }
-
-    .entry-header-left {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px 10px;
-    }
-
-    .entry-id {
-      font-weight: 600;
-      color: #bfdbfe;
-    }
-
-    .entry-date {
-      color: var(--muted);
-    }
-
-    .entry-desc {
-      font-size: 0.8rem;
-      color: #e5e7eb;
-      margin-bottom: 4px;
-    }
-
-    .entry-lines-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.78rem;
-    }
-
-    .entry-lines-table th,
-    .entry-lines-table td {
-      padding: 3px 4px;
-      border-bottom: 1px solid rgba(55,65,81,0.6);
-    }
-
-    .entry-lines-table thead {
-      background: rgba(15,23,42,1);
-    }
-
-    .badge-total {
-      font-size: 0.78rem;
-      color: #bbf7d0;
-      white-space:nowrap;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 12px 5px;
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-
-    .entries-toolbar {
+    /* 🔍 خلية الحساب + البحث */
+    .account-cell {
       display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:8px;
-      margin-bottom:6px;
-      flex-wrap:wrap;
-    }
-
-    .btn-xs {
-      padding:4px 10px;
-      font-size:0.78rem;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,0.7);
-      background:rgba(15,23,42,0.9);
-      color:#e5e7eb;
-      cursor:pointer;
-      display:inline-flex;
-      align-items:center;
+      flex-direction:column;
       gap:4px;
-      transition:0.15s ease;
-      white-space:nowrap;
     }
 
-    .btn-xs:hover {
-      background:rgba(37,99,235,0.4);
-    }
-
-    .small-note {
+    .account-search {
       font-size:0.78rem;
-      color:var(--muted);
-      margin-top:4px;
+      padding:5px 8px;
+    }
+
+    .account-search::placeholder {
+      color:rgba(148,163,184,0.9);
     }
 
     @media print {
@@ -493,6 +408,9 @@
       }
       .page-wrapper {
         padding-top:16px;
+      }
+      .btn, .btn-line {
+        display:none !important;
       }
     }
   </style>
@@ -509,129 +427,104 @@
       <button class="nav-btn" onclick="location.href='/receipts-list'">📋 سندات التحصيل</button>
       <button class="nav-btn" onclick="location.href='/accounts'">📒 دليل الحسابات</button>
       <button class="nav-btn" onclick="location.href='/ledger'">📑 دفتر الأستاذ</button>
-      <button class="nav-btn" onclick="location.href='/general'">📓 اليومية العامة</button>
+      <button class="nav-btn active" onclick="location.href='/general'">📓 اليومية العامة</button>
+      <button class="nav-btn" onclick="location.href='/journal-list'">📜 القيود اليدوية</button>
     </div>
 
     <h1 class="page-title">📓 اليومية العامة</h1>
 
     <div class="top-right">
       <span class="top-small-note">
-        إنشاء قيود يدوية + مراجعة القيود المسجَّلة
+        إدخال قيد يومية يدوي فقط (عرض القيود من صفحة القيود اليدوية)
       </span>
     </div>
   </header>
 
   <div class="page-wrapper">
     <div class="container">
-      <!-- عنوان الصفحة داخل الكرت -->
+      <!-- عنوان الصفحة -->
       <div class="header">
         <div class="title-group">
-          <h1>📓 اليومية العامة (قيود يدوية)</h1>
+          <h1>📓 قيد يومية يدوي</h1>
           <p>
-            سجّل قيود يومية يدوية (مدين/دائن)،
-            والقيود الآلية الناتجة من التفويضات وسندات التحصيل تظهر هنا أيضًا.
+            استخدم هذه الشاشة لتسجيل قيود يومية يدوية (مدين/دائن).  
+            تأكد أن إجمالي المدين = إجمالي الدائن قبل الحفظ.
           </p>
         </div>
+        <p class="small-note-link">
+          لعرض القيود اليدوية المسجَّلة مسبقًا، استخدم صفحة
+          <a href="/journal-list" class="inline-link">عرض القيود اليدوية</a>.
+        </p>
       </div>
 
-      <div class="layout">
-        <!-- ✅ الفورم: قيد جديد -->
-        <div class="card">
-          <div class="card-header">
-            <h2>➕ قيد يومية جديد</h2>
-            <span class="badge">مدين / دائن</span>
-          </div>
-          <div class="card-body">
-            <form id="journalForm">
-              <div class="field">
-                <label for="jeDate">تاريخ القيد</label>
-                <input id="jeDate" type="date" />
-                <div class="hint">لو تركته فارغًا، سيتم استخدام تاريخ اليوم تلقائيًا.</div>
-              </div>
-
-              <div class="field">
-                <label for="jeDesc">وصف القيد</label>
-                <input id="jeDesc" type="text" placeholder="مثال: قيد تسوية / قيد يدوي لعميل معين..." />
-              </div>
-
-              <div class="field">
-                <label>بنود القيد (مدين / دائن)</label>
-                <div class="hint">
-                  يجب أن يكون مجموع المدين = مجموع الدائن قبل حفظ القيد.
-                </div>
-
-                <div class="lines-table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style="width: 40%;">الحساب</th>
-                        <th style="width: 20%;">مدين</th>
-                        <th style="width: 20%;">دائن</th>
-                        <th style="width: 20%;">إجراء</th>
-                      </tr>
-                    </thead>
-                    <tbody id="linesBody">
-                      <!-- صفوف البنود تتضاف هنا ديناميكياً -->
-                    </tbody>
-                  </table>
-                </div>
-
-                <div class="footer-totals">
-                  <span>إجمالي المدين: <strong id="totalDebit">0.00</strong></span>
-                  <span>إجمالي الدائن: <strong id="totalCredit">0.00</strong></span>
-                </div>
-
-                <div class="hint-strong" id="balanceHint">
-                  ⚖️ يجب أن يكون القيد متوازنًا (مجموع المدين = مجموع الدائن).
-                </div>
-
-                <div style="margin-top:6px;">
-                  <button type="button" class="btn-line" id="btnAddLine">
-                    ➕ إضافة سطر
-                  </button>
-                </div>
-              </div>
-
-              <div class="actions">
-                <button type="submit" class="btn btn-primary">
-                  💾 حفظ القيد
-                </button>
-                <button type="button" class="btn btn-ghost" id="btnResetForm">
-                  ♻️ مسح الحقول
-                </button>
-              </div>
-
-              <div id="formMessage" class="message"></div>
-            </form>
-          </div>
+      <!-- ✅ كرت واحد للفورم فقط -->
+      <div class="card">
+        <div class="card-header">
+          <h2>➕ قيد يومية جديد</h2>
+          <span class="badge">مدين / دائن</span>
         </div>
-
-        <!-- 📜 قائمة القيود -->
-        <div class="card">
-          <div class="card-header">
-            <h2>📜 القيود المسجَّلة</h2>
-            <span class="badge-count" id="entriesCount">—</span>
-          </div>
-          <div class="card-body" style="max-height: 470px; overflow:auto;">
-            <div class="entries-toolbar">
-              <button class="btn-xs" type="button" onclick="loadJournalEntries()">
-                🔄 إعادة تحميل القيود
-              </button>
-              <span class="small-note">
-                القيود الآلية من التفويضات وسندات التحصيل تظهر مع الحقول المرجعية (مثل رقم التفويض).
-              </span>
+        <div class="card-body">
+          <form id="journalForm">
+            <div class="field">
+              <label for="jeDate">تاريخ القيد</label>
+              <input id="jeDate" type="date" />
+              <div class="hint">لو تركته فارغًا، سيتم استخدام تاريخ اليوم تلقائيًا.</div>
             </div>
 
-            <div id="entriesContainer">
-              <div class="empty-state">
-                جاري تحميل القيود...
+            <div class="field">
+              <label for="jeDesc">وصف القيد</label>
+              <input id="jeDesc" type="text" placeholder="مثال: قيد تسوية / قيد يدوي لعميل معين..." />
+            </div>
+
+            <div class="field">
+              <label>بنود القيد (مدين / دائن)</label>
+              <div class="hint">
+                يجب أن يكون مجموع المدين = مجموع الدائن قبل حفظ القيد.
+              </div>
+
+              <div class="lines-table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 40%;">الحساب</th>
+                      <th style="width: 20%;">مدين</th>
+                      <th style="width: 20%;">دائن</th>
+                      <th style="width: 20%;">إجراء</th>
+                    </tr>
+                  </thead>
+                  <tbody id="linesBody">
+                    <!-- صفوف البنود تتضاف هنا ديناميكياً -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="footer-totals">
+                <span>إجمالي المدين: <strong id="totalDebit">0.00</strong></span>
+                <span>إجمالي الدائن: <strong id="totalCredit">0.00</strong></span>
+              </div>
+
+              <div class="hint-strong" id="balanceHint">
+                ⚖️ يجب أن يكون القيد متوازنًا (مجموع المدين = مجموع الدائن).
+              </div>
+
+              <div style="margin-top:6px;">
+                <button type="button" class="btn-line" id="btnAddLine">
+                  ➕ إضافة سطر
+                </button>
               </div>
             </div>
 
-            <div class="hint" style="margin-top:6px;">
-              لاحقًا ممكن نعمل صفحة مستقلة <code>journal-list.html</code> لعرض القيود بالتفصيل مع فلاتر وتصدير.
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">
+                💾 حفظ القيد
+              </button>
+              <button type="button" class="btn btn-ghost" id="btnResetForm">
+                ♻️ مسح الحقول
+              </button>
             </div>
-          </div>
+
+            <div id="formMessage" class="message"></div>
+          </form>
         </div>
       </div>
     </div>
@@ -640,7 +533,6 @@
   <script>
     // بيانات الحسابات
     let accounts = [];
-    const accountsMap = new Map();
 
     // عناصر الفورم
     const jeDateInput = document.getElementById("jeDate");
@@ -653,8 +545,6 @@
     const journalForm = document.getElementById("journalForm");
     const btnAddLine = document.getElementById("btnAddLine");
     const btnResetForm = document.getElementById("btnResetForm");
-    const entriesContainer = document.getElementById("entriesContainer");
-    const entriesCount = document.getElementById("entriesCount");
 
     // ضبط تاريخ اليوم مبدئيًا
     (function setToday() {
@@ -711,6 +601,7 @@
       }
     }
 
+    // إنشاء قائمة الحسابات
     function createAccountSelect() {
       const select = document.createElement("select");
       select.className = "line-account";
@@ -729,6 +620,20 @@
       return select;
     }
 
+    // فلترة حسابات حسب نص البحث
+    function filterAccountOptions(selectElem, term) {
+      const t = (term || "").trim().toLowerCase();
+      Array.from(selectElem.options).forEach(opt => {
+        if (!opt.value) { // "اختر حساباً..."
+          opt.hidden = false;
+          return;
+        }
+        const name = (opt.textContent || "").toLowerCase();
+        const match = !t || name.includes(t);
+        opt.hidden = !match;
+      });
+    }
+
     function addLineRow() {
       const tr = document.createElement("tr");
 
@@ -737,8 +642,35 @@
       const tdCredit = document.createElement("td");
       const tdAction = document.createElement("td");
 
+      // 🔍 خلية الحساب فيها input بحث + select
+      const accountWrapper = document.createElement("div");
+      accountWrapper.className = "account-cell";
+
+      const searchInput = document.createElement("input");
+      searchInput.type = "text";
+      searchInput.placeholder = "بحث عن حساب...";
+      searchInput.className = "account-search";
+
       const sel = createAccountSelect();
-      tdAccount.appendChild(sel);
+
+      // ربط البحث بالـ select
+      searchInput.addEventListener("input", () => {
+        filterAccountOptions(sel, searchInput.value);
+      });
+
+      // لو اختار حساب من القائمة نحط اسمه في خانة البحث
+      sel.addEventListener("change", () => {
+        const opt = sel.options[sel.selectedIndex];
+        if (opt && opt.value) {
+          searchInput.value = opt.textContent || "";
+          // نرجّع كل الخيارات تبان (ممكن تسيبها كما هي)
+          filterAccountOptions(sel, "");
+        }
+      });
+
+      accountWrapper.appendChild(searchInput);
+      accountWrapper.appendChild(sel);
+      tdAccount.appendChild(accountWrapper);
 
       const debitInput = document.createElement("input");
       debitInput.type = "number";
@@ -830,7 +762,7 @@
         const credit = parseFloat(creditInput.value || "0");
 
         if ((isNaN(debit) || debit === 0) && (isNaN(credit) || credit === 0)) {
-          continue;
+          continue; // سطر فاضي
         }
 
         if (!isNaN(debit)) totalDebit += debit;
@@ -869,7 +801,9 @@
           body: JSON.stringify(payload)
         });
 
-        const data = await res.json();
+        let data = {};
+        try { data = await res.json(); } catch (_) {}
+
         if (!res.ok) {
           showFormMessage(data.error || "حدث خطأ أثناء حفظ القيد.", "error");
           return;
@@ -879,7 +813,6 @@
         linesBody.innerHTML = "";
         updateTotals();
         jeDescInput.value = "";
-        await loadJournalEntries();
       } catch (err) {
         showFormMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error");
       }
@@ -892,137 +825,10 @@
         if (!res.ok) throw new Error("error");
         const data = await res.json();
         accounts = data || [];
-        accountsMap.clear();
-        accounts.forEach(acc => {
-          accountsMap.set(acc.id, acc.name);
-        });
       } catch (err) {
         console.error("Error loading accounts", err);
         accounts = [];
       }
-    }
-
-    // تحميل قيود اليومية
-    async function loadJournalEntries() {
-      try {
-        entriesContainer.innerHTML = `
-          <div class="empty-state">
-            جاري تحميل القيود...
-          </div>
-        `;
-        const res = await fetch("/api/journal_entries");
-        if (!res.ok) throw new Error("error");
-        const data = await res.json();
-        renderJournalEntries(data || []);
-      } catch (err) {
-        console.error("Error loading journal entries", err);
-        entriesContainer.innerHTML = `
-          <div class="empty-state">
-            ⚠️ حدث خطأ أثناء تحميل القيود، حاول تحديث الصفحة.
-          </div>
-        `;
-        entriesCount.textContent = "خطأ في التحميل";
-      }
-    }
-
-    function renderJournalEntries(entries) {
-      if (!entries || entries.length === 0) {
-        entriesContainer.innerHTML = `
-          <div class="empty-state">
-            لا توجد قيود يومية مسجَّلة حتى الآن.
-          </div>
-        `;
-        entriesCount.textContent = "0 قيد";
-        return;
-      }
-
-      entriesCount.textContent = `${entries.length} قيد/قيود`;
-      entriesContainer.innerHTML = "";
-
-      entries.forEach(entry => {
-        const card = document.createElement("div");
-        card.className = "entry-card";
-
-        let totalDebit = 0;
-        let totalCredit = 0;
-        (entry.lines || []).forEach(ln => {
-          totalDebit += ln.debit || 0;
-          totalCredit += ln.credit || 0;
-        });
-
-        const header = document.createElement("div");
-        header.className = "entry-header";
-
-        const left = document.createElement("div");
-        left.className = "entry-header-left";
-
-        const idSpan = document.createElement("span");
-        idSpan.className = "entry-id";
-        idSpan.textContent = `قيد #${entry.id}`;
-
-        const dateSpan = document.createElement("span");
-        dateSpan.className = "entry-date";
-        dateSpan.textContent = entry.date || "";
-
-        left.appendChild(idSpan);
-        left.appendChild(dateSpan);
-
-        if (entry.ref_authorization_id) {
-          const authSpan = document.createElement("span");
-          authSpan.style.color = "#fbbf24";
-          authSpan.textContent = `تفويض مرتبط: ${entry.ref_authorization_id}`;
-          left.appendChild(authSpan);
-        }
-
-        if (entry.ref_receipt_id) {
-          const rSpan = document.createElement("span");
-          rSpan.style.color = "#38bdf8";
-          rSpan.textContent = `سند تحصيل: ${entry.ref_receipt_id}`;
-          left.appendChild(rSpan);
-        }
-
-        const right = document.createElement("div");
-        right.className = "badge-total";
-        right.textContent = `مدين: ${formatNumber(totalDebit)} | دائن: ${formatNumber(totalCredit)}`;
-
-        header.appendChild(left);
-        header.appendChild(right);
-
-        const desc = document.createElement("div");
-        desc.className = "entry-desc";
-        desc.textContent = entry.description || "—";
-
-        const linesTable = document.createElement("table");
-        linesTable.className = "entry-lines-table";
-        linesTable.innerHTML = `
-          <thead>
-            <tr>
-              <th style="width:45%;">الحساب</th>
-              <th style="width:22%;">مدين</th>
-              <th style="width:22%;">دائن</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        `;
-
-        const tbody = linesTable.querySelector("tbody");
-        (entry.lines || []).forEach(ln => {
-          const tr = document.createElement("tr");
-          const accName = accountsMap.get(ln.account_id) || `حساب #${ln.account_id}`;
-          tr.innerHTML = `
-            <td>${accName}</td>
-            <td>${formatNumber(ln.debit)}</td>
-            <td>${formatNumber(ln.credit)}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-
-        card.appendChild(header);
-        card.appendChild(desc);
-        card.appendChild(linesTable);
-
-        entriesContainer.appendChild(card);
-      });
     }
 
     async function init() {
@@ -1031,7 +837,6 @@
         addLineRow();
         addLineRow();
       }
-      await loadJournalEntries();
     }
 
     init();

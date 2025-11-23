@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>📜 القيود اليدوية - اليومية العامة</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg1:#0d6efd;
+      --bg2:#6c63ff;
+      --card:#111827;
+      --ink:#f9fafb;
+      --muted:#9ca3af;
+      --border:#374151;
+      --accent:#2563eb;
+      --danger:#dc2626;
+      --success:#16a34a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--ink);
+    }
+
+    /* 🔝 شريط علوي ثابت */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.25);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-group {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .nav-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      color: #0f172a;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+      text-decoration:none;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg1);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .nav-btn.active {
+      background: var(--bg1);
+      color:#fff;
+      box-shadow: 0 0 0 1px rgba(191,219,254,0.8);
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+      color: #fff;
+    }
+
+    .top-right {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .top-small-note {
+      font-size:11px;
+      color:#e5e7eb;
+      opacity:0.9;
+    }
+
+    /* الحاوية الرئيسية */
+    .page-wrapper {
+      display:flex;
+      justify-content:center;
+      padding: 80px 16px 16px; /* مساحة للهيدر الثابت */
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.22), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(15,23,42,0.6), transparent 55%),
+                  #020617;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .title-group p {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: #e5e7eb;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 14px 12px;
+      border: 1px solid rgba(148,163,184,0.45);
+      box-shadow: 0 14px 40px rgba(0,0,0,0.48);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 8px;
+      flex-wrap:wrap;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+      white-space:nowrap;
+    }
+
+    .filters-grid {
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap:10px;
+    }
+
+    @media (max-width: 960px) {
+      .filters-grid {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .filters-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field {
+      margin-bottom: 6px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.84rem;
+      color: #e5e7eb;
+    }
+
+    input[type="date"],
+    input[type="text"] {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 9px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: #020617;
+      color: var(--ink);
+      font-size: 0.9rem;
+      outline: none;
+      transition: 0.15s ease;
+    }
+
+    input[type="date"]:focus,
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.45);
+    }
+
+    .filters-actions {
+      display:flex;
+      align-items:flex-end;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:4px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.85rem;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: white;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.4);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #e5e7eb;
+      border: 1px solid rgba(148,163,184,0.7);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(15,23,42,0.9);
+    }
+
+    .btn-xs {
+      padding:4px 10px;
+      font-size:0.78rem;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,0.7);
+      background:rgba(15,23,42,0.9);
+      color:#e5e7eb;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      transition:0.15s ease;
+      white-space:nowrap;
+    }
+
+    .btn-xs:hover {
+      background:rgba(37,99,235,0.4);
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top:4px;
+    }
+
+    .entries-wrapper {
+      margin-top:10px;
+      max-height: 520px;
+      overflow:auto;
+    }
+
+    .entries-toolbar {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:6px;
+    }
+
+    .entry-card {
+      border-radius: 10px;
+      border: 1px solid rgba(55,65,81,0.9);
+      padding: 8px 9px;
+      margin-bottom: 8px;
+      background: rgba(15,23,42,0.9);
+    }
+
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+      flex-wrap:wrap;
+    }
+
+    .entry-header-left {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+    }
+
+    .entry-id {
+      font-weight: 600;
+      color: #bfdbfe;
+    }
+
+    .entry-date {
+      color: var(--muted);
+    }
+
+    .badge-total {
+      font-size: 0.78rem;
+      color: #bbf7d0;
+      white-space:nowrap;
+    }
+
+    .entry-desc {
+      font-size: 0.8rem;
+      color: #e5e7eb;
+      margin-bottom: 4px;
+    }
+
+    .entry-lines-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+
+    .entry-lines-table th,
+    .entry-lines-table td {
+      padding: 3px 4px;
+      border-bottom: 1px solid rgba(55,65,81,0.6);
+      text-align:right;
+    }
+
+    .entry-lines-table thead {
+      background: rgba(15,23,42,1);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 12px 5px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .error-state {
+      text-align:center;
+      padding:10px;
+      font-size:0.83rem;
+      color:#fecaca;
+      background:rgba(220,38,38,0.08);
+      border-radius:10px;
+      border:1px solid rgba(220,38,38,0.8);
+      margin-top:6px;
+    }
+
+    @media print {
+      body { background:#ffffff; }
+      .top-bar { display:none; }
+      .page-wrapper { padding-top:16px; }
+      .btn, .btn-xs { display:none!important; }
+      #filtersCard { display:none!important; }
+      .entries-toolbar { display:none!important; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- 🔝 الهيدر الثابت -->
+  <header class="top-bar">
+    <div class="nav-group">
+      <button class="nav-btn" onclick="location.href='/'">🏠 الرئيسية</button>
+      <button class="nav-btn" onclick="location.href='/operations'">🧾 العمليات</button>
+      <button class="nav-btn" onclick="location.href='/receipt'">🧾 سند تحصيل جديد</button>
+      <button class="nav-btn" onclick="location.href='/receipts-list'">📋 سندات التحصيل</button>
+      <button class="nav-btn" onclick="location.href='/accounts'">📒 دليل الحسابات</button>
+      <button class="nav-btn" onclick="location.href='/ledger'">📑 دفتر الأستاذ</button>
+      <button class="nav-btn" onclick="location.href='/general'">📓 اليومية العامة</button>
+      <button class="nav-btn active" onclick="location.href='/journal-list'">📜 القيود اليدوية</button>
+    </div>
+
+    <h1 class="page-title">📜 القيود اليدوية</h1>
+
+    <div class="top-right">
+      <span class="top-small-note">
+        عرض القيود اليدوية المسجَّلة في اليومية العامة مع فلاتر بسيطة
+      </span>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <!-- عنوان -->
+      <div class="header">
+        <div class="title-group">
+          <h1>📜 القيود اليدوية (اليومية العامة)</h1>
+          <p>
+            هذه الصفحة تعرض فقط القيود التي تم إدخالها يدويًا من شاشة اليومية العامة،
+            مع إمكانية الفلترة حسب التاريخ والبحث في البيان أو اسم الحساب.
+          </p>
+        </div>
+      </div>
+
+      <!-- فلاتر -->
+      <div class="card" id="filtersCard">
+        <div class="card-header">
+          <h2>🎛️ فلاتر البحث</h2>
+          <span class="badge-count" id="entriesCount">—</span>
+        </div>
+        <div>
+          <div class="filters-grid">
+            <div class="field">
+              <label for="dateFrom">من تاريخ</label>
+              <input id="dateFrom" type="date">
+            </div>
+            <div class="field">
+              <label for="dateTo">إلى تاريخ</label>
+              <input id="dateTo" type="date">
+            </div>
+            <div class="field" style="grid-column: span 2;">
+              <label for="searchText">بحث في البيان / اسم الحساب</label>
+              <input id="searchText" type="text" placeholder="اكتب جزء من البيان أو اسم الحساب...">
+            </div>
+          </div>
+
+          <div class="filters-actions">
+            <button type="button" class="btn btn-primary" id="btnApplyFilters">
+              🔍 تطبيق الفلاتر
+            </button>
+            <button type="button" class="btn btn-ghost" id="btnClearFilters">
+              ♻️ مسح الفلاتر
+            </button>
+            <button type="button" class="btn-xs" id="btnReload">
+              🔄 إعادة تحميل
+            </button>
+          </div>
+
+          <div class="hint">
+            الفلترة تتم من خلال الـ API:
+            <code>/api/journal_entries/manual?date_from=&amp;date_to=&amp;search=</code>
+            (تقدر تضبط المنطق من جهة الباك إند لاحقًا).
+          </div>
+        </div>
+      </div>
+
+      <!-- قائمة القيود -->
+      <div class="card" style="margin-top:12px;">
+        <div class="card-header">
+          <h2>📑 قائمة القيود اليدوية</h2>
+          <span class="badge-count" id="manualCountLabel">—</span>
+        </div>
+
+        <!-- شريط أدوات فوق القائمة: تصدير / طباعة -->
+        <div class="entries-toolbar">
+          <button type="button" class="btn-xs" id="btnExportCsv">
+            ⬇️ تصدير CSV
+          </button>
+          <button type="button" class="btn-xs" id="btnExportExcel">
+            ⬇️ تصدير Excel
+          </button>
+          <button type="button" class="btn-xs" id="btnPrintPage">
+            🖨️ طباعة الصفحة
+          </button>
+        </div>
+
+        <div class="entries-wrapper" id="entriesWrapper">
+          <div class="empty-state">
+            جاري تحميل القيود اليدوية...
+          </div>
+        </div>
+        <div id="errorBox" class="error-state" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // خريطة الحسابات لعرض الأسماء بدلاً من الأرقام
+    let accountsMap = new Map();
+    // القيود الحالية المعروضة (للتصدير)
+    let currentEntries = [];
+
+    const entriesWrapper = document.getElementById("entriesWrapper");
+    const entriesCount = document.getElementById("entriesCount");
+    const manualCountLabel = document.getElementById("manualCountLabel");
+    const errorBox = document.getElementById("errorBox");
+
+    const dateFromInput = document.getElementById("dateFrom");
+    const dateToInput = document.getElementById("dateTo");
+    const searchInput = document.getElementById("searchText");
+    const btnApplyFilters = document.getElementById("btnApplyFilters");
+    const btnClearFilters = document.getElementById("btnClearFilters");
+    const btnReload = document.getElementById("btnReload");
+
+    const btnExportCsv = document.getElementById("btnExportCsv");
+    const btnExportExcel = document.getElementById("btnExportExcel");
+    const btnPrintPage = document.getElementById("btnPrintPage");
+
+    function formatNumber(val) {
+      const num = Number(val || 0);
+      return num.toFixed(2);
+    }
+
+    function setTodayIfEmpty() {
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = String(today.getMonth() + 1).padStart(2, "0");
+      const d = String(today.getDate()).padStart(2, "0");
+      if (!dateToInput.value) {
+        dateToInput.value = `${y}-${m}-${d}`;
+      }
+    }
+
+    // تحميل الحسابات من API عشان نقدر نعرض اسم الحساب
+    async function loadAccounts() {
+      try {
+        const res = await fetch("/api/accounts");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        accountsMap.clear();
+        (data || []).forEach(acc => {
+          accountsMap.set(acc.id, acc.name);
+        });
+      } catch (err) {
+        console.error("Error loading accounts", err);
+        // لو الحسابات ما اتحملتش هنستخدم "حساب #id" بدل الاسم.
+      }
+    }
+
+    function buildQueryString() {
+      const params = [];
+      const df = (dateFromInput.value || "").trim();
+      const dt = (dateToInput.value || "").trim();
+      const s = (searchInput.value || "").trim();
+
+      if (df) params.push("date_from=" + encodeURIComponent(df));
+      if (dt) params.push("date_to=" + encodeURIComponent(dt));
+      if (s) params.push("search=" + encodeURIComponent(s));
+
+      if (params.length === 0) return "";
+      return "?" + params.join("&");
+    }
+
+    async function loadManualJournalEntries() {
+      errorBox.style.display = "none";
+      entriesWrapper.innerHTML = `
+        <div class="empty-state">
+          جاري تحميل القيود اليدوية...
+        </div>
+      `;
+      entriesCount.textContent = "—";
+      manualCountLabel.textContent = "—";
+      currentEntries = [];
+
+      try {
+        const qs = buildQueryString();
+        const url = "/api/journal_entries/manual" + qs;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const entries = Array.isArray(data) ? data : [];
+        renderManualEntries(entries);
+      } catch (err) {
+        console.error("Error loading manual journal entries", err);
+        entriesWrapper.innerHTML = `
+          <div class="empty-state">
+            ⚠️ تعذر تحميل القيود اليدوية، حاول مرة أخرى.
+          </div>
+        `;
+        entriesCount.textContent = "خطأ في التحميل";
+        manualCountLabel.textContent = "خطأ في التحميل";
+        errorBox.textContent = "تفاصيل الخطأ: " + (err.message || err.toString());
+        errorBox.style.display = "block";
+      }
+    }
+
+    function renderManualEntries(entries) {
+      currentEntries = entries || [];
+
+      if (!entries || entries.length === 0) {
+        entriesWrapper.innerHTML = `
+          <div class="empty-state">
+            لا توجد قيود يدوية مطابقة للفلاتر الحالية.
+          </div>
+        `;
+        entriesCount.textContent = "0 قيد";
+        manualCountLabel.textContent = "0 قيد يدوي";
+        return;
+      }
+
+      entriesCount.textContent = `${entries.length} قيد`;
+      manualCountLabel.textContent = `${entries.length} قيد يدوي`;
+      entriesWrapper.innerHTML = "";
+
+      entries.forEach(entry => {
+        const card = document.createElement("div");
+        card.className = "entry-card";
+
+        let totalDebit = 0;
+        let totalCredit = 0;
+        (entry.lines || []).forEach(ln => {
+          totalDebit += ln.debit || 0;
+          totalCredit += ln.credit || 0;
+        });
+
+        const header = document.createElement("div");
+        header.className = "entry-header";
+
+        const left = document.createElement("div");
+        left.className = "entry-header-left";
+
+        const idSpan = document.createElement("span");
+        idSpan.className = "entry-id";
+        idSpan.textContent = `قيد #${entry.id}`;
+
+        const dateSpan = document.createElement("span");
+        dateSpan.className = "entry-date";
+        dateSpan.textContent = entry.date || "";
+
+        left.appendChild(idSpan);
+        left.appendChild(dateSpan);
+
+        const right = document.createElement("div");
+        right.className = "badge-total";
+        right.textContent = `مدين: ${formatNumber(totalDebit)} | دائن: ${formatNumber(totalCredit)}`;
+
+        header.appendChild(left);
+        header.appendChild(right);
+
+        const desc = document.createElement("div");
+        desc.className = "entry-desc";
+        desc.textContent = entry.description || "—";
+
+        const linesTable = document.createElement("table");
+        linesTable.className = "entry-lines-table";
+        linesTable.innerHTML = `
+          <thead>
+            <tr>
+              <th style="width:50%;">الحساب</th>
+              <th style="width:25%;">مدين</th>
+              <th style="width:25%;">دائن</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+
+        const tbody = linesTable.querySelector("tbody");
+        (entry.lines || []).forEach(ln => {
+          const tr = document.createElement("tr");
+          const accName = accountsMap.get(ln.account_id) || `حساب #${ln.account_id}`;
+          tr.innerHTML = `
+            <td>${accName}</td>
+            <td>${formatNumber(ln.debit)}</td>
+            <td>${formatNumber(ln.credit)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        card.appendChild(header);
+        card.appendChild(desc);
+        card.appendChild(linesTable);
+
+        entriesWrapper.appendChild(card);
+      });
+    }
+
+    // 🔽 تصدير القيود المعروضة إلى CSV / Excel
+    function exportEntriesToCSV(asExcel = false) {
+      if (!currentEntries || currentEntries.length === 0) {
+        alert("لا توجد قيود لعمل تصدير.");
+        return;
+      }
+
+      const rows = [];
+      // العناوين
+      rows.push(["Entry ID", "Date", "Description", "Account", "Debit", "Credit"]);
+
+      currentEntries.forEach(entry => {
+        const desc = (entry.description || "").replace(/\s+/g, " ").trim();
+        (entry.lines || []).forEach(ln => {
+          const accName = accountsMap.get(ln.account_id) || `حساب #${ln.account_id}`;
+          rows.push([
+            entry.id,
+            entry.date || "",
+            desc,
+            accName,
+            ln.debit != null ? ln.debit : 0,
+            ln.credit != null ? ln.credit : 0
+          ]);
+        });
+      });
+
+      // بناء CSV
+      const csvContent = rows.map(row =>
+        row.map(field => {
+          const str = String(field ?? "");
+          // نهرب علامات التنصيص
+          return '"' + str.replace(/"/g, '""') + '"';
+        }).join(",")
+      ).join("\r\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const now = new Date();
+      const stamp = now.toISOString().slice(0,10);
+
+      // Excel يفتح ملف CSV عادي، بس لو حابب نخلي الامتداد xls
+      a.href = url;
+      a.download = asExcel
+        ? `manual_journal_entries_${stamp}.xls`
+        : `manual_journal_entries_${stamp}.csv`;
+
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // 🔁 أحداث الأزرار
+    btnApplyFilters.addEventListener("click", () => {
+      loadManualJournalEntries();
+    });
+
+    btnClearFilters.addEventListener("click", () => {
+      dateFromInput.value = "";
+      dateToInput.value = "";
+      searchInput.value = "";
+      loadManualJournalEntries();
+    });
+
+    btnReload.addEventListener("click", () => {
+      loadManualJournalEntries();
+    });
+
+    // بحث بالإنتر في خانة البحث
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        loadManualJournalEntries();
+      }
+    });
+
+    // تصدير / طباعة
+    btnExportCsv.addEventListener("click", () => {
+      exportEntriesToCSV(false);
+    });
+
+    btnExportExcel.addEventListener("click", () => {
+      exportEntriesToCSV(true);
+    });
+
+    btnPrintPage.addEventListener("click", () => {
+      window.print();
+    });
+
+    async function init() {
+      setTodayIfEmpty();
+      await loadAccounts();
+      await loadManualJournalEntries();
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -26,16 +26,89 @@
       font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
       background: linear-gradient(135deg, var(--bg1), var(--bg2));
       color: var(--ink);
+    }
+
+    /* 🔝 شريط علوي ثابت */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.25);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
       display: flex;
-      justify-content: center;
-      padding: 16px;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-group {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .nav-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #fff;
+      color: #0f172a;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      transition: 0.2s ease;
+      white-space: nowrap;
+      text-decoration:none;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg1);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+      color: #fff;
+    }
+
+    .top-right {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .top-small-note {
+      font-size:11px;
+      color:#e5e7eb;
+      opacity:0.9;
+    }
+
+    /* الحاوية الرئيسية */
+    .page-wrapper {
+      display:flex;
+      justify-content:center;
+      padding: 80px 16px 16px; /* مساحة للهيدر الثابت */
     }
 
     .container {
       width: 100%;
       max-width: 1200px;
-      background: radial-gradient(circle at top left, rgba(255,255,255,0.25), transparent 55%),
-                  radial-gradient(circle at bottom right, rgba(15,23,42,0.55), transparent 55%),
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.22), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(15,23,42,0.6), transparent 55%),
                   #020617;
       border-radius: 18px;
       padding: 20px;
@@ -53,33 +126,16 @@
 
     .title-group h1 {
       margin: 0;
-      font-size: 1.6rem;
+      font-size: 1.5rem;
+      display:flex;
+      align-items:center;
+      gap:8px;
     }
 
     .title-group p {
       margin: 4px 0 0;
       font-size: 0.9rem;
       color: #e5e7eb;
-    }
-
-    .btn-back {
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(148,163,184,0.6);
-      background: rgba(15,23,42,0.9);
-      color: #e5e7eb;
-      cursor: pointer;
-      font-size: 0.9rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: 0.2s ease;
-      text-decoration: none;
-    }
-
-    .btn-back:hover {
-      background: rgba(15,23,42,1);
-      transform: translateY(-1px);
     }
 
     .layout {
@@ -125,6 +181,7 @@
       background: rgba(37,99,235,0.12);
       border: 1px solid rgba(59,130,246,0.4);
       color: #dbeafe;
+      white-space:nowrap;
     }
 
     .card-body {
@@ -227,6 +284,7 @@
       color: #e5e7eb;
       cursor: pointer;
       transition: 0.15s ease;
+      white-space:nowrap;
     }
 
     .btn-line:hover {
@@ -339,6 +397,7 @@
       gap: 6px;
       font-size: 0.8rem;
       margin-bottom: 4px;
+      flex-wrap:wrap;
     }
 
     .entry-header-left {
@@ -381,6 +440,7 @@
     .badge-total {
       font-size: 0.78rem;
       color: #bbf7d0;
+      white-space:nowrap;
     }
 
     .empty-state {
@@ -389,119 +449,188 @@
       font-size: 0.85rem;
       color: var(--muted);
     }
+
+    .entries-toolbar {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin-bottom:6px;
+      flex-wrap:wrap;
+    }
+
+    .btn-xs {
+      padding:4px 10px;
+      font-size:0.78rem;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,0.7);
+      background:rgba(15,23,42,0.9);
+      color:#e5e7eb;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      transition:0.15s ease;
+      white-space:nowrap;
+    }
+
+    .btn-xs:hover {
+      background:rgba(37,99,235,0.4);
+    }
+
+    .small-note {
+      font-size:0.78rem;
+      color:var(--muted);
+      margin-top:4px;
+    }
+
+    @media print {
+      body {
+        background:#ffffff;
+      }
+      .top-bar {
+        display:none;
+      }
+      .page-wrapper {
+        padding-top:16px;
+      }
+    }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <div class="title-group">
-        <h1>📓 اليومية العامة</h1>
-        <p>إنشاء قيود يومية يدوية (مدين/دائن) ومراجعة القيود المسجَّلة في النظام.</p>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <a href="/" class="btn-back">
-          <span>🏠</span>
-          <span>الرئيسية</span>
-        </a>
-        <a href="/accounts" class="btn-back">
-          <span>📒</span>
-          <span>دليل الحسابات</span>
-        </a>
-        <a href="/ledger" class="btn-back">
-          <span>📑</span>
-          <span>دفتر الأستاذ</span>
-        </a>
-      </div>
+
+  <!-- 🔝 الهيدر الثابت -->
+  <header class="top-bar">
+    <div class="nav-group">
+      <button class="nav-btn" onclick="location.href='/'">🏠 الرئيسية</button>
+      <button class="nav-btn" onclick="location.href='/operations'">🧾 العمليات</button>
+      <button class="nav-btn" onclick="location.href='/receipt'">🧾 سند تحصيل جديد</button>
+      <button class="nav-btn" onclick="location.href='/receipts-list'">📋 سندات التحصيل</button>
+      <button class="nav-btn" onclick="location.href='/accounts'">📒 دليل الحسابات</button>
+      <button class="nav-btn" onclick="location.href='/ledger'">📑 دفتر الأستاذ</button>
+      <button class="nav-btn" onclick="location.href='/general'">📓 اليومية العامة</button>
     </div>
 
-    <div class="layout">
-      <!-- Form: new journal entry -->
-      <div class="card">
-        <div class="card-header">
-          <h2>➕ قيد يومية جديد</h2>
-          <span class="badge">مدين / دائن</span>
-        </div>
-        <div class="card-body">
-          <form id="journalForm">
-            <div class="field">
-              <label for="jeDate">تاريخ القيد</label>
-              <input id="jeDate" type="date" />
-              <div class="hint">لو تركته فارغًا، سيتم استخدام تاريخ اليوم تلقائيًا.</div>
-            </div>
+    <h1 class="page-title">📓 اليومية العامة</h1>
 
-            <div class="field">
-              <label for="jeDesc">وصف القيد</label>
-              <input id="jeDesc" type="text" placeholder="مثال: قيد تسوية / قيد يدوي لعميل معين..." />
-            </div>
+    <div class="top-right">
+      <span class="top-small-note">
+        إنشاء قيود يدوية + مراجعة القيود المسجَّلة
+      </span>
+    </div>
+  </header>
 
-            <div class="field">
-              <label>بنود القيد (مدين / دائن)</label>
-              <div class="hint">
-                يجب أن يكون مجموع المدين = مجموع الدائن قبل حفظ القيد.
-              </div>
-
-              <div class="lines-table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style="width: 40%;">الحساب</th>
-                      <th style="width: 20%;">مدين</th>
-                      <th style="width: 20%;">دائن</th>
-                      <th style="width: 20%;">إجراء</th>
-                    </tr>
-                  </thead>
-                  <tbody id="linesBody">
-                    <!-- صفوف البنود تتضاف هنا ديناميكياً -->
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="footer-totals">
-                <span>إجمالي المدين: <strong id="totalDebit">0.00</strong></span>
-                <span>إجمالي الدائن: <strong id="totalCredit">0.00</strong></span>
-              </div>
-
-              <div class="hint-strong" id="balanceHint">
-                ⚖️ يجب أن يكون القيد متوازنًا (مجموع المدين = مجموع الدائن).
-              </div>
-
-              <div style="margin-top:6px;">
-                <button type="button" class="btn-line" id="btnAddLine">
-                  ➕ إضافة سطر
-                </button>
-              </div>
-            </div>
-
-            <div class="actions">
-              <button type="submit" class="btn btn-primary">
-                💾 حفظ القيد
-              </button>
-              <button type="button" class="btn btn-ghost" id="btnResetForm">
-                ♻️ مسح الحقول
-              </button>
-            </div>
-
-            <div id="formMessage" class="message"></div>
-          </form>
+  <div class="page-wrapper">
+    <div class="container">
+      <!-- عنوان الصفحة داخل الكرت -->
+      <div class="header">
+        <div class="title-group">
+          <h1>📓 اليومية العامة (قيود يدوية)</h1>
+          <p>
+            سجّل قيود يومية يدوية (مدين/دائن)،
+            والقيود الآلية الناتجة من التفويضات وسندات التحصيل تظهر هنا أيضًا.
+          </p>
         </div>
       </div>
 
-      <!-- List: existing journal entries -->
-      <div class="card">
-        <div class="card-header">
-          <h2>📜 القيود المسجَّلة</h2>
-          <span class="badge-count" id="entriesCount">—</span>
-        </div>
-        <div class="card-body" style="max-height: 470px; overflow:auto;">
-          <div id="entriesContainer">
-            <div class="empty-state">
-              جاري تحميل القيود...
-            </div>
+      <div class="layout">
+        <!-- ✅ الفورم: قيد جديد -->
+        <div class="card">
+          <div class="card-header">
+            <h2>➕ قيد يومية جديد</h2>
+            <span class="badge">مدين / دائن</span>
           </div>
-          <div class="hint" style="margin-top:6px;">
-            ملاحظة: القيود الآلية الناتجة من إقفال التفويضات ستظهر هنا أيضًا (مرتبطة برقم التفويض).
+          <div class="card-body">
+            <form id="journalForm">
+              <div class="field">
+                <label for="jeDate">تاريخ القيد</label>
+                <input id="jeDate" type="date" />
+                <div class="hint">لو تركته فارغًا، سيتم استخدام تاريخ اليوم تلقائيًا.</div>
+              </div>
+
+              <div class="field">
+                <label for="jeDesc">وصف القيد</label>
+                <input id="jeDesc" type="text" placeholder="مثال: قيد تسوية / قيد يدوي لعميل معين..." />
+              </div>
+
+              <div class="field">
+                <label>بنود القيد (مدين / دائن)</label>
+                <div class="hint">
+                  يجب أن يكون مجموع المدين = مجموع الدائن قبل حفظ القيد.
+                </div>
+
+                <div class="lines-table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width: 40%;">الحساب</th>
+                        <th style="width: 20%;">مدين</th>
+                        <th style="width: 20%;">دائن</th>
+                        <th style="width: 20%;">إجراء</th>
+                      </tr>
+                    </thead>
+                    <tbody id="linesBody">
+                      <!-- صفوف البنود تتضاف هنا ديناميكياً -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="footer-totals">
+                  <span>إجمالي المدين: <strong id="totalDebit">0.00</strong></span>
+                  <span>إجمالي الدائن: <strong id="totalCredit">0.00</strong></span>
+                </div>
+
+                <div class="hint-strong" id="balanceHint">
+                  ⚖️ يجب أن يكون القيد متوازنًا (مجموع المدين = مجموع الدائن).
+                </div>
+
+                <div style="margin-top:6px;">
+                  <button type="button" class="btn-line" id="btnAddLine">
+                    ➕ إضافة سطر
+                  </button>
+                </div>
+              </div>
+
+              <div class="actions">
+                <button type="submit" class="btn btn-primary">
+                  💾 حفظ القيد
+                </button>
+                <button type="button" class="btn btn-ghost" id="btnResetForm">
+                  ♻️ مسح الحقول
+                </button>
+              </div>
+
+              <div id="formMessage" class="message"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- 📜 قائمة القيود -->
+        <div class="card">
+          <div class="card-header">
+            <h2>📜 القيود المسجَّلة</h2>
+            <span class="badge-count" id="entriesCount">—</span>
+          </div>
+          <div class="card-body" style="max-height: 470px; overflow:auto;">
+            <div class="entries-toolbar">
+              <button class="btn-xs" type="button" onclick="loadJournalEntries()">
+                🔄 إعادة تحميل القيود
+              </button>
+              <span class="small-note">
+                القيود الآلية من التفويضات وسندات التحصيل تظهر مع الحقول المرجعية (مثل رقم التفويض).
+              </span>
+            </div>
+
+            <div id="entriesContainer">
+              <div class="empty-state">
+                جاري تحميل القيود...
+              </div>
+            </div>
+
+            <div class="hint" style="margin-top:6px;">
+              لاحقًا ممكن نعمل صفحة مستقلة <code>journal-list.html</code> لعرض القيود بالتفصيل مع فلاتر وتصدير.
+            </div>
           </div>
         </div>
       </div>
@@ -616,7 +745,6 @@
       debitInput.step = "0.01";
       debitInput.className = "small-input line-debit";
       debitInput.addEventListener("input", () => {
-        // لو فيه قيمة في المدين نخلي الدائن 0 (اختياري)
         if (debitInput.value && parseFloat(debitInput.value) !== 0) {
           creditInput.value = "";
         }
@@ -628,7 +756,6 @@
       creditInput.step = "0.01";
       creditInput.className = "small-input line-credit";
       creditInput.addEventListener("input", () => {
-        // لو فيه قيمة في الدائن نخلي المدين 0 (اختياري)
         if (creditInput.value && parseFloat(creditInput.value) !== 0) {
           debitInput.value = "";
         }
@@ -670,7 +797,6 @@
       linesBody.innerHTML = "";
       updateTotals();
       clearFormMessage();
-      // إعادة التاريخ لليوم
       const today = new Date();
       const y = today.getFullYear();
       const m = String(today.getMonth() + 1).padStart(2, "0");
@@ -688,7 +814,6 @@
         return;
       }
 
-      // حساب التوتال والتأكد من التوازن
       let totalDebit = 0;
       let totalCredit = 0;
       const linesPayload = [];
@@ -705,7 +830,7 @@
         const credit = parseFloat(creditInput.value || "0");
 
         if ((isNaN(debit) || debit === 0) && (isNaN(credit) || credit === 0)) {
-          continue; // سطر فاضي
+          continue;
         }
 
         if (!isNaN(debit)) totalDebit += debit;
@@ -732,7 +857,7 @@
       const descVal = jeDescInput.value.trim();
 
       const payload = {
-        date: dateVal || null, // الباك إند هيتعامل مع null أو تاريخ
+        date: dateVal || null,
         description: descVal,
         lines: linesPayload
       };
@@ -751,7 +876,6 @@
         }
 
         showFormMessage("✅ تم حفظ قيد اليومية بنجاح.", "success");
-        // فضي البنود والحقول
         linesBody.innerHTML = "";
         updateTotals();
         jeDescInput.value = "";
@@ -781,6 +905,11 @@
     // تحميل قيود اليومية
     async function loadJournalEntries() {
       try {
+        entriesContainer.innerHTML = `
+          <div class="empty-state">
+            جاري تحميل القيود...
+          </div>
+        `;
         const res = await fetch("/api/journal_entries");
         if (!res.ok) throw new Error("error");
         const data = await res.json();
@@ -814,7 +943,6 @@
         const card = document.createElement("div");
         card.className = "entry-card";
 
-        // حساب إجماليات القيد
         let totalDebit = 0;
         let totalCredit = 0;
         (entry.lines || []).forEach(ln => {
@@ -827,6 +955,7 @@
 
         const left = document.createElement("div");
         left.className = "entry-header-left";
+
         const idSpan = document.createElement("span");
         idSpan.className = "entry-id";
         idSpan.textContent = `قيد #${entry.id}`;
@@ -843,6 +972,13 @@
           authSpan.style.color = "#fbbf24";
           authSpan.textContent = `تفويض مرتبط: ${entry.ref_authorization_id}`;
           left.appendChild(authSpan);
+        }
+
+        if (entry.ref_receipt_id) {
+          const rSpan = document.createElement("span");
+          rSpan.style.color = "#38bdf8";
+          rSpan.textContent = `سند تحصيل: ${entry.ref_receipt_id}`;
+          left.appendChild(rSpan);
         }
 
         const right = document.createElement("div");
@@ -891,7 +1027,6 @@
 
     async function init() {
       await loadAccounts();
-      // مبدئيًا نحط سطرين (ممكن تعدل العدد بعدين)
       if (accounts.length > 0) {
         addLineRow();
         addLineRow();

@@ -263,6 +263,17 @@
       background: rgba(15,23,42,0.9);
     }
 
+    .btn-soft {
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      border: 1px solid rgba(94,234,212,0.7);
+      font-size: 0.8rem;
+    }
+
+    .btn-soft:hover {
+      background: rgba(45,212,191,0.12);
+    }
+
     .message {
       margin-top: 8px;
       font-size: 0.8rem;
@@ -359,6 +370,12 @@
       font-size: 0.78rem;
     }
 
+    .core-star {
+      font-size: 0.75rem;
+      color: #facc15;
+      margin-right: 4px;
+    }
+
     .empty-state {
       text-align: center;
       padding: 12px 4px;
@@ -391,7 +408,8 @@
       <div class="title-group">
         <h1>📒 دليل الحسابات</h1>
         <p>
-          إعداد شجرة الحسابات: أصول / التزامات / إيراد / مصروفات، مع إمكانية إضافة حسابات فرعية مثل حسابات السائقين.
+          إعداد شجرة الحسابات: أصول / التزامات / إيراد / مصروفات، مع إبراز حسابات السائقين والصندوق وسلف/رسوم السائقين
+          لاستخدامها في إقفال التفويضات وسندات التحصيل.
         </p>
       </div>
     </div>
@@ -407,8 +425,14 @@
           <form id="accountForm">
             <div class="field">
               <label for="accName">اسم الحساب</label>
-              <input id="accName" type="text" placeholder="مثال: الأصول / حسابات السائقين / سائق: أحمد علي" />
-              <div class="hint">هذا الاسم سيظهر في اليومية ودفتر الأستاذ كما هو.</div>
+              <input id="accName" type="text" placeholder="مثال: السائقين / الصندوق / سلف سائقين / رسوم سائقين" />
+              <div class="hint">
+                الحسابات الأساسية لمعاملات السائقين:
+                <br>• <strong>السائقين</strong> (نوع: أصل - مجموعة) ← تحتها حسابات السائقين التفصيلية.
+                <br>• <strong>الصندوق</strong> (نوع: أصل - تفصيلي) ← لقيد التحصيل من السائقين.
+                <br>• <strong>سلف سائقين</strong> (نوع: إيراد - مجموعة) ← لقيد إقفال التفويض من حسابات السائقين.
+                <br>• <strong>رسوم سائقين</strong> (نوع: التزام - مجموعة) لو احتجت رسوم إضافية على السائقين.
+              </div>
             </div>
 
             <div class="field">
@@ -420,7 +444,11 @@
                 <option value="revenue">إيراد (Revenue)</option>
                 <option value="expense">مصروف (Expense)</option>
               </select>
-              <div class="hint">مثال: الأصول / حسابات السائقين / الصندوق كلها من نوع أصل (Asset).</div>
+              <div class="hint">
+                مثال: <strong>السائقين</strong> و <strong>الصندوق</strong> نوعهم "أصل" /  
+                <strong>سلف سائقين</strong> نوعه "إيراد" /  
+                <strong>رسوم سائقين</strong> نوعه "التزام".
+              </div>
             </div>
 
             <div class="field-inline">
@@ -430,7 +458,8 @@
                   <option value="">بدون (حساب من المستوى الأول)</option>
                 </select>
                 <div class="hint">
-                  مثال: "حسابات السائقين" يكون أب لـ "سائق: أحمد علي".
+                  مثال: الحساب الأب <strong>"السائقين"</strong> يكون أب لـ حساب تفصيلي باسم السائق
+                  مثل: "محمود مصطفى".
                 </div>
               </div>
 
@@ -442,7 +471,8 @@
                   <option value="detail">حساب تفصيلي (Detail)</option>
                 </select>
                 <div class="hint">
-                  الحساب الرئيسي تُفتح تحته حسابات فرعية، أما التفصيلي يُستخدم مباشرة في القيود.
+                  • الحساب الرئيسي تُفتح تحته حسابات فرعية (مثل: السائقين، سلف سائقين، رسوم سائقين).
+                  <br>• الحساب التفصيلي يُستخدم مباشرة في القيود (مثل: الصندوق، السائق فلان).
                 </div>
               </div>
             </div>
@@ -453,6 +483,9 @@
               </button>
               <button type="button" class="btn btn-ghost" id="btnReset">
                 ♻️ مسح الحقول
+              </button>
+              <button type="button" class="btn btn-soft" id="btnCreateBase">
+                ⚙️ إنشاء الحسابات الأساسية (السائقين / الصندوق / سلف / رسوم سائقين)
               </button>
             </div>
 
@@ -491,8 +524,11 @@
           </div>
           <div class="hint" style="margin-top:8px;">
             ملاحظات:
-            <br/>• يفضّل تثبيت أسماء الحسابات الأساسية مثل "الأصول"، "الالتزامات"، "إيراد إيجار سيارات"، "حسابات السائقين".
-            <br/>• يمكنك لاحقًا ربط حسابات السائقين الفرعية بالسائقين من شاشة السائقين.
+            <br/>• يفضّل تثبيت أسماء الحسابات الأساسية كما هي:
+            <strong>"السائقين" / "الصندوق" / "سلف سائقين" / "رسوم سائقين"</strong>.
+            <br/>• قيد إقفال التفويض المقترح: من <strong>السائقين / اسم السائق</strong> إلى <strong>سلف سائقين</strong>.
+            <br/>• قيد سند التحصيل المقترح: من <strong>الصندوق</strong> إلى <strong>السائقين / اسم السائق</strong>.
+            <br/>• صفحة السائقين ستنشئ حساب تفصيلي لكل سائق تحت الحساب الرئيسي "السائقين".
           </div>
         </div>
       </div>
@@ -507,6 +543,7 @@
     const isGroupSelect = document.getElementById("isGroup");
     const formMessage = document.getElementById("formMessage");
     const resetBtn = document.getElementById("btnReset");
+    const baseBtn = document.getElementById("btnCreateBase");
     const tableBody = document.getElementById("accountsTableBody");
     const accountsCount = document.getElementById("accountsCount");
 
@@ -568,10 +605,23 @@
       return depth;
     }
 
+    function isCoreAccount(acc) {
+      if (!acc || !acc.name) return false;
+      return (
+        acc.name === "السائقين" ||
+        acc.name === "الصندوق" ||
+        acc.name === "سلف سائقين" ||
+        acc.name === "رسوم سائقين"
+      );
+    }
+
     function formatTreeName(acc, depth) {
       const indentUnits = "&nbsp;&nbsp;&nbsp;".repeat(depth);
       const branch = depth > 0 ? "<span class='tree-indent'>↳</span>&nbsp;" : "";
-      return `<span class="tree-name">${indentUnits}${branch}${acc.name}</span>`;
+      const core = isCoreAccount(acc)
+        ? "<span class='core-star'>⭐ حساب أساسي</span>"
+        : "";
+      return `<span class="tree-name">${indentUnits}${branch}${acc.name}</span> ${core}`;
     }
 
     async function loadAccounts() {
@@ -618,7 +668,7 @@
         tableBody.innerHTML = `
           <tr>
             <td colspan="6" class="empty-state">
-              لا توجد حسابات مسجَّلة حتى الآن. ابدأ بإنشاء الأصول / الالتزامات / الإيراد / المصروفات كحسابات رئيسية.
+              لا توجد حسابات مسجَّلة حتى الآن. يمكنك استخدام زر "إنشاء الحسابات الأساسية" لتهيئة حسابات السائقين والصندوق وسلف/رسوم السائقين.
             </td>
           </tr>
         `;
@@ -728,6 +778,48 @@
       isGroupSelect.value = "";
       clearMessage();
       accNameInput.focus();
+    });
+
+    baseBtn.addEventListener("click", async () => {
+      clearMessage();
+
+      if (!accountsCache || accountsCache.length === 0) {
+        showMessage("⏳ سيتم إنشاء الحسابات الأساسية الآن...", "success");
+      } else {
+        showMessage("⏳ يتم فحص وإنشاء الحسابات الأساسية الناقصة...", "success");
+      }
+
+      const needed = [
+        { name: "السائقين", type: "asset", is_group: true, parent_id: null },
+        { name: "الصندوق", type: "asset", is_group: false, parent_id: null },
+        { name: "سلف سائقين", type: "revenue", is_group: true, parent_id: null },
+        { name: "رسوم سائقين", type: "liability", is_group: true, parent_id: null }
+      ];
+
+      const existing = (accountsCache || []);
+      const toCreate = needed.filter(n =>
+        !existing.some(a => a.name === n.name && a.type === n.type)
+      );
+
+      if (toCreate.length === 0) {
+        showMessage("✅ كل الحسابات الأساسية موجودة بالفعل.", "success");
+        return;
+      }
+
+      try {
+        for (const acc of toCreate) {
+          await fetch("/api/accounts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(acc)
+          });
+        }
+        showMessage("✅ تم إنشاء/استكمال الحسابات الأساسية بنجاح.", "success");
+        await loadAccounts();
+      } catch (err) {
+        console.error(err);
+        showMessage("⚠️ تعذر إنشاء بعض الحسابات الأساسية، تحقق من السيرفر.", "error");
+      }
     });
 
     // أول ما الصفحة تفتح

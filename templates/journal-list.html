@@ -547,7 +547,21 @@
         const data = await res.json();
         accountsMap.clear();
         (data || []).forEach(acc => {
-          accountsMap.set(acc.id, acc.name);
+          const id =
+            acc.id ??
+            acc.account_id ??
+            acc.accountId ??
+            acc.code; // أي مفتاح محتمل للـ id
+          const name =
+            acc.name ??
+            acc.account_name ??
+            acc.arabic_name ??
+            acc.title ??
+            acc.label ??
+            (`حساب #${id}`);
+          if (id != null) {
+            accountsMap.set(id, name);
+          }
         });
       } catch (err) {
         console.error("Error loading accounts", err);
@@ -627,8 +641,8 @@
         let totalDebit = 0;
         let totalCredit = 0;
         (entry.lines || []).forEach(ln => {
-          totalDebit += ln.debit || 0;
-          totalCredit += ln.credit || 0;
+          totalDebit  += Number(ln.debit  || 0);
+          totalCredit += Number(ln.credit || 0);
         });
 
         const header = document.createElement("div");
@@ -675,7 +689,18 @@
         const tbody = linesTable.querySelector("tbody");
         (entry.lines || []).forEach(ln => {
           const tr = document.createElement("tr");
-          const accName = accountsMap.get(ln.account_id) || `حساب #${ln.account_id}`;
+
+          const accKey =
+            ln.account_id ??
+            ln.accountId ??
+            ln.account_code ??
+            ln.account ??
+            null;
+
+          const accName =
+            (accKey != null && accountsMap.get(accKey)) ||
+            (accKey != null ? `حساب #${accKey}` : "حساب غير معروف");
+
           tr.innerHTML = `
             <td>${accName}</td>
             <td>${formatNumber(ln.debit)}</td>
@@ -706,14 +731,24 @@
       currentEntries.forEach(entry => {
         const desc = (entry.description || "").replace(/\s+/g, " ").trim();
         (entry.lines || []).forEach(ln => {
-          const accName = accountsMap.get(ln.account_id) || `حساب #${ln.account_id}`;
+          const accKey =
+            ln.account_id ??
+            ln.accountId ??
+            ln.account_code ??
+            ln.account ??
+            null;
+
+          const accName =
+            (accKey != null && accountsMap.get(accKey)) ||
+            (accKey != null ? `حساب #${accKey}` : "حساب غير معروف");
+
           rows.push([
-            entry.id,
+            entry.id ?? "",
             entry.date || "",
             desc,
             accName,
-            ln.debit != null ? ln.debit : 0,
-            ln.credit != null ? ln.credit : 0
+            Number(ln.debit  || 0),
+            Number(ln.credit || 0)
           ]);
         });
       });
@@ -733,7 +768,6 @@
       const now = new Date();
       const stamp = now.toISOString().slice(0,10);
 
-      // Excel يفتح ملف CSV عادي، بس لو حابب نخلي الامتداد xls
       a.href = url;
       a.download = asExcel
         ? `manual_journal_entries_${stamp}.xls`

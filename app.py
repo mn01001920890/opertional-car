@@ -754,6 +754,11 @@ def end_authorization(auth_id):
     car = Car.query.filter_by(plate=auth.car_number).first()
 
     try:
+        # 🔹 قراءة بيانات الإقفال من الطلب (المودال في الفرونت إند)
+        data = request.get_json(silent=True) or {}
+        closing_note = (data.get("closing_note") or "").strip() or None
+        closed_amount_input = data.get("closed_amount")
+
         # تاريخ الإقفال الفعلي
         close_dt = datetime.utcnow()
         auth.close_date = close_dt
@@ -765,21 +770,44 @@ def end_authorization(auth_id):
             if base_for_end:
                 auth.end_date = get_friday_end(base_for_end)
 
-        # ✅ حساب عدد الأيام والمبلغ بنفس منطق start_date → end_date
+        # ✅ حساب عدد الأيام والمبلغ المحاسبي (start_date → end_date)
         rental_days = None
-        total_amount = None
+        auto_amount = None
         base_start = auth.start_date or auth.issue_date
         if base_start and auth.end_date and auth.daily_rent is not None:
             start_d = base_start.date()
             end_d = auth.end_date.date()
-            days = (end_d - start_d).days + 1  # +1 عشان يشمل يوم البداية
+            days = (end_d - start_d).days + 1  # +1 يشمل يوم البداية
             if days < 0:
                 days = 0
             rental_days = days
-            total_amount = float(auth.daily_rent) * days
+            auto_amount = float(auth.daily_rent) * days
 
-        # 🎯 إنشاء قيد اليومية لهذا التفويض المقفول
-        create_journal_for_closed_authorization(auth, total_amount)
+        # 🔹 تحديد المبلغ النهائي: يدوي من المودال أو المحسوب تلقائيًا
+        final_amount = auto_amount
+        closed_amount_dec = None
+
+        if closed_amount_input not in (None, "", " "):
+            try:
+                closed_amount_dec = Decimal(str(closed_amount_input))
+                if closed_amount_dec <= 0:
+                    closed_amount_dec = None
+                else:
+                    final_amount = float(closed_amount_dec)
+            except (InvalidOperation, ValueError, TypeError):
+                closed_amount_dec = None
+
+        # لو ما تمش إدخال مبلغ يدوي صالح، نخزن المحسوب تلقائيًا داخل closed_amount لو موجود
+        if closed_amount_dec is None and auto_amount is not None:
+            closed_amount_dec = Decimal(str(round(auto_amount, 2)))
+
+        # حفظ المبلغ والملاحظة في جدول التفويض
+        auth.closed_amount = closed_amount_dec
+        auth.closing_note = closing_note
+
+        # 🎯 إنشاء قيد اليومية لهذا التفويض المقفول (لو فيه مبلغ نهائي)
+        if final_amount and final_amount > 0:
+            create_journal_for_closed_authorization(auth, final_amount)
 
         # 📌 إنشاء تفويض جديد تلقائيًا لنفس السيارة والسائق من السبت التالي
         if auth.end_date:
@@ -814,13 +842,14 @@ def end_authorization(auth_id):
 
         db.session.commit()
 
+        # 🔁 نرجّع المبلغ النهائي بدل القديم عشان الفرونت يستخدمه في الرسالة
         return jsonify(
             {
                 "message": "✅ تم إنهاء التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد اليومية",
                 "closed_authorization": auth.to_dict(),
                 "new_authorization": new_auth.to_dict(),
                 "rental_days": rental_days,
-                "total_amount": total_amount,
+                "total_amount": final_amount,
             }
         ), 200
 

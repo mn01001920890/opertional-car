@@ -404,7 +404,7 @@ def create_journal_for_closed_authorization(auth, total_amount):
         if not total_amount or total_amount <= 0:
             return
 
-        revenue_account = Account.query.filter_by(name="إيراد إيجار سيارات").first()
+        revenue_account = Account.query.filter_by(name="سلف سائقين").first()
         if not revenue_account:
             # لو حساب الإيراد مش موجود ما نعملش قيد
             return
@@ -1304,3 +1304,4 @@ with app.app_context():
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+

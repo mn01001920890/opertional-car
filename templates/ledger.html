@@ -92,14 +92,8 @@
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.6fr);
-      gap: 18px;
-    }
-
-    @media (max-width: 960px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
     }
 
     .card {
@@ -116,6 +110,7 @@
       align-items: center;
       margin-bottom: 10px;
       gap: 8px;
+      flex-wrap:wrap;
     }
 
     .card-header h2 {
@@ -133,6 +128,7 @@
       background: rgba(37,99,235,0.12);
       border: 1px solid rgba(59,130,246,0.4);
       color: #dbeafe;
+      white-space:nowrap;
     }
 
     .card-body {
@@ -298,7 +294,7 @@
       padding: 6px 6px;
       border-bottom: 1px solid rgba(55,65,81,0.7);
       text-align: right;
-      white-space: nowrap; /* الافتراضي: بدون لف */
+      white-space: nowrap;
       vertical-align: top;
     }
 
@@ -372,14 +368,6 @@
       color: #e5e7eb;
     }
 
-    .filter-row {
-      display: grid;
-      grid-template-columns: minmax(0,1.1fr) minmax(0,0.9fr);
-      gap: 8px;
-      margin-top: 4px;
-      margin-bottom: 8px;
-    }
-
     .filter-row-2 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0,1fr));
@@ -394,6 +382,22 @@
 
     .print-header {
       display:none;
+    }
+
+    .query-summary {
+      margin-bottom: 8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px dashed rgba(148,163,184,0.7);
+      background: rgba(15,23,42,0.7);
+      font-size: 0.82rem;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px 18px;
+    }
+
+    .query-summary-item strong {
+      color:#e5e7eb;
     }
 
     @media print {
@@ -415,22 +419,21 @@
         max-width: 100%;
         padding: 10mm 12mm;
       }
-      .header,
-      .top-buttons,
+      /* نخلي العنوان والهيدر ظاهرين، لكن نخفي أزرار التنقل */
+      .top-buttons {
+        display:none !important;
+      }
+      /* نخفي الأزرار فقط، ونبقي بيانات الاستعلام */
       .btn,
-      .actions,
-      .hint,
       .message {
-        display: none !important;
+        display:none !important;
       }
       .card {
         box-shadow: none;
         border-radius: 0;
         border: none;
         padding: 0;
-      }
-      .layout {
-        grid-template-columns: 1fr;
+        margin-bottom:8px;
       }
       .ledger-wrapper {
         max-height: none;
@@ -445,6 +448,15 @@
       table, th, td {
         border-color:#e5e7eb !important;
         color:#111827 !important;
+      }
+      .info-box {
+        border-color:#e5e7eb;
+        background:#ffffff;
+      }
+      .query-summary {
+        border-color:#9ca3af;
+        background:#f9fafb;
+        color:#111827;
       }
     }
   </style>
@@ -480,22 +492,24 @@
       </div>
     </div>
 
-    <!-- Print header (يظهر فقط في الطباعة) -->
+    <!-- Print header (يظهر فقط في الطباعة أعلى الصفحة) -->
     <div class="print-header">
       <h2 style="margin:0 0 4px;">كشف حساب</h2>
       <div id="printAccountName" style="font-size:0.9rem; margin-bottom:2px;"></div>
       <div id="printDateRange" style="font-size:0.8rem; color:#4b5563;"></div>
+      <div id="printTextFilter" style="font-size:0.78rem; color:#4b5563;"></div>
     </div>
 
     <div class="layout">
-      <!-- left: filters & account info -->
+      <!-- الكارت الأول: كل بيانات الاستعلام والبحث والطباعة والتصدير -->
       <div class="card">
         <div class="card-header">
-          <h2>⚙️ إعداد كشف الحساب</h2>
-          <span class="badge">مرتبط بحركات صفحة العمليات</span>
+          <h2>⚙️ إعداد وفلترة كشف الحساب</h2>
+          <span class="badge">استعلام + بحث + طباعة + تصدير Excel</span>
         </div>
         <div class="card-body">
 
+          <!-- اختيار الحساب + بحث عن حساب -->
           <div class="field">
             <label for="accountSelect">الحساب</label>
             <select id="accountSelect">
@@ -506,18 +520,16 @@
             </div>
           </div>
 
-          <div class="filter-row">
-            <div class="field">
-              <label for="accountSearch">بحث عن حساب بالاسم أو الكود</label>
-              <input id="accountSearch" type="text" placeholder="اكتب جزء من اسم الحساب أو الكود..." />
-              <div class="hint">مثال: "1101" أو "سائقين" أو "إيراد".</div>
-            </div>
-            <div class="field">
-              <label class="small-label">حسابات متاحة</label>
-              <div class="hint" id="accountsCountHint">—</div>
+          <div class="field">
+            <label for="accountSearch">بحث عن حساب بالاسم أو الكود</label>
+            <input id="accountSearch" type="text" placeholder="اكتب جزء من اسم الحساب أو الكود..." />
+            <div class="hint">
+              مثال: "1101" أو "سائقين" أو "إيراد". |
+              <span id="accountsCountHint">—</span>
             </div>
           </div>
 
+          <!-- فلترة على مستوى الحركة -->
           <div class="field">
             <label>فلترة على مستوى الحركة</label>
             <div class="filter-row-2">
@@ -539,6 +551,7 @@
             </div>
           </div>
 
+          <!-- معلومات الحساب المختار -->
           <div class="info-box" id="accountInfoBox">
             <div class="info-row">
               <span class="info-label">الحساب المحدد:</span>
@@ -554,9 +567,10 @@
             </div>
           </div>
 
+          <!-- أزرار الاستعلام / الطباعة / التصدير -->
           <div class="actions">
             <button type="button" class="btn btn-primary" id="btnLoadLedger">
-              📥 تحميل كشف الحساب
+              📥 تحميل / تحديث كشف الحساب
             </button>
             <button type="button" class="btn btn-print" id="btnPrint">
               🖨️ طباعة / حفظ PDF
@@ -573,13 +587,29 @@
         </div>
       </div>
 
-      <!-- right: ledger table -->
+      <!-- الكارت الثاني: ملخّص الاستعلام + كشف الحساب (النتائج) -->
       <div class="card">
         <div class="card-header">
-          <h2>📊 كشف الحركة للحساب</h2>
+          <h2>📊 كشف الحركة للحساب (نتائج الاستعلام)</h2>
           <span class="badge-count" id="ledgerCount">—</span>
         </div>
         <div class="card-body">
+          <!-- ملخص بيانات الاستعلام يطبع مع الكشف -->
+          <div class="query-summary">
+            <div class="query-summary-item">
+              <strong>الحساب:</strong>
+              <span id="qsAccountName">—</span>
+            </div>
+            <div class="query-summary-item">
+              <strong>الفترة:</strong>
+              <span id="qsDateRange">بدون تحديد</span>
+            </div>
+            <div class="query-summary-item">
+              <strong>فلتر نصّي:</strong>
+              <span id="qsTextFilter">بدون</span>
+            </div>
+          </div>
+
           <div class="ledger-wrapper">
             <table>
               <thead>
@@ -646,6 +676,11 @@
 
     const printAccountName = document.getElementById("printAccountName");
     const printDateRange = document.getElementById("printDateRange");
+    const printTextFilter = document.getElementById("printTextFilter");
+
+    const qsAccountName = document.getElementById("qsAccountName");
+    const qsDateRange = document.getElementById("qsDateRange");
+    const qsTextFilter = document.getElementById("qsTextFilter");
 
     function showMessage(text, type = "success") {
       formMessage.textContent = text;
@@ -767,7 +802,10 @@
         infoAccountType.textContent = "—";
         infoAccountType.className = "badge-type";
         infoAccountId.textContent = "—";
+
+        qsAccountName.textContent = "—";
         printAccountName.textContent = "";
+
         return;
       }
 
@@ -776,7 +814,9 @@
       infoAccountType.className = typeBadgeClass(currentAccount.type);
       infoAccountId.textContent = currentAccount.id || "—";
 
-      printAccountName.textContent = `الحساب: ${currentAccount.name} (ID: ${currentAccount.id})`;
+      const nameText = `الحساب: ${currentAccount.name} (ID: ${currentAccount.id})`;
+      qsAccountName.textContent = nameText;
+      printAccountName.textContent = nameText;
     }
 
     function parseDateStringToDateObj(dateString) {
@@ -786,6 +826,35 @@
       const [y, m, d] = datePart.split("-").map(Number);
       if (!y || !m || !d) return null;
       return new Date(y, m - 1, d);
+    }
+
+    function updatePrintAndSummaryDateRange(fromDateVal, toDateVal) {
+      const fromVal = fromDateVal || fromDateInput.value.trim();
+      const toVal = toDateVal || toDateInput.value.trim();
+
+      let text = "";
+      if (!fromVal && !toVal) {
+        qsDateRange.textContent = "بدون تحديد";
+        printDateRange.textContent = "";
+        return;
+      }
+
+      text = "من " + (fromVal || "—");
+      if (toVal) text += " إلى " + toVal;
+
+      qsDateRange.textContent = text;
+      printDateRange.textContent = "الفترة: " + text;
+    }
+
+    function updateTextFilterSummary() {
+      const val = textFilterInput.value.trim();
+      if (!val) {
+        qsTextFilter.textContent = "بدون";
+        printTextFilter.textContent = "";
+      } else {
+        qsTextFilter.textContent = val;
+        printTextFilter.textContent = "فلتر نصّي: " + val;
+      }
     }
 
     function applyFilters() {
@@ -825,22 +894,8 @@
       });
 
       renderLedger();
-      updatePrintDateRange(fromDateVal, toDateVal);
-    }
-
-    function updatePrintDateRange(fromDateVal, toDateVal) {
-      const fromVal = fromDateVal || fromDateInput.value.trim();
-      const toVal = toDateVal || toDateInput.value.trim();
-
-      if (!fromVal && !toVal) {
-        printDateRange.textContent = "";
-        return;
-      }
-
-      let text = "الفترة: ";
-      if (fromVal) text += `من ${fromVal} `;
-      if (toVal) text += `إلى ${toVal}`;
-      printDateRange.textContent = text;
+      updatePrintAndSummaryDateRange(fromDateVal, toDateVal);
+      updateTextFilterSummary();
     }
 
     function renderLedger() {
@@ -1062,7 +1117,9 @@
       const toParam = urlParams.get("to");
       if (fromParam) fromDateInput.value = fromParam;
       if (toParam) toDateInput.value = toParam;
-      updatePrintDateRange(fromParam || "", toParam || "");
+
+      updatePrintAndSummaryDateRange(fromParam || "", toParam || "");
+      updateTextFilterSummary();
 
       if (accIdParam) {
         loadLedgerForSelectedAccount(true);

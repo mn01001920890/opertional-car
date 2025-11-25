@@ -742,9 +742,18 @@ def get_active_authorizations():
     return jsonify([a.to_dict() for a in auths])
 
 
-# إنهاء تفويض (يستخدم من زر الإنهاء)
+# إنهاء تفويض (يستخدم من زر الإنهاء) ✅ نسخة محدثة مع اختيار التجديد
 @app.route("/api/authorizations/<int:auth_id>/end", methods=["PATCH"])
 def end_authorization(auth_id):
+    """
+    إنهاء تفويض:
+    - يقفل التفويض الحالي (close_date, closed_amount, closing_note, status="منتهية")
+    - ينشئ قيد إقفال تفويض في اليومية (دايمًا لو فيه مبلغ)
+    - حسب اختيار الفرونت إند:
+        * renew = true  ⇒ إنشاء تفويض جديد للأسبوع التالي + تظل السيارة "مؤجرة"
+        * renew = false ⇒ عدم إنشاء تفويض جديد + تحويل السيارة إلى "متاحة"
+    - يرجع أيضًا suggested_receipt عشان تفتح بها شاشة سند تحصيل تلقائي.
+    """
     auth = Authorization.query.get(auth_id)
     if not auth:
         return jsonify({"error": "التفويض غير موجود"}), 404
@@ -754,8 +763,24 @@ def end_authorization(auth_id):
     car = Car.query.filter_by(plate=auth.car_number).first()
 
     try:
-        # 🔹 قراءة بيانات الإقفال من الطلب (المودال في الفرونت إند)
+        # 🔹 قراءة بيانات الإقفال من الطلب
         data = request.get_json(silent=True) or {}
+
+        # ✅ اختيار التجديد أو لا:
+        #  - renew (bool) أو renew_option في الـ body
+        renew_raw = data.get("renew")
+        if renew_raw is None:
+            renew_raw = data.get("renew_option")  # اسم بديل لو حبيت تستخدمه في الفرونت
+
+        # القيمة الافتراضية = True عشان توافق السلوك القديم (تجديد تلقائي)
+        renew = True
+        if isinstance(renew_raw, bool):
+            renew = renew_raw
+        elif isinstance(renew_raw, (int, float)):
+            renew = bool(renew_raw)
+        elif isinstance(renew_raw, str):
+            renew = renew_raw.strip().lower() in ("1", "true", "yes", "y", "renew", "تجديد")
+
         closing_note = (data.get("closing_note") or "").strip() or None
         closed_amount_input = data.get("closed_amount")
 
@@ -809,49 +834,71 @@ def end_authorization(auth_id):
         if final_amount and final_amount > 0:
             create_journal_for_closed_authorization(auth, final_amount)
 
-        # 📌 إنشاء تفويض جديد تلقائيًا لنفس السيارة والسائق من السبت التالي
-        if auth.end_date:
-            new_issue = auth.end_date + timedelta(days=1)  # السبت التالي
+        new_auth = None  # احتمال يكون فيه تفويض جديد أو لا حسب الاختيار
+
+        # 🔁 لو اختارت تجديد: نعمل تفويض جديد للأسبوع القادم ونخلي العربية "مؤجرة"
+        if renew:
+            if auth.end_date:
+                new_issue = auth.end_date + timedelta(days=1)  # السبت التالي
+            else:
+                new_issue = close_dt + timedelta(days=1)
+
+            # نخلي الساعة 09:00 (تقديرية)
+            new_issue = new_issue.replace(hour=9, minute=0, second=0, microsecond=0)
+            new_end = get_friday_end(new_issue)
+
+            new_auth = Authorization(
+                driver_name=auth.driver_name,
+                driver_license_no=auth.driver_license_no,
+                driver_id=auth.driver_id,
+                car_number=auth.car_number,
+                car_model=auth.car_model,
+                car_type=auth.car_type,
+                issue_date=new_issue,
+                start_date=new_issue,
+                daily_rent=auth.daily_rent,
+                details=auth.details,
+                status="مؤجرة",
+                end_date=new_end,
+                close_date=None,
+            )
+            db.session.add(new_auth)
+
+            # السيارة تظل "مؤجرة"
+            if car:
+                car.status = "مؤجرة"
         else:
-            new_issue = close_dt + timedelta(days=1)
-
-        # نخلي الساعة 09:00 (تقديرية)
-        new_issue = new_issue.replace(hour=9, minute=0, second=0, microsecond=0)
-        new_end = get_friday_end(new_issue)
-
-        new_auth = Authorization(
-            driver_name=auth.driver_name,
-            driver_license_no=auth.driver_license_no,
-            driver_id=auth.driver_id,
-            car_number=auth.car_number,
-            car_model=auth.car_model,
-            car_type=auth.car_type,
-            issue_date=new_issue,
-            start_date=new_issue,
-            daily_rent=auth.daily_rent,
-            details=auth.details,
-            status="مؤجرة",
-            end_date=new_end,
-            close_date=None,
-        )
-        db.session.add(new_auth)
-
-        # السيارة تظل "مؤجرة" لأن التفويض يتجدد أسبوعيًا تلقائيًا
-        if car:
-            car.status = "مؤجرة"
+            # ❌ عدم التجديد → السيارة ترجع "متاحة"
+            if car:
+                car.status = "متاحة"
 
         db.session.commit()
 
-        # 🔁 نرجّع المبلغ النهائي بدل القديم عشان الفرونت يستخدمه في الرسالة
-        return jsonify(
-            {
-                "message": "✅ تم إنهاء التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد اليومية",
-                "closed_authorization": auth.to_dict(),
-                "new_authorization": new_auth.to_dict(),
-                "rental_days": rental_days,
-                "total_amount": final_amount,
-            }
-        ), 200
+        # 🔗 تجهيز بيانات سند تحصيل تلقائي (الفرونت إند يفتح /receipt بهذه البيانات)
+        suggested_receipt = {
+            "authorization_id": auth.id,
+            "driver_id": auth.driver_id,
+            "driver_name": auth.driver_name,
+            "default_amount": final_amount,
+            "description": f"سداد عن تفويض رقم {auth.id}",
+        }
+
+        if renew:
+            message = "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد اليومية"
+        else:
+            message = "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة مع تسجيل قيد اليومية (بدون إنشاء تفويض جديد)"
+
+        response = {
+            "message": message,
+            "closed_authorization": auth.to_dict(),
+            "new_authorization": new_auth.to_dict() if new_auth else None,
+            "rental_days": rental_days,
+            "total_amount": final_amount,
+            "renew": renew,
+            "suggested_receipt": suggested_receipt,
+        }
+
+        return jsonify(response), 200
 
     except Exception as e:
         db.session.rollback()
@@ -860,6 +907,9 @@ def end_authorization(auth_id):
 
 
 # ----- Cars APIs -----
+
+
+
 @app.route("/api/cars", methods=["GET"])
 def list_cars():
     cars = Car.query.order_by(Car.id.desc()).all()
@@ -901,6 +951,9 @@ def cars_status():
 
 
 # ----- Drivers APIs -----
+
+
+
 @app.route("/api/drivers", methods=["GET"])
 def list_drivers():
     drivers = Driver.query.order_by(Driver.id.desc()).all()
@@ -929,6 +982,9 @@ def add_driver():
 
 
 # ----- Accounts APIs -----
+
+
+
 @app.route("/api/accounts", methods=["GET", "POST"])
 def accounts_api():
     """
@@ -1011,6 +1067,9 @@ def create_driver_account_api():
 
 
 # ----- Ledger API -----
+
+
+
 @app.route("/api/accounts/<int:account_id>/ledger", methods=["GET"])
 def get_account_ledger(account_id):
     """
@@ -1053,6 +1112,9 @@ def get_account_ledger(account_id):
 
 
 # ----- General Journal APIs (لليومية العامة) -----
+
+
+
 @app.route("/api/journal_entries", methods=["GET", "POST"])
 def journal_entries_api():
     """
@@ -1143,6 +1205,9 @@ def manual_journal_entries_api():
 
 
 # ----- Cash Receipts APIs (سندات التحصيل النقدي) -----
+
+
+
 @app.route("/api/receipts", methods=["GET", "POST"])
 def receipts_api():
     """

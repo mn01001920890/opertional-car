@@ -291,13 +291,15 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.82rem;
+      table-layout: fixed; /* علشان الأعمدة ثابتة والوصف يلف لتحت */
     }
 
     th, td {
       padding: 6px 6px;
       border-bottom: 1px solid rgba(55,65,81,0.7);
       text-align: right;
-      white-space: nowrap;
+      white-space: nowrap; /* الافتراضي: بدون لف */
+      vertical-align: top;
     }
 
     thead {
@@ -308,6 +310,21 @@
       font-weight: 600;
       color: #e5e7eb;
       font-size: 0.78rem;
+    }
+
+    /* توزيع عرض الأعمدة */
+    th.col-date,    td.col-date    { width: 14%; }
+    th.col-desc,    td.col-desc    { width: 40%; }
+    th.col-debit,   td.col-debit   { width: 15%; }
+    th.col-credit,  td.col-credit  { width: 15%; }
+    th.col-balance, td.col-balance { width: 16%; }
+
+    /* الوصف يلف لتحت بدل ما يوسع الجدول */
+    th.col-desc,
+    td.col-desc {
+      white-space: normal !important;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
     }
 
     tbody tr:nth-child(odd) {
@@ -380,6 +397,11 @@
     }
 
     @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm 8mm;
+      }
+
       body {
         background: var(--print-bg);
         color: var(--print-ink);
@@ -412,6 +434,8 @@
       }
       .ledger-wrapper {
         max-height: none;
+        overflow: visible;
+        border: 1px solid #e5e7eb;
       }
       .print-header {
         display:block;
@@ -537,6 +561,9 @@
             <button type="button" class="btn btn-print" id="btnPrint">
               🖨️ طباعة / حفظ PDF
             </button>
+            <button type="button" class="btn btn-ghost" id="btnExportExcel">
+              ⬇️ تصدير Excel (CSV)
+            </button>
             <button type="button" class="btn btn-ghost" id="btnResetFilters">
               ♻️ مسح الفلاتر
             </button>
@@ -557,11 +584,11 @@
             <table>
               <thead>
                 <tr>
-                  <th>التاريخ</th>
-                  <th>الوصف / البيان</th>
-                  <th>مدين</th>
-                  <th>دائن</th>
-                  <th>الرصيد</th>
+                  <th class="col-date">التاريخ</th>
+                  <th class="col-desc">الوصف / البيان</th>
+                  <th class="col-debit">مدين</th>
+                  <th class="col-credit">دائن</th>
+                  <th class="col-balance">الرصيد</th>
                 </tr>
               </thead>
               <tbody id="ledgerBody">
@@ -613,6 +640,7 @@
 
     const btnLoadLedger = document.getElementById("btnLoadLedger");
     const btnPrint = document.getElementById("btnPrint");
+    const btnExportExcel = document.getElementById("btnExportExcel");
     const btnResetFilters = document.getElementById("btnResetFilters");
     const formMessage = document.getElementById("formMessage");
 
@@ -858,11 +886,11 @@
       rows.forEach(row => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${row.date || ""}</td>
-          <td>${row.description || ""}</td>
-          <td>${formatNumber(row.debit)}</td>
-          <td>${formatNumber(row.credit)}</td>
-          <td>${formatNumber(row.balance)}</td>
+          <td class="col-date">${row.date || ""}</td>
+          <td class="col-desc">${row.description || ""}</td>
+          <td class="col-debit">${formatNumber(row.debit)}</td>
+          <td class="col-credit">${formatNumber(row.credit)}</td>
+          <td class="col-balance">${formatNumber(row.balance)}</td>
         `;
         ledgerBody.appendChild(tr);
 
@@ -939,6 +967,60 @@
       }
     }
 
+    // 🔽 تصدير كشف الحساب المعروض إلى ملف CSV (Excel)
+    function exportLedgerToCSV() {
+      if (!currentAccount) {
+        alert("اختر حسابًا أولاً قبل التصدير.");
+        return;
+      }
+      if (!currentLedgerFiltered || !currentLedgerFiltered.length) {
+        alert("لا توجد حركات مطبقة حاليًا للتصدير.");
+        return;
+      }
+
+      const rows = [];
+      // ترويسة الأعمدة
+      rows.push(["Date", "Description", "Debit", "Credit", "Balance"]);
+
+      currentLedgerFiltered.forEach(row => {
+        const desc = (row.description || "").replace(/\s+/g, " ").trim();
+        rows.push([
+          row.date || "",
+          desc,
+          row.debit != null ? row.debit : 0,
+          row.credit != null ? row.credit : 0,
+          row.balance != null ? row.balance : 0
+        ]);
+      });
+
+      const csvLines = rows.map(r =>
+        r.map(field => {
+          let v = String(field ?? "");
+          v = v.replace(/"/g, '""');
+          if (/[",\n]/.test(v)) {
+            v = `"${v}"`;
+          }
+          return v;
+        }).join(",")
+      ).join("\r\n");
+
+      const csvContent = "\uFEFF" + csvLines; // BOM عشان العربي يظهر صح في Excel
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+
+      a.href = url;
+      a.download = `ledger_account_${currentAccount.id || ""}_${yyyy}${mm}${dd}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
     btnLoadLedger.addEventListener("click", () => loadLedgerForSelectedAccount(false));
 
     [fromDateInput, toDateInput, textFilterInput].forEach(input => {
@@ -960,8 +1042,11 @@
         alert("اختر حسابًا أولاً قبل الطباعة.");
         return;
       }
+      // المستخدم يقدر يختار "حفظ كـ PDF" من نافذة الطباعة
       window.print();
     });
+
+    btnExportExcel.addEventListener("click", exportLedgerToCSV);
 
     // ✅ تهيئة الفلاتر بناءً على باراميترات URL القادمة من صفحة العمليات
     function applyInitialURLFilters() {

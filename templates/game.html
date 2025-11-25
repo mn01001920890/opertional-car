@@ -1,0 +1,322 @@
+<!-- game.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>eTaxi Mini Game</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg,#0d6efd,#6c63ff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: #fff;
+    }
+
+    .game-wrapper {
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+      font-size: 24px;
+    }
+
+    .sub {
+      font-size: 13px;
+      margin-bottom: 10px;
+      opacity: 0.9;
+    }
+
+    .game-area {
+      position: relative;
+      width: 360px;
+      height: 520px;
+      background: #020617;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 3px solid rgba(248,250,252,0.3);
+      box-shadow: 0 14px 40px rgba(0,0,0,0.6);
+      margin: 0 auto 10px;
+    }
+
+    .road-line {
+      position: absolute;
+      left: 50%;
+      width: 4px;
+      height: 40px;
+      margin-left: -2px;
+      background: rgba(248,250,252,0.5);
+      top: -40px;
+      animation: roadMove 1s linear infinite;
+    }
+
+    @keyframes roadMove {
+      0%   { top: -40px; }
+      100% { top: 520px; }
+    }
+
+    .car {
+      position: absolute;
+      bottom: 10px;
+      width: 40px;
+      height: 70px;
+      background: #facc15;
+      border-radius: 10px;
+      left: 160px;
+      box-shadow: 0 0 0 3px #fbbf24;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .obstacle, .coin {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+    }
+
+    .obstacle {
+      background: #ef4444;
+      box-shadow: 0 0 0 2px rgba(248,113,113,0.9);
+    }
+
+    .coin {
+      background: #facc15;
+      box-shadow: 0 0 0 2px rgba(251,191,36,0.9);
+    }
+
+    .score-board {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .btn-back {
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(15,23,42,0.9);
+      color: #f9fafb;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-back:hover {
+      background: rgba(15,23,42,1);
+    }
+
+    .game-over {
+      position: absolute;
+      inset: 0;
+      background: rgba(15,23,42,0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #f9fafb;
+      font-size: 16px;
+    }
+
+    .game-over button {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: #22c55e;
+      color: #022c22;
+      font-weight: 600;
+    }
+
+    .hint {
+      font-size: 12px;
+      opacity: 0.85;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-wrapper">
+    <h1>eTaxi Mini Game</h1>
+    <div class="sub">حرّك التاكسي ← → لجمع العملات وتجنب الحفر</div>
+    <div class="hint">استخدم الأسهم يمين / يسار على لوحة المفاتيح</div>
+    <div class="score-board">
+      Score: <span id="score">0</span>
+    </div>
+
+    <div class="game-area" id="gameArea">
+      <!-- خط الطريق المتحرك -->
+      <div class="road-line"></div>
+
+      <!-- السيارة -->
+      <div class="car" id="car">🚕</div>
+      <!-- العناصر (حفر + كوين) تُنشأ من الجافاسكربت -->
+    </div>
+
+    <br/>
+    <a href="dashboard.html" class="btn-back">⬅️ العودة إلى لوحة التحكم</a>
+  </div>
+
+  <script>
+    const gameArea = document.getElementById('gameArea');
+    const car = document.getElementById('car');
+    const scoreSpan = document.getElementById('score');
+
+    let carX = 160;            // موضع السيارة على المحور X
+    const carSpeed = 10;       // سرعة الحركة يمين/يسار
+    let score = 0;
+    let gameRunning = true;
+
+    const objects = [];        // تخزين الحفر والكوينات
+
+    function setCarPosition() {
+      // حدود داخل اللعبة
+      const minX = 10;
+      const maxX = 360 - 10 - 40; // عرض اللعبة - هامش - عرض السيارة
+      if (carX < minX) carX = minX;
+      if (carX > maxX) carX = maxX;
+      car.style.left = carX + 'px';
+    }
+
+    setCarPosition();
+
+    document.addEventListener('keydown', (e) => {
+      if (!gameRunning) return;
+      if (e.key === 'ArrowLeft') {
+        carX -= carSpeed;
+        setCarPosition();
+      } else if (e.key === 'ArrowRight') {
+        carX += carSpeed;
+        setCarPosition();
+      }
+    });
+
+    function createObject() {
+      if (!gameRunning) return;
+
+      // 50% كوين – 50% حفرة
+      const isCoin = Math.random() < 0.5;
+
+      const el = document.createElement('div');
+      el.className = isCoin ? 'coin' : 'obstacle';
+
+      const laneX = 20 + Math.random() * (360 - 40 - 40); // عشوائي داخل الطريق
+      el.style.left = laneX + 'px';
+      el.style.top = '-40px';
+
+      gameArea.appendChild(el);
+
+      const obj = {
+        el,
+        x: laneX,
+        y: -40,
+        isCoin
+      };
+      objects.push(obj);
+    }
+
+    function rectsIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
+      return ax < bx + bw &&
+             ax + aw > bx &&
+             ay < by + bh &&
+             ay + ah > by;
+    }
+
+    function update() {
+      if (!gameRunning) return;
+
+      // تحريك العناصر لأسفل
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i];
+        obj.y += 3; // سرعة النزول
+        obj.el.style.top = obj.y + 'px';
+
+        // حدود العنصر
+        const objRect = {
+          x: obj.x,
+          y: obj.y,
+          w: 28,
+          h: 28
+        };
+
+        // حدود السيارة
+        const carRect = {
+          x: carX,
+          y: 520 - 10 - 70, // game height - bottom margin - car height
+          w: 40,
+          h: 70
+        };
+
+        // تصادم
+        if (rectsIntersect(carRect.x, carRect.y, carRect.w, carRect.h,
+                           objRect.x, objRect.y, objRect.w, objRect.h)) {
+
+          if (obj.isCoin) {
+            // جمع كوين
+            score += 1;
+            scoreSpan.textContent = score;
+            gameArea.removeChild(obj.el);
+            objects.splice(i, 1);
+          } else {
+            // حفرة → جيم أوفر
+            gameOver();
+            return;
+          }
+        }
+
+        // حذف العناصر اللي خرجت من الشاشة
+        if (obj.y > 520) {
+          gameArea.removeChild(obj.el);
+          objects.splice(i, 1);
+        }
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    function gameOver() {
+      gameRunning = false;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'game-over';
+      overlay.innerHTML = `
+        <div>💥 Game Over</div>
+        <div>Score: ${score}</div>
+        <button id="btnRestart">إعادة اللعب</button>
+      `;
+      gameArea.appendChild(overlay);
+
+      document.getElementById('btnRestart').addEventListener('click', () => {
+        // إعادة تعيين
+        objects.forEach(o => {
+          if (o.el.parentNode === gameArea) gameArea.removeChild(o.el);
+        });
+        objects.length = 0;
+        score = 0;
+        scoreSpan.textContent = '0';
+        gameArea.removeChild(overlay);
+        gameRunning = true;
+        requestAnimationFrame(update);
+      });
+    }
+
+    // إنشاء عنصر جديد كل فترة
+    setInterval(() => {
+      if (!gameRunning) return;
+      createObject();
+    }, 900);
+
+    // بدء التحديث
+    requestAnimationFrame(update);
+  </script>
+</body>
+</html>

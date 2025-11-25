@@ -683,7 +683,8 @@
       <button class="back-btn" onclick="location.href='/'">🏠 الرئيسية</button>
       <button class="back-btn" onclick="location.href='/cars'">🚗 السيارات</button>
       <button class="back-btn" onclick="location.href='/drivers'">🧑‍✈️ السائقون</button>
-      <button class="back-btn" onclick="location.href='/authorizations'">📄 التفويضات</button>
+      <!-- ✅ صفحة عرض كل التفويضات هي /view في الباك إند -->
+      <button class="back-btn" onclick="location.href='/view'">📄 التفويضات</button>
       <button class="back-btn" onclick="location.href='/operations'">🧾 العمليات</button>
     </div>
 
@@ -1337,7 +1338,7 @@
         // - تحديث التفويض (closed_amount, closing_note, close_date)
         // - إنشاء قيد إقفال في اليومية العامة حسب شجرة الحسابات
         // - ربط القيد بصفحة العمليات
-        // - (اختياري) إنشاء تفويض جديد للأسبوع التالي إن لزم
+        // - إنشاء تفويض جديد للأسبوع التالي لنفس السيارة والسائق
         const res = await fetch(`/api/authorizations/${pendingCloseAuth.id}/end`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -1364,12 +1365,18 @@
         allAuthorizations = allAuthorizations.filter(
           a => String(a.id) !== String(pendingCloseAuth.id)
         );
+
+        // ✅ إضافة التفويض الجديد للأسبوع التالي (لو راجع من الباك إند)
+        const newAuth = data.new_authorization;
+        if (newAuth && !newAuth.close_date) {
+          allAuthorizations.push(newAuth);
+        }
+
+        // إعادة تطبيق الفلتر وإعادة الرسم
         applyFilter();
         document.getElementById("activeCount").textContent = allAuthorizations.length;
-
-        if (allAuthorizations.length === 0) {
-          document.getElementById("emptyState").style.display = "block";
-        }
+        document.getElementById("emptyState").style.display =
+          allAuthorizations.length === 0 ? "block" : "none";
 
         const totalAmount =
           (data.closed_authorization && data.closed_authorization.closed_amount) ||

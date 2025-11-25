@@ -572,11 +572,11 @@ def operations_page():
     return render_template("operations.html")
 
 @app.route("/receipts-list")
-def operations_page():
+def receipts_list_page():
     return render_template("receipts-list.html")
 
 @app.route("/journal-list")
-def operations_page():
+def journal_list_page():
     return render_template("journal-list.html")
 
 
@@ -1312,6 +1312,7 @@ with app.app_context():
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
 
 
 

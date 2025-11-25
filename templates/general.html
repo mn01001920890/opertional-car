@@ -435,7 +435,7 @@
 
     <div class="top-right">
       <span class="top-small-note">
-        إدخال قيد يومية يدوي فقط (عرض القيود من صفحة القيود اليدوية)
+        هذه الشاشة خاصة بالقيود اليدوية فقط — باقي القيود (سندات، تفويضات) تأتي تلقائيًا من صفحاتها.
       </span>
     </div>
   </header>
@@ -447,8 +447,9 @@
         <div class="title-group">
           <h1>📓 قيد يومية يدوي</h1>
           <p>
-            استخدم هذه الشاشة لتسجيل قيود يومية يدوية (مدين/دائن).  
-            تأكد أن إجمالي المدين = إجمالي الدائن قبل الحفظ.
+            استخدم هذه الشاشة لتسجيل قيود يومية يدوية (مدين/دائن).
+            تأكد أن إجمالي المدين = إجمالي الدائن قبل الحفظ، وسيتم ربط القيد تلقائيًا
+            بصفحة <strong>العمليات</strong> ودفتر الأستاذ حسب شجرة الحسابات.
           </p>
         </div>
         <p class="small-note-link">
@@ -461,7 +462,7 @@
       <div class="card">
         <div class="card-header">
           <h2>➕ قيد يومية جديد</h2>
-          <span class="badge">مدين / دائن</span>
+          <span class="badge">مدين / دائن — من شجرة الحسابات</span>
         </div>
         <div class="card-body">
           <form id="journalForm">
@@ -479,7 +480,7 @@
             <div class="field">
               <label>بنود القيد (مدين / دائن)</label>
               <div class="hint">
-                يجب أن يكون مجموع المدين = مجموع الدائن قبل حفظ القيد.
+                اختر فقط حسابات تفصيلية (وليس حسابات تجميعية)، ويجب أن يكون مجموع المدين = مجموع الدائن قبل حفظ القيد.
               </div>
 
               <div class="lines-table-wrapper">
@@ -555,14 +556,19 @@
       jeDateInput.value = `${y}-${m}-${d}`;
     })();
 
-    function showFormMessage(text, type = "success") {
-      formMessage.textContent = text;
+    function showFormMessage(text, type = "success", allowHtml = false) {
+      if (allowHtml) {
+        formMessage.innerHTML = text;
+      } else {
+        formMessage.textContent = text;
+      }
       formMessage.className = "message " + type;
       formMessage.style.display = "block";
     }
 
     function clearFormMessage() {
       formMessage.textContent = "";
+      formMessage.innerHTML = "";
       formMessage.style.display = "none";
     }
 
@@ -613,7 +619,9 @@
       accounts.forEach(acc => {
         const opt = document.createElement("option");
         opt.value = acc.id;
-        opt.textContent = acc.name;
+        const code = acc.code ? String(acc.code).trim() : "";
+        const name = acc.name || "";
+        opt.textContent = code ? `${code} — ${name}` : name;
         select.appendChild(opt);
       });
 
@@ -648,7 +656,7 @@
 
       const searchInput = document.createElement("input");
       searchInput.type = "text";
-      searchInput.placeholder = "بحث عن حساب...";
+      searchInput.placeholder = "بحث عن حساب... (اكتب جزء من الاسم أو الكود)";
       searchInput.className = "account-search";
 
       const sel = createAccountSelect();
@@ -663,7 +671,6 @@
         const opt = sel.options[sel.selectedIndex];
         if (opt && opt.value) {
           searchInput.value = opt.textContent || "";
-          // نرجّع كل الخيارات تبان (ممكن تسيبها كما هي)
           filterAccountOptions(sel, "");
         }
       });
@@ -805,16 +812,42 @@
         try { data = await res.json(); } catch (_) {}
 
         if (!res.ok) {
-          showFormMessage(data.error || "حدث خطأ أثناء حفظ القيد.", "error");
+          // رسائل الخطأ هنا نص فقط (بدون HTML) للحماية
+          showFormMessage(data.error || "حدث خطأ أثناء حفظ القيد.", "error", false);
           return;
         }
 
-        showFormMessage("✅ تم حفظ قيد اليومية بنجاح.", "success");
+        // نحاول نجيب رقم القيد عشان نربطه بالعمليات
+        const entryId = data.id || (data.entry && data.entry.id);
+
+        let msg = "✅ تم حفظ قيد اليومية بنجاح.";
+        if (entryId) {
+          const opsUrl = `/operations?type=journal&journal_id=${entryId}`;
+          msg += `
+            <br />
+            <a href="/journal-list" style="color:#bfdbfe;text-decoration:underline;margin-left:8px;">
+              📜 عرض في صفحة القيود اليدوية
+            </a>
+            <a href="${opsUrl}" style="color:#bfdbfe;text-decoration:underline;margin-right:8px;">
+              🧾 عرض هذا القيد في صفحة العمليات
+            </a>
+          `;
+        }
+
+        showFormMessage(msg, "success", true);
+
+        // إعادة تهيئة البنود
         linesBody.innerHTML = "";
         updateTotals();
         jeDescInput.value = "";
+
+        // نضيف سطرين فاضيين جديدين للتسهيل
+        if (accounts.length > 0) {
+          addLineRow();
+          addLineRow();
+        }
       } catch (err) {
-        showFormMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error");
+        showFormMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error", false);
       }
     });
 
@@ -824,7 +857,26 @@
         const res = await fetch("/api/accounts");
         if (!res.ok) throw new Error("error");
         const data = await res.json();
-        accounts = data || [];
+        let list = data || [];
+
+        // لو فيه is_group → نستخدم فقط الحسابات الفرعية (is_group = false)
+        if (Array.isArray(list) && list.length > 0 && "is_group" in list[0]) {
+          list = list.filter(acc => acc.is_group === false);
+        }
+
+        // ترتيب الحسابات: بالكود لو موجود، وبعدها بالاسم
+        list.sort((a, b) => {
+          const ac = (a.code || "").toString();
+          const bc = (b.code || "").toString();
+          if (ac && bc && ac !== bc) {
+            return ac.localeCompare(bc, "ar");
+          }
+          const an = (a.name || "").toString();
+          const bn = (b.name || "").toString();
+          return an.localeCompare(bn, "ar");
+        });
+
+        accounts = list;
       } catch (err) {
         console.error("Error loading accounts", err);
         accounts = [];

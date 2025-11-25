@@ -136,6 +136,12 @@
       color: #0f172a;
     }
 
+    .add-driver-subtitle {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
     .add-driver-row {
       display: flex;
       flex-wrap: wrap;
@@ -265,6 +271,11 @@
       color: #334155;
     }
 
+    .td-account {
+      font-size: 12px;
+      color: #1f2937;
+    }
+
     /* كارت السائق في الموبايل */
     .driver-card {
       background: rgba(255,255,255,0.96);
@@ -336,12 +347,19 @@
 
   <main class="page-content">
     <h2>قائمة السائقين</h2>
-    <p class="subtitle">إضافة سائق جديد مع إنشاء حساب تفصيلي له في دليل الحسابات، ثم عرض جميع السائقين المسجلين في النظام.</p>
+    <p class="subtitle">
+      إضافة سائق جديد مع إنشاء حساب تفصيلي له في دليل الحسابات تحت
+      <strong>أصل / السائقين / اسم السائق</strong>، ثم عرض جميع السائقين المسجلين في النظام.
+    </p>
 
     <!-- ➕ إضافة سائق جديد + إنشاء حساب في دليل الحسابات -->
     <div class="add-driver-card">
       <div class="add-driver-title">
         <span>➕ إضافة سائق جديد (مع إنشاء حساب في شجرة "حساب السائقين")</span>
+      </div>
+      <div class="add-driver-subtitle">
+        سيتم إنشاء حساب أصل تلقائي باسم السائق فقط تحت الحساب الرئيسي
+        <strong>"السائقين"</strong> لاستخدامه في إقفال التفويضات وسندات التحصيل.
       </div>
       <div class="add-driver-row">
         <input id="new_driver_name" placeholder="اسم السائق *" />
@@ -369,6 +387,7 @@
             <th>اسم السائق</th>
             <th>الجوال</th>
             <th>الرخصة</th>
+            <th>الحساب في الدليل</th>
             <th>ملاحظات</th>
             <th>إجراءات</th>
           </tr>
@@ -404,6 +423,18 @@
       }
     }
 
+    function getDriverAccountLabel(d) {
+      // نتوقع من الباك إند يرجّع واحد من دول:
+      // account_path = "أصل / السائقين / محمود مصطفى"
+      // أو account_name + account_code
+      if (d.account_path) return d.account_path;
+      if (d.account_name && d.account_code) {
+        return d.account_code + " - " + d.account_name;
+      }
+      if (d.account_name) return d.account_name;
+      return "—";
+    }
+
     function renderDrivers(list) {
       const tbody = document.getElementById("driversTableBody");
       const cards = document.getElementById("driversCards");
@@ -411,12 +442,15 @@
       cards.innerHTML = "";
 
       list.forEach((d, i) => {
+        const accountLabel = getDriverAccountLabel(d);
+
         const tr = `
           <tr>
             <td>${i + 1}</td>
             <td>${d.name}</td>
             <td>${d.phone || "—"}</td>
             <td>${d.license_no || "—"}</td>
+            <td class="td-account">${accountLabel}</td>
             <td class="td-notes">${d.notes || "—"}</td>
             <td>
               <button class="btn-xs btn-xs-primary" onclick="goTo('/issue?driver_id=${d.id}')">تفويض</button>
@@ -431,6 +465,7 @@
             <div class="driver-card-name">${d.name}</div>
             <div>📞 ${d.phone || "—"}</div>
             <div>🚘 رخصة: ${d.license_no || "—"}</div>
+            <div>💼 الحساب: ${accountLabel}</div>
             <div>📝 ${d.notes || "—"}</div>
             <div class="card-actions" style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
               <button class="btn-xs btn-xs-primary" onclick="goTo('/issue?driver_id=${d.id}')">تفويض</button>
@@ -473,7 +508,7 @@
       }
 
       msgBox.style.color = "#111827";
-      msgBox.textContent = "⏳ جاري إضافة السائق وإنشاء الحساب...";
+      msgBox.textContent = "⏳ جاري إضافة السائق وإنشاء الحساب المحاسبي...";
 
       try {
         // 1) إضافة السائق نفسه
@@ -499,13 +534,25 @@
         const driverId = driver.id;
 
         let accountMessage = "";
-        // 2) إنشاء حساب تفصيلي للسائق تحت "حساب السائقين"
+
+        // 2) إنشاء حساب تفصيلي للسائق تحت "أصل / السائقين"
         if (driverId) {
           try {
+            // هنا بنحدد العقد اللي الباك إند هيمشي عليه بعدين:
+            // root_type  = "asset"  → نوع الحساب: أصل
+            // parent_key = "السائقين" → الحساب الرئيسي
+            // account_name = اسم السائق فقط
+            // auto_number = true     → الباك إند يرقّم الحساب (1101, 1102, ...)
             const accRes = await fetch("/api/accounts/driver", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ driver_id: driverId })
+              body: JSON.stringify({
+                driver_id: driverId,
+                driver_name: driver.name || name,
+                root_type: "asset",
+                parent_key: "السائقين",
+                auto_number: true
+              })
             });
             const accData = await accRes.json();
 
@@ -513,7 +560,7 @@
               if (accData.already_exists) {
                 accountMessage = " (الحساب الخاص بالسائق كان موجود مسبقًا في دليل الحسابات).";
               } else {
-                accountMessage = " وتم إنشاء حساب تفصيلي للسائق في شجرة 'حساب السائقين'.";
+                accountMessage = " وتم إنشاء حساب تفصيلي للسائق في شجرة: أصل / السائقين / " + (driver.name || name) + ".";
               }
             } else {
               accountMessage = " ولكن لم يتم إنشاء الحساب المحاسبي للسائق: " + (accData.error || "خطأ غير معروف");

@@ -136,10 +136,8 @@
       if (username === VALID_USER && password === VALID_PASS) {
         errorBox.textContent = "";
         // توجيه مباشر إلى لوحة التحكم
-       // window.location.href = "dashboard.html";
-       function goTo(page) {
-                window.location.href = page;
-               }
+        window.location.href = "dashboard.html";
+ 
       } else {
         errorBox.textContent = "❌ اسم المستخدم أو كلمة المرور غير صحيحة.";
       }
@@ -147,5 +145,6 @@
   </script>
 </body>
 </html>
+
 
 

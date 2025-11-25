@@ -334,28 +334,13 @@ class JournalLine(db.Model):
     account = db.relationship("Account", backref="lines", lazy=True)
 
     def to_dict(self):
-        """
-        نرجّع معلومات أكثر عن الحساب عشان:
-        - صفحة العمليات operations.html
-        - اليومية العامة general.html
-        - أي صفحات تانية تحتاج اسم/كود الحساب
-        """
-        acc = self.account
-        acc_id = self.account_id
-        acc_name = acc.name if acc else None
-        # بنستخدم ID كـ "كود" مبدئيًا (ممكن بعدين نضيف عمود code فعلي لو حبيت)
-        acc_code = str(acc.id) if acc else (str(acc_id) if acc_id else None)
-
         return {
             "id": self.id,
             "journal_entry_id": self.journal_entry_id,
-            "account_id": acc_id,
-            # حقول للحساب عشان الـ Frontend:
-            "account_name": acc_name,
-            "account_code": acc_code,
-            # نفس المعلومة بأسماء عامة (احتياطي)
-            "name": acc_name,
-            "code": acc_code,
+            "account_id": self.account_id,
+            # ✅ عشان صفحة العمليات تقدر تعرض اسم الحساب وكوده
+            "account_name": self.account.name if self.account else None,
+            "account_code": str(self.account.id) if self.account else None,
             "debit": float(self.debit or 0),
             "credit": float(self.credit or 0),
         }
@@ -585,12 +570,6 @@ def receipt_page():
 @app.route("/operations")
 def operations_page():
     return render_template("operations.html")
-
-
-@app.route("/journal-list")
-def journal_list_page():
-    """صفحة عرض القيود اليدوية (لو عندك journal-list.html)."""
-    return render_template("journal-list.html")
 
 
 @app.route("/api/health")

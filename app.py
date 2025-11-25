@@ -516,6 +516,12 @@ def create_journal_for_cash_receipt(receipt: CashReceipt):
 def index_page():
     return render_template("index.html")
 
+# صفحة لوحة التحكم بعد تسجيل الدخول
+@app.route("/dashboard")
+def dashboard_page():
+    return render_template("dashboard.html")
+
+
 
 @app.route("/issue")
 def issue_page():
@@ -1314,6 +1320,7 @@ with app.app_context():
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
 
 
 

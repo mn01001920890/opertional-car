@@ -673,6 +673,27 @@
       color: #9ca3af;
       margin-top: 2px;
     }
+
+    /* خيارات التجديد في المودال */
+    .modal-choice-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .modal-choice {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: #e5e7eb;
+    }
+
+    .modal-choice input[type="radio"] {
+      accent-color: #22c55e;
+      cursor: pointer;
+    }
   </style>
 </head>
 
@@ -851,6 +872,21 @@
         ></textarea>
         <div class="modal-hint">
           البيان سيظهر في اليومية / العمليات لتوضيح سبب وطبيعة الإقفال وربطه بالسائق والسيارة.
+        </div>
+
+        <div class="modal-section-title">بعد الإقفال</div>
+        <div class="modal-hint">
+          اختر هل تريد إنشاء تفويض جديد لنفس السيارة والسائق للأسبوع التالي، أم تحويل السيارة للحالة المتاحة بدون تجديد.
+        </div>
+        <div class="modal-choice-row">
+          <label class="modal-choice">
+            <input type="radio" name="renewOption" value="renew" checked />
+            ✅ تجديد التفويض للأسبوع التالي (السيارة تظل مؤجرة)
+          </label>
+          <label class="modal-choice">
+            <input type="radio" name="renewOption" value="no_renew" />
+            ⛔ لا، تحويل السيارة إلى متاحة بدون تفويض جديد
+          </label>
         </div>
       </div>
 
@@ -1132,7 +1168,7 @@
           <p class="small-note">
             عند الضغط على "إنهاء التفويض" سيتم فتح نافذة لمراجعة القيمة والبيان قبل الإقفال،
             ثم يقوم النظام من الباك إند بإنشاء <strong>قيد إقفال التفويض</strong> وربطه بشجرة الحسابات
-            وظهوره في صفحة العمليات، مع إمكانية إنشاء تفويض جديد للأسبوع التالي تلقائيًا.
+            وظهوره في صفحة العمليات، مع إمكانية إنشاء تفويض جديد للأسبوع التالي تلقائيًا أو تحويل السيارة لمتاحة حسب اختيارك.
           </p>
         `;
 
@@ -1284,6 +1320,13 @@
         auth.closing_note ||
         `إقفال تفويض رقم ${auth.id} للسيارة ${auth.car_number || ""} عن الفترة من ${periodStart} إلى ${periodEnd}`;
 
+      // إعادة اختيار التجديد الافتراضي = تجديد
+      const renewRadios = document.querySelectorAll('input[name="renewOption"]');
+      renewRadios.forEach(r => {
+        if (r.value === "renew") r.checked = true;
+        else r.checked = false;
+      });
+
       // إظهار المودال
       document.getElementById("closeModalOverlay").style.display = "flex";
       closeAmountInput.focus();
@@ -1324,7 +1367,20 @@
 
       const noteStr = (noteInput.value || "").trim();
 
-      if (!window.confirm("هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان وتسجيل القيد للأسبوع؟")) {
+      // قراءة اختيار التجديد
+      const renewRadios = document.querySelectorAll('input[name="renewOption"]');
+      let localRenew = true; // الافتراضي تجديد
+      renewRadios.forEach(r => {
+        if (r.checked && r.value === "no_renew") {
+          localRenew = false;
+        }
+      });
+
+      const confirmText = localRenew
+        ? "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان مع إنشاء تفويض جديد للأسبوع التالي وتسجيل القيد؟"
+        : "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان وتحويل السيارة إلى متاحة بدون تفويض جديد وتسجيل القيد؟";
+
+      if (!window.confirm(confirmText)) {
         return;
       }
 
@@ -1338,13 +1394,14 @@
         // - تحديث التفويض (closed_amount, closing_note, close_date)
         // - إنشاء قيد إقفال في اليومية العامة حسب شجرة الحسابات
         // - ربط القيد بصفحة العمليات
-        // - إنشاء تفويض جديد للأسبوع التالي لنفس السيارة والسائق
+        // - إنشاء تفويض جديد للأسبوع التالي لنفس السيارة والسائق في حالة التجديد
         const res = await fetch(`/api/authorizations/${pendingCloseAuth.id}/end`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             closed_amount: amountNum,
-            closing_note: noteStr
+            closing_note: noteStr,
+            renew: localRenew
           })
         });
 
@@ -1361,14 +1418,17 @@
           return;
         }
 
+        // القيمة النهائية لقرار التجديد من الباك إند (لو رجع)
+        const serverRenew = typeof data.renew === "boolean" ? data.renew : localRenew;
+
         // إزالة التفويض المنتهي من القائمة الحالية
         allAuthorizations = allAuthorizations.filter(
           a => String(a.id) !== String(pendingCloseAuth.id)
         );
 
-        // ✅ إضافة التفويض الجديد للأسبوع التالي (لو راجع من الباك إند)
+        // ✅ إضافة التفويض الجديد للأسبوع التالي (لو راجع من الباك إند وتم اختياره)
         const newAuth = data.new_authorization;
-        if (newAuth && !newAuth.close_date) {
+        if (serverRenew && newAuth && !newAuth.close_date) {
           allAuthorizations.push(newAuth);
         }
 
@@ -1394,19 +1454,47 @@
           pendingCloseAuth.id;
 
         const opsUrl = `/operations?type=auth_close&auth_id=${closedAuthId}`;
-        const linkHtml = `
+        const opsLinkHtml = `
           <a href="${opsUrl}"
              style="margin-right:8px;color:#1d4ed8;text-decoration:underline;font-weight:600;">
             📄 عرض هذا القيد في صفحة العمليات
           </a>
         `;
 
-        const htmlMessage = `✅ تم إقفال التفويض وتسجيل القيد للأسبوع المحاسبي${msgExtra}.<br>${linkHtml}`;
+        // تجهيز لينك سند التحصيل التلقائي من suggested_receipt
+        let receiptLinkHtml = "";
+        const sr = data.suggested_receipt;
+        if (sr && sr.authorization_id) {
+          const params = new URLSearchParams();
+          params.set("authorization_id", sr.authorization_id);
+          if (sr.driver_id != null) params.set("driver_id", sr.driver_id);
+          if (sr.driver_name) params.set("driver_name", sr.driver_name);
+          if (sr.default_amount != null) params.set("amount", sr.default_amount);
+          if (sr.description) params.set("description", sr.description);
+
+          const receiptUrl = `/receipt?${params.toString()}`;
+          receiptLinkHtml = `
+            <a href="${receiptUrl}"
+               style="margin-right:8px;color:#15803d;text-decoration:underline;font-weight:600;">
+              🧾 إنشاء سند تحصيل تلقائي لهذا التفويض
+            </a>
+          `;
+        }
+
+        const baseText =
+          data.message ||
+          (serverRenew
+            ? "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي وتسجيل القيد للأسبوع المحاسبي"
+            : "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة وتسجيل القيد للأسبوع المحاسبي");
+
+        const htmlMessage = `${baseText}${msgExtra}.<br>${opsLinkHtml}${
+          receiptLinkHtml ? "<br>" + receiptLinkHtml : ""
+        }`;
 
         // إخفاء المودال بعد الحساب
         cancelCloseModal();
 
-        // ✅ عرض رسالة فيها لينك مباشر لصفحة العمليات
+        // ✅ عرض رسالة فيها لينك مباشر لصفحة العمليات + سند التحصيل
         showStatus(htmlMessage, false);
 
       } catch (err) {

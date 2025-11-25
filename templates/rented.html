@@ -578,7 +578,7 @@
 
     .modal-row {
       display: flex;
-      justify-content: space بين;
+      justify-content: space-between;
       gap: 6px;
       margin-bottom: 4px;
     }
@@ -703,10 +703,11 @@
     <h2>السيارات المؤجرة حاليًا</h2>
     <p class="subtitle">
       هذه الشاشة تعرض <strong>كل التفويضات النشطة</strong> (لم يتم إنهاؤها بعد)، مع تمييز
-      <strong>التفويضات التي تجاوزت نهاية الأسبوع (الجمعة)</strong> باللون الأحمر وترتيبها في بداية الصفحة.
+      <strong>التفويضات التي تجاوزت نهاية الأسبوع المحاسبي (الجمعة)</strong> باللون الأحمر وترتيبها في بداية الصفحة.
       <br/>
       عدد الأيام المحاسبية محسوب من <strong>تاريخ بداية التفويض (start_date)</strong> حتى
-      <strong>نهاية الجمعة المحاسبية (planned_end)</strong> شامل يوم البداية.
+      <strong>نهاية الجمعة المحاسبية (planned_end)</strong> شامل يوم البداية، ويتم استخدامه لاحقًا
+      في <strong>قيد إقفال التفويض</strong> في صفحة العمليات ودفتر الأستاذ وفق شجرة الحسابات.
     </p>
 
     <!-- شريط الفلترة والعداد -->
@@ -837,7 +838,8 @@
           placeholder="اكتب القيمة النهائية للتفويض عند الإقفال"
         />
         <div class="modal-hint">
-          يمكنك تعديل هذه القيمة (زيادة أو تخفيض) حسب الواقع الفعلي قبل تسجيل القيد المحاسبي.
+          يمكنك تعديل هذه القيمة (زيادة أو تخفيض) حسب الواقع الفعلي قبل تسجيل <strong>قيد إقفال التفويض</strong>
+          الذي سيظهر في صفحة العمليات ودفتر الأستاذ وفق شجرة الحسابات (مثلاً: إيراد إيجار سيارات / حساب السائق).
         </div>
 
         <div class="modal-section-title">بيان الإقفال</div>
@@ -847,7 +849,7 @@
           placeholder="مثال: إقفال تفويض أسبوعي للسيارة رقم ... عن الفترة من ... إلى ..."
         ></textarea>
         <div class="modal-hint">
-          البيان سيظهر في اليومية / العمليات لتوضيح سبب وطبيعة الإقفال.
+          البيان سيظهر في اليومية / العمليات لتوضيح سبب وطبيعة الإقفال وربطه بالسائق والسيارة.
         </div>
       </div>
 
@@ -859,7 +861,7 @@
           class="modal-btn confirm"
           onclick="confirmCloseAuthorization()"
         >
-          ✅ تأكيد الإقفال وإنشاء تفويض جديد
+          ✅ تأكيد الإقفال وتسجيل القيد للأسبوع
         </button>
       </div>
     </div>
@@ -940,7 +942,7 @@
         bar.style.display = "none";
         return;
       }
-      bar.innerHTML = message; // ← هنا بدّلنا من textContent إلى innerHTML
+      bar.innerHTML = message;
       bar.className = "status-bar " + (isError ? "err" : "ok");
       bar.style.display = "block";
     }
@@ -1128,7 +1130,8 @@
 
           <p class="small-note">
             عند الضغط على "إنهاء التفويض" سيتم فتح نافذة لمراجعة القيمة والبيان قبل الإقفال،
-            ثم تسجيل القيد المحاسبي وإنشاء تفويض جديد للأسبوع التالي تلقائيًا.
+            ثم يقوم النظام من الباك إند بإنشاء <strong>قيد إقفال التفويض</strong> وربطه بشجرة الحسابات
+            وظهوره في صفحة العمليات، مع إمكانية إنشاء تفويض جديد للأسبوع التالي تلقائيًا.
           </p>
         `;
 
@@ -1290,7 +1293,7 @@
       document.getElementById("closeModalOverlay").style.display = "none";
       const btn = document.getElementById("confirmCloseBtn");
       btn.disabled = false;
-      btn.textContent = "✅ تأكيد الإقفال وإنشاء تفويض جديد";
+      btn.textContent = "✅ تأكيد الإقفال وتسجيل القيد للأسبوع";
     }
 
     // تأكيد الإقفال فعليًا (استدعاء API)
@@ -1320,7 +1323,7 @@
 
       const noteStr = (noteInput.value || "").trim();
 
-      if (!window.confirm("هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان؟")) {
+      if (!window.confirm("هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان وتسجيل القيد للأسبوع؟")) {
         return;
       }
 
@@ -1328,8 +1331,13 @@
         btn.disabled = true;
         btn.textContent = "جاري الإقفال...";
 
-        showStatus("جارِ إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي...", false);
+        showStatus("جارِ إقفال التفويض وحساب الأسبوع المحاسبي وتسجيل القيد...", false);
 
+        // الباك إند هنا مسؤول عن:
+        // - تحديث التفويض (closed_amount, closing_note, close_date)
+        // - إنشاء قيد إقفال في اليومية العامة حسب شجرة الحسابات
+        // - ربط القيد بصفحة العمليات
+        // - (اختياري) إنشاء تفويض جديد للأسبوع التالي إن لزم
         const res = await fetch(`/api/authorizations/${pendingCloseAuth.id}/end`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -1348,7 +1356,7 @@
           const msg = data.error || `لم يتم إقفال التفويض (HTTP ${res.status})`;
           showStatus(msg, true);
           btn.disabled = false;
-          btn.textContent = "✅ تأكيد الإقفال وإنشاء تفويض جديد";
+          btn.textContent = "✅ تأكيد الإقفال وتسجيل القيد للأسبوع";
           return;
         }
 
@@ -1386,7 +1394,7 @@
           </a>
         `;
 
-        const htmlMessage = `✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي${msgExtra}.<br>${linkHtml}`;
+        const htmlMessage = `✅ تم إقفال التفويض وتسجيل القيد للأسبوع المحاسبي${msgExtra}.<br>${linkHtml}`;
 
         // إخفاء المودال بعد الحساب
         cancelCloseModal();
@@ -1398,7 +1406,7 @@
         console.error(err);
         showStatus("تعذر إقفال التفويض. تأكد من أن الخادم يعمل ثم أعد المحاولة.", true);
         btn.disabled = false;
-        btn.textContent = "✅ تأكيد الإقفال وإنشاء تفويض جديد";
+        btn.textContent = "✅ تأكيد الإقفال وتسجيل القيد للأسبوع";
       }
     }
 

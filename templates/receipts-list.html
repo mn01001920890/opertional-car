@@ -653,6 +653,7 @@
       return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
     }
 
+    // ✅ هنا التعديل المهم: async + await
     async function loadReceipts() {
       showStatus("جارِ تحميل سندات التحصيل من الخادم...", false);
       document.getElementById("cardsContainer").innerHTML = "";
@@ -686,9 +687,7 @@
         if (!allReceipts.length) {
           showStatus("لا توجد سندات تحصيل مسجلة حتى الآن.", false);
         } else {
-          showStatus(`تم تحميل ${allReceipts.length} سند تحصيل بنجاح.`,
-            false
-          );
+          showStatus(`تم تحميل ${allReceipts.length} سند تحصيل بنجاح.`, false);
         }
       } catch (err) {
         console.error(err);

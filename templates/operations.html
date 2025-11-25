@@ -1,417 +1,3 @@
-<!DOCTYPE html> 
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <title>🧾 صفحة العمليات (دفتر القيود)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <style>
-    :root {
-      --bg1:#0d6efd;
-      --bg2:#6c63ff;
-      --card:#ffffff;
-      --ink:#111827;
-      --muted:#6b7280;
-      --border:#e5e7eb;
-      --accent:#0d6efd;
-      --danger:#dc2626;
-      --success:#16a34a;
-      --info:#0ea5e9;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
-      background: linear-gradient(135deg, var(--bg1), var(--bg2));
-      color: var(--ink);
-      display: flex;
-      justify-content: center;
-      padding: 16px;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 1200px;
-      background:
-        radial-gradient(circle at top left, rgba(255,255,255,0.35), transparent 55%),
-        radial-gradient(circle at bottom right, rgba(15,23,42,0.35), transparent 55%),
-        #0b1120;
-      border-radius: 18px;
-      padding: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
-      color: #f9fafb;
-    }
-
-    .header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-
-    .title-group h1 {
-      margin: 0;
-      font-size: 1.6rem;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .title-group p {
-      margin: 4px 0 0;
-      font-size: 0.9rem;
-      color: #e5e7eb;
-    }
-
-    .top-buttons {
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-    }
-
-    .btn-back,
-    .btn-nav {
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(148,163,184,0.6);
-      background: rgba(15,23,42,0.85);
-      color: #e5e7eb;
-      cursor: pointer;
-      font-size: 0.9rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: 0.2s ease;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-
-    .btn-back:hover,
-    .btn-nav:hover {
-      background: rgba(15,23,42,1);
-      transform: translateY(-1px);
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 16px;
-    }
-
-    .card {
-      background: rgba(15,23,42,0.92);
-      border-radius: 14px;
-      padding: 14px 16px;
-      border: 1px solid rgba(148,163,184,0.4);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      gap: 10px;
-    }
-
-    .card-header h2 {
-      margin: 0;
-      font-size: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .card-header span.badge {
-      padding: 3px 9px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      background: rgba(37,99,235,0.12);
-      border: 1px solid rgba(59,130,246,0.4);
-      color: #dbeafe;
-    }
-
-    .filters {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    @media (max-width: 900px) {
-      .filters {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 600px) {
-      .filters {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    label {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 0.78rem;
-      color: #e5e7eb;
-    }
-
-    input[type="text"],
-    input[type="date"],
-    select {
-      width: 100%;
-      padding: 6px 9px;
-      border-radius: 9px;
-      border: 1px solid rgba(148,163,184,0.6);
-      background: rgba(15,23,42,0.9);
-      color: #f9fafb;
-      font-size: 0.85rem;
-      outline: none;
-      transition: 0.15s ease;
-    }
-
-    input[type="text"]:focus,
-    input[type="date"]:focus,
-    select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(37,99,235,0.4);
-    }
-
-    .hint {
-      font-size: 0.78rem;
-      color: #9ca3af;
-      margin-top: 4px;
-    }
-
-    .badge-count {
-      font-size: 0.8rem;
-      color: #9ca3af;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-
-    thead {
-      background: rgba(15,23,42,0.95);
-    }
-
-    th, td {
-      padding: 6px 8px;
-      border-bottom: 1px solid rgba(55,65,81,0.7);
-      text-align: right;
-      white-space: nowrap;
-      vertical-align: top;
-    }
-
-    th {
-      font-weight: 600;
-      color: #e5e7eb;
-      font-size: 0.8rem;
-    }
-
-    tbody tr:nth-child(odd) {
-      background: rgba(15,23,42,0.75);
-    }
-
-    tbody tr:nth-child(even) {
-      background: rgba(15,23,42,0.55);
-    }
-
-    tbody tr:hover {
-      background: rgba(37,99,235,0.22);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 12px 4px;
-      font-size: 0.85rem;
-      color: #9ca3af;
-    }
-
-    .pill-op {
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      border: 1px solid rgba(148,163,184,0.7);
-      color: #e5e7eb;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .pill-op.auth {
-      border-color:#22c55e;
-      color:#bbf7d0;
-    }
-
-    .pill-op.receipt {
-      border-color:#0ea5e9;
-      color:#bae6fd;
-    }
-
-    .pill-op.manual {
-      border-color:#a855f7;
-      color:#e9d5ff;
-    }
-
-    .amount-cell {
-      font-family: "SF Mono","Cascadia Code",monospace;
-    }
-
-    .ref-main {
-      font-family: "SF Mono","Cascadia Code",monospace;
-      font-size: 0.8rem;
-      color:#e5e7eb;
-    }
-
-    .subtext {
-      font-size: 0.78rem;
-      color:#9ca3af;
-    }
-
-    .acc-name {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color:#e5e7eb;
-    }
-
-    .acc-code {
-      font-size: 0.75rem;
-      color:#9ca3af;
-    }
-
-    /* تظليل صف عند الفوكس من URL */
-    .row-highlight {
-      outline: 2px solid #facc15;
-      box-shadow: 0 0 0 2px rgba(250,204,21,0.5);
-    }
-  </style>
-</head>
-
-<body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <div class="title-group">
-        <h1>🧾 صفحة العمليات (قيود اليومية)</h1>
-        <p>
-          هنا يظهر كل <strong>القيود المحاسبية</strong> (مدين/دائن) الناتجة عن: إقفال التفويض، سند التحصيل النقدي، أو القيود اليدوية من اليومية العامة.
-        </p>
-      </div>
-      <div class="top-buttons">
-        <a href="/" class="btn-back">
-          <span>🏠</span>
-          <span>الرئيسية</span>
-        </a>
-        <a href="/accounts" class="btn-nav">
-          <span>📒</span>
-          <span>دليل الحسابات</span>
-        </a>
-        <a href="/ledger" class="btn-nav">
-          <span>📑</span>
-          <span>دفتر الأستاذ</span>
-        </a>
-        <a href="/general" class="btn-nav">
-          <span>📓</span>
-          <span>اليومية العامة</span>
-        </a>
-        <a href="/receipt" class="btn-nav">
-          <span>🧾</span>
-          <span>سند تحصيل</span>
-        </a>
-      </div>
-    </div>
-
-    <div class="layout">
-      <!-- فلاتر -->
-      <div class="card">
-        <div class="card-header">
-          <h2>🔍 فلاتر القيود</h2>
-          <span class="badge-count" id="operationsCount">—</span>
-        </div>
-        <div class="card-body">
-          <div class="filters">
-            <div>
-              <label for="filterType">مصدر العملية</label>
-              <select id="filterType">
-                <option value="all">الكل</option>
-                <option value="auth_close">إقفال تفويض</option>
-                <option value="receipt">سند تحصيل نقدي</option>
-                <option value="manual">قيد يدوي من اليومية</option>
-              </select>
-            </div>
-
-            <div>
-              <label for="filterFromDate">من تاريخ</label>
-              <input type="date" id="filterFromDate" />
-            </div>
-
-            <div>
-              <label for="filterToDate">إلى تاريخ</label>
-              <input type="date" id="filterToDate" />
-            </div>
-
-            <div>
-              <label for="filterSearch">بحث (حساب / سائق / وصف / مرجع)</label>
-              <input type="text" id="filterSearch" placeholder="اكتب جزء من اسم الحساب أو السائق أو كلمة من البيان أو رقم المرجع" />
-            </div>
-          </div>
-
-          <div class="hint">
-            • كل سطر هنا يمثل <strong>قيد يومية كامل (مدين + دائن)</strong> قادم من إقفال التفويض أو سند التحصيل أو قيد يدوي.<br/>
-            • يمكنك فتح الصفحة من روابط أخرى مع فلاتر جاهزة باستخدام باراميترات URL مثل:
-            <code>?type=receipt&amp;journal_id=15</code> أو <code>?auth_id=10</code> أو <code>?receipt_id=3</code>.
-          </div>
-        </div>
-      </div>
-
-      <!-- جدول العمليات -->
-      <div class="card">
-        <div class="card-header">
-          <h2>📋 قائمة القيود المحاسبية</h2>
-          <span class="badge">Journal Operations Log</span>
-        </div>
-        <div class="card-body">
-          <div style="max-height: 420px; overflow: auto; border-radius: 10px; border: 1px solid rgba(55,65,81,0.7);">
-            <table>
-              <thead>
-                <tr>
-                  <th># رقم القيد</th>
-                  <th>التاريخ</th>
-                  <th>نوع العملية</th>
-                  <th>الأرقام (عملية / مرجع)</th>
-                  <th>الحساب المدين</th>
-                  <th>الحساب الدائن</th>
-                  <th>المبلغ</th>
-                  <th>وصف مختصر</th>
-                </tr>
-              </thead>
-              <tbody id="operationsTableBody">
-                <tr>
-                  <td colspan="8" class="empty-state">
-                    جاري تحميل القيود...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="hint" style="margin-top:8px;">
-            الترتيب الافتراضي من الأحدث إلى الأقدم. الفلاتر بالأعلى تضيق النتائج حسب المصدر أو التاريخ أو البحث.
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script>
     const urlParams = new URLSearchParams(window.location.search);
 
@@ -476,32 +62,44 @@
       return `<span class="${cls}"><span>${icon}</span><span>${label}</span></span>`;
     }
 
-    function buildOperationsRow(op, index) {
+    function buildAccountCellHtml(lines, roleLabel) {
+      if (!Array.isArray(lines) || lines.length === 0) {
+        return "—";
+      }
+      const first = lines[0];
+      const extraCount = lines.length - 1;
+
+      const hasId = !!first.account_id;
+      const linkStart = hasId
+        ? `<a href="/ledger?account_id=${first.account_id}" style="color:inherit;text-decoration:none;">`
+        : "";
+      const linkEnd = hasId ? `</a>` : "";
+
+      return `
+        ${linkStart}
+          <div class="acc-name">${first.account_name || "—"}</div>
+          <div class="acc-code">${first.account_code || ""}</div>
+          <div class="subtext">${roleLabel}: ${formatAmount(first.amount)}</div>
+          ${
+            extraCount > 0
+              ? `<div class="subtext">+ ${extraCount} حساب/ات أخرى في نفس القيد</div>`
+              : ""
+          }
+        ${linkEnd}
+      `;
+    }
+
+    function buildOperationsRow(op) {
       const dateStr   = formatDateForDisplay(op.date);
       const amountStr = formatAmount(op.amount);
-
       const rowId = `op-row-${op.id}`;
 
-      const debitHtml = op.debit
-        ? `
-          <div class="acc-name">${op.debit.account_name || "—"}</div>
-          <div class="acc-code">${op.debit.account_code || ""}</div>
-          <div class="subtext">مدين: ${formatAmount(op.debit.amount)}</div>
-        `
-        : "—";
-
-      const creditHtml = op.credit
-        ? `
-          <div class="acc-name">${op.credit.account_name || "—"}</div>
-          <div class="acc-code">${op.credit.account_code || ""}</div>
-          <div class="subtext">دائن: ${formatAmount(op.credit.amount)}</div>
-        `
-        : "—";
+      const debitHtml  = buildAccountCellHtml(op.debits, "مدين");
+      const creditHtml = buildAccountCellHtml(op.credits, "دائن");
 
       const mainRef = `قيد #${op.id}`;
       let subRef = op.ref_text || "";
 
-      // لو ref_text فاضي نعمل فallback حسب المصدر والـ IDs
       if (!subRef) {
         if (op.source_type === "auth_close" && op.ref_authorization_id) {
           subRef = `تفويض #${op.ref_authorization_id}`;
@@ -519,6 +117,15 @@
 
       const descShort = op.description || "—";
 
+      const extraSub =
+        op.driver_name || op.car_number
+          ? `<div class="subtext">${
+              op.driver_name ? "سائق: " + op.driver_name : ""
+            }${op.driver_name && op.car_number ? " | " : ""}${
+              op.car_number ? "سيارة: " + op.car_number : ""
+            }</div>`
+          : "";
+
       return `
         <tr id="${rowId}">
           <td>${op.id}</td>
@@ -530,15 +137,7 @@
           <td class="amount-cell">${amountStr}</td>
           <td>
             ${descShort}
-            ${
-              op.driver_name || op.car_number
-                ? `<div class="subtext">${
-                    op.driver_name ? "سائق: " + op.driver_name : ""
-                  }${op.driver_name && op.car_number ? " | " : ""}${
-                    op.car_number ? "سيارة: " + op.car_number : ""
-                  }</div>`
-                : ""
-            }
+            ${extraSub}
           </td>
         </tr>
       `;
@@ -568,14 +167,22 @@
         if (toDate && opDate && opDate > toDate) return false;
 
         if (searchVal) {
+          const debitText = (op.debits || [])
+            .map(d => (d.account_name || "") + " " + (d.account_code || ""))
+            .join(" ");
+          const creditText = (op.credits || [])
+            .map(c => (c.account_name || "") + " " + (c.account_code || ""))
+            .join(" ");
+
           const haystack = (
             (op.description || "") + " " +
             (op.driver_name || "") + " " +
             (op.car_number || "") + " " +
             (op.ref_text || "") + " " +
-            (op.debit ? (op.debit.account_name || "") + " " + (op.debit.account_code || "") : "") + " " +
-            (op.credit ? (op.credit.account_name || "") + " " + (op.credit.account_code || "") : "")
+            debitText + " " +
+            creditText
           ).toLowerCase();
+
           if (!haystack.includes(searchVal)) return false;
         }
 
@@ -599,8 +206,8 @@
       }
 
       operationsTableBody.innerHTML = "";
-      filteredOperations.forEach((op, idx) => {
-        operationsTableBody.insertAdjacentHTML("beforeend", buildOperationsRow(op, idx));
+      filteredOperations.forEach(op => {
+        operationsTableBody.insertAdjacentHTML("beforeend", buildOperationsRow(op));
       });
 
       operationsCount.textContent = `${filteredOperations.length} قيد`;
@@ -621,38 +228,43 @@
           source_type = "receipt";
         }
 
-        let debitLine  = null;
-        let creditLine = null;
+        const debits = [];
+        const credits = [];
+
         if (Array.isArray(je.lines)) {
           je.lines.forEach(ln => {
             const d = Number(ln.debit || 0);
             const c = Number(ln.credit || 0);
 
-            // نحاول نستنتج كود واسم الحساب لو مش مبعوتين من الـ API
-            const accCode = ln.account_code || ln.code || (ln.account_id ? ("#" + ln.account_id) : "");
-            const accName = ln.account_name || ln.name || (ln.account_id ? ("حساب رقم " + ln.account_id) : "");
+            const accId   = ln.account_id || ln.accountId || null;
+            const accCode = ln.account_code || ln.code || (accId ? ("#" + accId) : "");
+            const accName = ln.account_name || ln.name || (accId ? ("حساب رقم " + accId) : "");
 
-            if (d > 0 && !debitLine)  debitLine  = { 
-              account_code: accCode, 
-              account_name: accName, 
-              amount: d 
-            };
-            if (c > 0 && !creditLine) creditLine = { 
-              account_code: accCode, 
-              account_name: accName, 
-              amount: c 
-            };
+            if (d > 0) {
+              debits.push({
+                account_id: accId,
+                account_code: accCode,
+                account_name: accName,
+                amount: d
+              });
+            }
+            if (c > 0) {
+              credits.push({
+                account_id: accId,
+                account_code: accCode,
+                account_name: accName,
+                amount: c
+              });
+            }
           });
         }
 
-        const amount =
-          debitLine ? debitLine.amount :
-          (creditLine ? creditLine.amount : null);
+        const totalDebit  = debits.reduce((sum, l) => sum + (l.amount || 0), 0);
+        const totalCredit = credits.reduce((sum, l) => sum + (l.amount || 0), 0);
+        const amount = totalDebit || totalCredit || null;
 
-        // نستخدم ref_text من الباك إند لو متاحة
         let refText = je.ref_text || "";
         if (!refText) {
-          // fallback بسيط
           if (source_type === "auth_close" && je.ref_authorization_id) {
             refText = `تفويض رقم ${je.ref_authorization_id}`;
           } else if (source_type === "receipt" && je.ref_receipt_id) {
@@ -664,21 +276,21 @@
 
         ops.push({
           id: je.id,
-          date: je.date,
+          date: je.date || je.created_at || je.createdAt || null,
           description: je.description || "",
           source_type,
           ref_authorization_id: je.ref_authorization_id || null,
           ref_receipt_id: je.ref_receipt_id || null,
           driver_name: je.driver_name || "",
           car_number: je.car_number || "",
-          debit: debitLine,
-          credit: creditLine,
+          debits,
+          credits,
           amount,
           ref_text: refText
         });
       });
 
-      // ترتيب من الأحدث للأقدم
+      // ترتيب من الأحدث للأقدم حسب التاريخ
       ops.sort((a, b) => {
         const da = parseDateStr(a.date);
         const db = parseDateStr(b.date);
@@ -692,14 +304,12 @@
 
     async function loadOperations() {
       try {
-        // نعتمد فقط على قيود اليومية من الـ API
         const res = await fetch("/api/journal_entries");
         if (!res.ok) throw new Error("HTTP " + res.status);
         const journalEntries = await res.json();
 
         operations = mapJournalEntriesToOps(journalEntries);
 
-        // نطبّق فلاتر أولية من URL قبل أول render
         applyInitialURLFilters();
         applyFilters();
       } catch (err) {
@@ -766,14 +376,10 @@
       }
     }
 
-    // ربط الفلاتر
     filterType.addEventListener("change", applyFilters);
     filterFromDate.addEventListener("change", applyFilters);
     filterToDate.addEventListener("change", applyFilters);
     filterSearch.addEventListener("input", applyFilters);
 
-    // أول ما الصفحة تفتح
     loadOperations();
   </script>
-</body>
-</html>

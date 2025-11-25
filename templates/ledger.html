@@ -81,7 +81,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: 0.2s.ease;
+      transition: 0.2s ease;
       text-decoration: none;
     }
 
@@ -484,9 +484,9 @@
 
           <div class="filter-row">
             <div class="field">
-              <label for="accountSearch">بحث عن حساب بالاسم</label>
-              <input id="accountSearch" type="text" placeholder="اكتب جزء من اسم الحساب لسرعة الوصول..." />
-              <div class="hint">مثال: "سائقين" أو "إيراد".</div>
+              <label for="accountSearch">بحث عن حساب بالاسم أو الكود</label>
+              <input id="accountSearch" type="text" placeholder="اكتب جزء من اسم الحساب أو الكود..." />
+              <div class="hint">مثال: "1101" أو "سائقين" أو "إيراد".</div>
             </div>
             <div class="field">
               <label class="small-label">حسابات متاحة</label>
@@ -655,7 +655,26 @@
         const res = await fetch("/api/accounts");
         if (!res.ok) throw new Error("error");
         const data = await res.json();
-        allAccounts = Array.isArray(data) ? data : [];
+        let list = Array.isArray(data) ? data : [];
+
+        // لو فيه is_group → نستخدم فقط الحسابات الفرعية (is_group = false)
+        if (Array.isArray(list) && list.length > 0 && "is_group" in list[0]) {
+          list = list.filter(acc => acc.is_group === false);
+        }
+
+        // ترتيب الحسابات بالكود لو موجود، ثم الاسم
+        list.sort((a, b) => {
+          const ac = (a.code || "").toString();
+          const bc = (b.code || "").toString();
+          if (ac && bc && ac !== bc) {
+            return ac.localeCompare(bc, "ar");
+          }
+          const an = (a.name || "").toString();
+          const bn = (b.name || "").toString();
+          return an.localeCompare(bn, "ar");
+        });
+
+        allAccounts = list;
         accountsCountHint.textContent = `${allAccounts.length} حساب/حسابات متاحة`;
         populateAccountsSelect();
       } catch (err) {
@@ -677,7 +696,9 @@
       list.forEach(acc => {
         const opt = document.createElement("option");
         opt.value = acc.id;
-        opt.textContent = acc.name;
+        const code = acc.code ? String(acc.code).trim() : "";
+        const name = acc.name || "";
+        opt.textContent = code ? `${code} — ${name}` : name;
         accountSelect.appendChild(opt);
       });
 
@@ -695,9 +716,11 @@
         populateAccountsSelect();
         return;
       }
-      const filtered = allAccounts.filter(acc =>
-        (acc.name || "").toLowerCase().includes(term)
-      );
+      const filtered = allAccounts.filter(acc => {
+        const name = (acc.name || "").toLowerCase();
+        const code = (acc.code || "").toString().toLowerCase();
+        return name.includes(term) || code.includes(term);
+      });
       populateAccountsSelect(filtered);
     });
 

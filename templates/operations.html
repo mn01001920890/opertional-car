@@ -1,385 +1,388 @@
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
 
-    const filterType      = document.getElementById("filterType");
-    const filterFromDate  = document.getElementById("filterFromDate");
-    const filterToDate    = document.getElementById("filterToDate");
-    const filterSearch    = document.getElementById("filterSearch");
-    const operationsTableBody = document.getElementById("operationsTableBody");
-    const operationsCount = document.getElementById("operationsCount");
+  const filterType      = document.getElementById("filterType");
+  const filterFromDate  = document.getElementById("filterFromDate");
+  const filterToDate    = document.getElementById("filterToDate");
+  const filterSearch    = document.getElementById("filterSearch");
+  const operationsTableBody = document.getElementById("operationsTableBody");
+  const operationsCount = document.getElementById("operationsCount");
 
-    let operations = [];      // كل القيود بعد الماب
-    let filteredOperations = [];
+  let operations = [];      // كل القيود بعد الماب
+  let filteredOperations = [];
 
-    function parseDateStr(dateStr) {
-      if (!dateStr) return null;
-      try {
-        // نفترض الشكل: "YYYY-MM-DD HH:MM:SS"
-        return new Date(dateStr.replace(" ", "T"));
-      } catch {
-        return null;
-      }
+  function parseDateStr(dateStr) {
+    if (!dateStr) return null;
+    try {
+      // نفترض الشكل: "YYYY-MM-DD HH:MM:SS"
+      return new Date(dateStr.replace(" ", "T"));
+    } catch {
+      return null;
+    }
+  }
+
+  function formatDateForDisplay(dateStr) {
+    if (!dateStr) return "—";
+    const d = parseDateStr(dateStr);
+    if (!d || isNaN(d.getTime())) return dateStr;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  }
+
+  function formatAmount(amount) {
+    if (amount === null || amount === undefined) return "—";
+    const num = Number(amount);
+    if (isNaN(num)) return "—";
+    return num.toLocaleString("ar-EG", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function typePill(sourceType) {
+    let cls = "pill-op";
+    let label = "";
+    let icon = "";
+
+    if (sourceType === "auth_close") {
+      cls += " auth";
+      label = "إقفال تفويض";
+      icon = "🚗";
+    } else if (sourceType === "receipt") {
+      cls += " receipt";
+      label = "سند تحصيل نقدي";
+      icon = "💵";
+    } else { // manual / غيره
+      cls += " manual";
+      label = "قيد يدوي";
+      icon = "📘";
     }
 
-    function formatDateForDisplay(dateStr) {
-      if (!dateStr) return "—";
-      const d = parseDateStr(dateStr);
-      if (!d || isNaN(d.getTime())) return dateStr;
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      const hh = String(d.getHours()).padStart(2, "0");
-      const mi = String(d.getMinutes()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+    return `<span class="${cls}"><span>${icon}</span><span>${label}</span></span>`;
+  }
+
+  function buildAccountCellHtml(lines, roleLabel) {
+    if (!Array.isArray(lines) || lines.length === 0) {
+      return "—";
     }
+    const first = lines[0];
+    const extraCount = lines.length - 1;
 
-    function formatAmount(amount) {
-      if (amount === null || amount === undefined) return "—";
-      const num = Number(amount);
-      if (isNaN(num)) return "—";
-      return num.toLocaleString("ar-EG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
+    const hasId = !!first.account_id;
+    const linkStart = hasId
+      ? `<a href="/ledger?account_id=${first.account_id}" style="color:inherit;text-decoration:none;">`
+      : "";
+    const linkEnd = hasId ? `</a>` : "";
 
-    function typePill(sourceType) {
-      let cls = "pill-op";
-      let label = "";
-      let icon = "";
-
-      if (sourceType === "auth_close") {
-        cls += " auth";
-        label = "إقفال تفويض";
-        icon = "🚗";
-      } else if (sourceType === "receipt") {
-        cls += " receipt";
-        label = "سند تحصيل نقدي";
-        icon = "💵";
-      } else { // manual / غيره
-        cls += " manual";
-        label = "قيد يدوي";
-        icon = "📘";
-      }
-
-      return `<span class="${cls}"><span>${icon}</span><span>${label}</span></span>`;
-    }
-
-    function buildAccountCellHtml(lines, roleLabel) {
-      if (!Array.isArray(lines) || lines.length === 0) {
-        return "—";
-      }
-      const first = lines[0];
-      const extraCount = lines.length - 1;
-
-      const hasId = !!first.account_id;
-      const linkStart = hasId
-        ? `<a href="/ledger?account_id=${first.account_id}" style="color:inherit;text-decoration:none;">`
-        : "";
-      const linkEnd = hasId ? `</a>` : "";
-
-      return `
-        ${linkStart}
-          <div class="acc-name">${first.account_name || "—"}</div>
-          <div class="acc-code">${first.account_code || ""}</div>
-          <div class="subtext">${roleLabel}: ${formatAmount(first.amount)}</div>
-          ${
-            extraCount > 0
-              ? `<div class="subtext">+ ${extraCount} حساب/ات أخرى في نفس القيد</div>`
-              : ""
-          }
-        ${linkEnd}
-      `;
-    }
-
-    function buildOperationsRow(op) {
-      const dateStr   = formatDateForDisplay(op.date);
-      const amountStr = formatAmount(op.amount);
-      const rowId = `op-row-${op.id}`;
-
-      const debitHtml  = buildAccountCellHtml(op.debits, "مدين");
-      const creditHtml = buildAccountCellHtml(op.credits, "دائن");
-
-      const mainRef = `قيد #${op.id}`;
-      let subRef = op.ref_text || "";
-
-      if (!subRef) {
-        if (op.source_type === "auth_close" && op.ref_authorization_id) {
-          subRef = `تفويض #${op.ref_authorization_id}`;
-        } else if (op.source_type === "receipt" && op.ref_receipt_id) {
-          subRef = `سند تحصيل #${op.ref_receipt_id}`;
-        } else if (op.source_type === "manual") {
-          subRef = "قيد يدوي";
+    return `
+      ${linkStart}
+        <div class="acc-name">${first.account_name || "—"}</div>
+        <div class="acc-code">${first.account_code || ""}</div>
+        <div class="subtext">${roleLabel}: ${formatAmount(first.amount)}</div>
+        ${
+          extraCount > 0
+            ? `<div class="subtext">+ ${extraCount} حساب/ات أخرى في نفس القيد</div>`
+            : ""
         }
+      ${linkEnd}
+    `;
+  }
+
+  function buildOperationsRow(op) {
+    const dateStr   = formatDateForDisplay(op.date);
+    const amountStr = formatAmount(op.amount);
+    const rowId = `op-row-${op.id}`;
+
+    const debitHtml  = buildAccountCellHtml(op.debits, "مدين");
+    const creditHtml = buildAccountCellHtml(op.credits, "دائن");
+
+    const mainRef = `قيد #${op.id}`;
+    let subRef = op.ref_text || "";
+
+    if (!subRef) {
+      if (op.source_type === "auth_close" && op.ref_authorization_id) {
+        subRef = `تفويض #${op.ref_authorization_id}`;
+      } else if (op.source_type === "receipt" && op.ref_receipt_id) {
+        subRef = `سند تحصيل #${op.ref_receipt_id}`;
+      } else if (op.source_type === "manual") {
+        subRef = "قيد يدوي";
+      }
+    }
+
+    const refHtml = `
+      <div class="ref-main">${mainRef}</div>
+      ${subRef ? `<div class="subtext">${subRef}</div>` : ""}
+    `;
+
+    const descShort = op.description || "—";
+
+    const extraSub =
+      op.driver_name || op.car_number
+        ? `<div class="subtext">${
+            op.driver_name ? "سائق: " + op.driver_name : ""
+          }${op.driver_name && op.car_number ? " | " : ""}${
+            op.car_number ? "سيارة: " + op.car_number : ""
+          }</div>`
+        : "";
+
+    return `
+      <tr id="${rowId}">
+        <td>${op.id}</td>
+        <td>${dateStr}</td>
+        <td>${typePill(op.source_type)}</td>
+        <td>${refHtml}</td>
+        <td>${debitHtml}</td>
+        <td>${creditHtml}</td>
+        <td class="amount-cell">${amountStr}</td>
+        <td>
+          ${descShort}
+          ${extraSub}
+        </td>
+      </tr>
+    `;
+  }
+
+  function applyFilters() {
+    const typeVal    = filterType.value;
+    const fromVal    = filterFromDate.value;
+    const toVal      = filterToDate.value;
+    const searchVal  = (filterSearch.value || "").trim().toLowerCase();
+
+    let fromDate = null;
+    let toDate   = null;
+
+    if (fromVal) {
+      fromDate = new Date(fromVal + "T00:00:00");
+    }
+    if (toVal) {
+      toDate = new Date(toVal + "T23:59:59");
+    }
+
+    filteredOperations = operations.filter(op => {
+      if (typeVal !== "all" && op.source_type !== typeVal) return false;
+
+      const opDate = parseDateStr(op.date);
+      if (fromDate && opDate && opDate < fromDate) return false;
+      if (toDate && opDate && opDate > toDate) return false;
+
+      if (searchVal) {
+        const debitText = (op.debits || [])
+          .map(d => (d.account_name || "") + " " + (d.account_code || ""))
+          .join(" ");
+        const creditText = (op.credits || [])
+          .map(c => (c.account_name || "") + " " + (c.account_code || ""))
+          .join(" ");
+
+        const haystack = (
+          (op.description || "") + " " +
+          (op.driver_name || "") + " " +
+          (op.car_number || "") + " " +
+          (op.ref_text || "") + " " +
+          debitText + " " +
+          creditText
+        ).toLowerCase();
+
+        if (!haystack.includes(searchVal)) return false;
       }
 
-      const refHtml = `
-        <div class="ref-main">${mainRef}</div>
-        ${subRef ? `<div class="subtext">${subRef}</div>` : ""}
-      `;
+      return true;
+    });
 
-      const descShort = op.description || "—";
+    renderOperationsTable();
+  }
 
-      const extraSub =
-        op.driver_name || op.car_number
-          ? `<div class="subtext">${
-              op.driver_name ? "سائق: " + op.driver_name : ""
-            }${op.driver_name && op.car_number ? " | " : ""}${
-              op.car_number ? "سيارة: " + op.car_number : ""
-            }</div>`
-          : "";
-
-      return `
-        <tr id="${rowId}">
-          <td>${op.id}</td>
-          <td>${dateStr}</td>
-          <td>${typePill(op.source_type)}</td>
-          <td>${refHtml}</td>
-          <td>${debitHtml}</td>
-          <td>${creditHtml}</td>
-          <td class="amount-cell">${amountStr}</td>
-          <td>
-            ${descShort}
-            ${extraSub}
+  function renderOperationsTable() {
+    if (!filteredOperations || filteredOperations.length === 0) {
+      operationsTableBody.innerHTML = `
+        <tr>
+          <td colspan="8" class="empty-state">
+            لا توجد قيود مطابقة للفلاتر الحالية.
           </td>
         </tr>
       `;
+      operationsCount.textContent = "0 قيد";
+      return;
     }
 
-    function applyFilters() {
-      const typeVal    = filterType.value;
-      const fromVal    = filterFromDate.value;
-      const toVal      = filterToDate.value;
-      const searchVal  = (filterSearch.value || "").trim().toLowerCase();
+    operationsTableBody.innerHTML = "";
+    filteredOperations.forEach(op => {
+      operationsTableBody.insertAdjacentHTML("beforeend", buildOperationsRow(op));
+    });
 
-      let fromDate = null;
-      let toDate   = null;
+    operationsCount.textContent = `${filteredOperations.length} قيد`;
 
-      if (fromVal) {
-        fromDate = new Date(fromVal + "T00:00:00");
-      }
-      if (toVal) {
-        toDate = new Date(toVal + "T23:59:59");
-      }
+    // بعد الرسم نحاول نحدد صف معيّن من URL
+    focusRowFromURL();
+  }
 
-      filteredOperations = operations.filter(op => {
-        if (typeVal !== "all" && op.source_type !== typeVal) return false;
+  function mapJournalEntriesToOps(journalEntries) {
+    const ops = [];
 
-        const opDate = parseDateStr(op.date);
-        if (fromDate && opDate && opDate < fromDate) return false;
-        if (toDate && opDate && opDate > toDate) return false;
-
-        if (searchVal) {
-          const debitText = (op.debits || [])
-            .map(d => (d.account_name || "") + " " + (d.account_code || ""))
-            .join(" ");
-          const creditText = (op.credits || [])
-            .map(c => (c.account_name || "") + " " + (c.account_code || ""))
-            .join(" ");
-
-          const haystack = (
-            (op.description || "") + " " +
-            (op.driver_name || "") + " " +
-            (op.car_number || "") + " " +
-            (op.ref_text || "") + " " +
-            debitText + " " +
-            creditText
-          ).toLowerCase();
-
-          if (!haystack.includes(searchVal)) return false;
-        }
-
-        return true;
-      });
-
-      renderOperationsTable();
-    }
-
-    function renderOperationsTable() {
-      if (!filteredOperations || filteredOperations.length === 0) {
-        operationsTableBody.innerHTML = `
-          <tr>
-            <td colspan="8" class="empty-state">
-              لا توجد قيود مطابقة للفلاتر الحالية.
-            </td>
-          </tr>
-        `;
-        operationsCount.textContent = "0 قيد";
-        return;
+    (journalEntries || []).forEach(je => {
+      const source_type_raw = je.source_type || je.source || "manual";
+      let source_type = "manual";
+      if (source_type_raw === "auth_close" || source_type_raw === "authorization") {
+        source_type = "auth_close";
+      } else if (source_type_raw === "receipt") {
+        source_type = "receipt";
       }
 
-      operationsTableBody.innerHTML = "";
-      filteredOperations.forEach(op => {
-        operationsTableBody.insertAdjacentHTML("beforeend", buildOperationsRow(op));
-      });
+      const debits = [];
+      const credits = [];
 
-      operationsCount.textContent = `${filteredOperations.length} قيد`;
+      if (Array.isArray(je.lines)) {
+        je.lines.forEach(ln => {
+          const d = Number(ln.debit || 0);
+          const c = Number(ln.credit || 0);
 
-      // بعد الرسم نحاول نحدد صف معيّن من URL
-      focusRowFromURL();
-    }
+          const accId   = ln.account_id || ln.accountId || null;
+          const accCode = ln.account_code || ln.code || (accId ? ("#" + accId) : "");
+          const accName = ln.account_name || ln.name || (accId ? ("حساب رقم " + accId) : "");
 
-    function mapJournalEntriesToOps(journalEntries) {
-      const ops = [];
-
-      (journalEntries || []).forEach(je => {
-        const source_type_raw = je.source_type || je.source || "manual";
-        let source_type = "manual";
-        if (source_type_raw === "auth_close" || source_type_raw === "authorization") {
-          source_type = "auth_close";
-        } else if (source_type_raw === "receipt") {
-          source_type = "receipt";
-        }
-
-        const debits = [];
-        const credits = [];
-
-        if (Array.isArray(je.lines)) {
-          je.lines.forEach(ln => {
-            const d = Number(ln.debit || 0);
-            const c = Number(ln.credit || 0);
-
-            const accId   = ln.account_id || ln.accountId || null;
-            const accCode = ln.account_code || ln.code || (accId ? ("#" + accId) : "");
-            const accName = ln.account_name || ln.name || (accId ? ("حساب رقم " + accId) : "");
-
-            if (d > 0) {
-              debits.push({
-                account_id: accId,
-                account_code: accCode,
-                account_name: accName,
-                amount: d
-              });
-            }
-            if (c > 0) {
-              credits.push({
-                account_id: accId,
-                account_code: accCode,
-                account_name: accName,
-                amount: c
-              });
-            }
-          });
-        }
-
-        const totalDebit  = debits.reduce((sum, l) => sum + (l.amount || 0), 0);
-        const totalCredit = credits.reduce((sum, l) => sum + (l.amount || 0), 0);
-        const amount = totalDebit || totalCredit || null;
-
-        let refText = je.ref_text || "";
-        if (!refText) {
-          if (source_type === "auth_close" && je.ref_authorization_id) {
-            refText = `تفويض رقم ${je.ref_authorization_id}`;
-          } else if (source_type === "receipt" && je.ref_receipt_id) {
-            refText = `سند تحصيل رقم ${je.ref_receipt_id}`;
-          } else {
-            refText = "قيد يدوي";
+          if (d > 0) {
+            debits.push({
+              account_id: accId,
+              account_code: accCode,
+              account_name: accName,
+              amount: d
+            });
           }
-        }
-
-        ops.push({
-          id: je.id,
-          date: je.date || je.created_at || je.createdAt || null,
-          description: je.description || "",
-          source_type,
-          ref_authorization_id: je.ref_authorization_id || null,
-          ref_receipt_id: je.ref_receipt_id || null,
-          driver_name: je.driver_name || "",
-          car_number: je.car_number || "",
-          debits,
-          credits,
-          amount,
-          ref_text: refText
+          if (c > 0) {
+            credits.push({
+              account_id: accId,
+              account_code: accCode,
+              account_name: accName,
+              amount: c
+            });
+          }
         });
+      }
+
+      const totalDebit  = debits.reduce((sum, l) => sum + (l.amount || 0), 0);
+      const totalCredit = credits.reduce((sum, l) => sum + (l.amount || 0), 0);
+      const amount = totalDebit || totalCredit || null;
+
+      let refText = je.ref_text || "";
+      if (!refText) {
+        if (source_type === "auth_close" && je.ref_authorization_id) {
+          refText = `تفويض رقم ${je.ref_authorization_id}`;
+        } else if (source_type === "receipt" && je.ref_receipt_id) {
+          refText = `سند تحصيل رقم ${je.ref_receipt_id}`;
+        } else {
+          refText = "قيد يدوي";
+        }
+      }
+
+      ops.push({
+        id: je.id,
+        date: je.date || je.created_at || je.createdAt || null,
+        description: je.description || "",
+        source_type,
+        ref_authorization_id: je.ref_authorization_id || null,
+        ref_receipt_id: je.ref_receipt_id || null,
+        driver_name: je.driver_name || "",
+        car_number: je.car_number || "",
+        debits,
+        credits,
+        amount,
+        ref_text: refText
       });
+    });
 
-      // ترتيب من الأحدث للأقدم حسب التاريخ
-      ops.sort((a, b) => {
-        const da = parseDateStr(a.date);
-        const db = parseDateStr(b.date);
-        const na = da ? da.getTime() : 0;
-        const nb = db ? db.getTime() : 0;
-        return nb - na;
-      });
+    // ترتيب من الأحدث للأقدم حسب التاريخ
+    ops.sort((a, b) => {
+      const da = parseDateStr(a.date);
+      const db = parseDateStr(b.date);
+      const na = da ? da.getTime() : 0;
+      const nb = db ? db.getTime() : 0;
+      return nb - na;
+    });
 
-      return ops;
+    return ops;
+  }
+
+  async function loadOperations() {
+    try {
+      const res = await fetch("/api/journal_entries");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const journalEntries = await res.json();
+
+      operations = mapJournalEntriesToOps(journalEntries);
+
+      applyInitialURLFilters();
+      applyFilters();
+    } catch (err) {
+      console.error(err);
+      operationsTableBody.innerHTML = `
+        <tr>
+          <td colspan="8" class="empty-state">
+            ⚠️ حدث خطأ أثناء تحميل القيود، حاول تحديث الصفحة.
+          </td>
+        </tr>
+      `;
+      operationsCount.textContent = "خطأ في التحميل";
+    }
+  }
+
+  function applyInitialURLFilters() {
+    const typeParam = urlParams.get("type");
+    const fromParam = urlParams.get("from");
+    const toParam   = urlParams.get("to");
+    const qParam    = urlParams.get("q");
+
+    if (typeParam && ["auth_close","receipt","manual","all"].includes(typeParam)) {
+      filterType.value = typeParam;
     }
 
-    async function loadOperations() {
-      try {
-        const res = await fetch("/api/journal_entries");
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const journalEntries = await res.json();
+    if (fromParam) filterFromDate.value = fromParam;
+    if (toParam)   filterToDate.value   = toParam;
+    if (qParam)    filterSearch.value   = qParam;
+  }
 
-        operations = mapJournalEntriesToOps(journalEntries);
+  function focusRowFromURL() {
+    const authId    = urlParams.get("auth_id");
+    const receiptId = urlParams.get("receipt_id");
+    const journalId = urlParams.get("journal_id");
 
-        applyInitialURLFilters();
-        applyFilters();
-      } catch (err) {
-        console.error(err);
-        operationsTableBody.innerHTML = `
-          <tr>
-            <td colspan="8" class="empty-state">
-              ⚠️ حدث خطأ أثناء تحميل القيود، حاول تحديث الصفحة.
-            </td>
-          </tr>
-        `;
-        operationsCount.textContent = "خطأ في التحميل";
-      }
+    let targetOp = null;
+
+    if (journalId) {
+      targetOp = filteredOperations.find(
+        op => String(op.id) === String(journalId)
+      );
+    } else if (authId) {
+      targetOp = filteredOperations.find(
+        op => op.source_type === "auth_close" &&
+              String(op.ref_authorization_id) === String(authId)
+      );
+    } else if (receiptId) {
+      targetOp = filteredOperations.find(
+        op => op.source_type === "receipt" &&
+              String(op.ref_receipt_id) === String(receiptId)
+      );
     }
 
-    function applyInitialURLFilters() {
-      const typeParam = urlParams.get("type");
-      const fromParam = urlParams.get("from");
-      const toParam   = urlParams.get("to");
-      const qParam    = urlParams.get("q");
+    if (!targetOp) return;
 
-      if (typeParam && ["auth_close","receipt","manual","all"].includes(typeParam)) {
-        filterType.value = typeParam;
-      }
-
-      if (fromParam) filterFromDate.value = fromParam;
-      if (toParam)   filterToDate.value   = toParam;
-      if (qParam)    filterSearch.value   = qParam;
+    const rowDomId = `op-row-${targetOp.id}`;
+    const rowEl = document.getElementById(rowDomId);
+    if (rowEl) {
+      rowEl.classList.add("row-highlight");
+      rowEl.scrollIntoView({ behavior:"smooth", block:"center" });
+      setTimeout(() => {
+        rowEl.classList.remove("row-highlight");
+      }, 3500);
     }
+  }
 
-    function focusRowFromURL() {
-      const authId    = urlParams.get("auth_id");
-      const receiptId = urlParams.get("receipt_id");
-      const journalId = urlParams.get("journal_id");
+  filterType.addEventListener("change", applyFilters);
+  filterFromDate.addEventListener("change", applyFilters);
+  filterToDate.addEventListener("change", applyFilters);
+  filterSearch.addEventListener("input", applyFilters);
 
-      let targetOp = null;
-
-      if (journalId) {
-        targetOp = filteredOperations.find(
-          op => String(op.id) === String(journalId)
-        );
-      } else if (authId) {
-        targetOp = filteredOperations.find(
-          op => op.source_type === "auth_close" &&
-                String(op.ref_authorization_id) === String(authId)
-        );
-      } else if (receiptId) {
-        targetOp = filteredOperations.find(
-          op => op.source_type === "receipt" &&
-                String(op.ref_receipt_id) === String(receiptId)
-        );
-      }
-
-      if (!targetOp) return;
-
-      const rowDomId = `op-row-${targetOp.id}`;
-      const rowEl = document.getElementById(rowDomId);
-      if (rowEl) {
-        rowEl.classList.add("row-highlight");
-        rowEl.scrollIntoView({ behavior:"smooth", block:"center" });
-        setTimeout(() => {
-          rowEl.classList.remove("row-highlight");
-        }, 3500);
-      }
-    }
-
-    filterType.addEventListener("change", applyFilters);
-    filterFromDate.addEventListener("change", applyFilters);
-    filterToDate.addEventListener("change", applyFilters);
-    filterSearch.addEventListener("input", applyFilters);
-
-    loadOperations();
-  </script>
+  loadOperations();
+</script>

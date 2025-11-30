@@ -554,6 +554,8 @@
     const btnAddLine = document.getElementById("btnAddLine");
     const btnResetForm = document.getElementById("btnResetForm");
     const btnPrintEntry = document.getElementById("btnPrintEntry");
+    let shouldPrintAfterSave = false;
+
 
 
     // ضبط تاريخ اليوم مبدئيًا
@@ -751,10 +753,18 @@
       const d = String(today.getDate()).padStart(2, "0");
       jeDateInput.value = `${y}-${m}-${d}`;
     });
-    // 🖨️ طباعة القيد
-    btnPrintEntry.addEventListener("click", () => {
-      window.print();
-    });
+      // 🖨️ طباعة القيد بعد الحفظ
+      btnPrintEntry.addEventListener("click", () => {
+        // نقول للفورم: بعد الحفظ اطبع
+        shouldPrintAfterSave = true;
+        // نستعمل نفس مسار الحفظ (submit) بكل الفاليديشن
+        if (typeof journalForm.requestSubmit === "function") {
+          journalForm.requestSubmit();
+        } else {
+          journalForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+        }
+      });
+
 
     journalForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -849,16 +859,23 @@
 
         showFormMessage(msg, "success", true);
 
-        // إعادة تهيئة البنود
-        linesBody.innerHTML = "";
-        updateTotals();
-        jeDescInput.value = "";
+          // 🖨️ لو جاي من زر الطباعة، اطبع قبل ما نمسح القيد من الشاشة
+          if (shouldPrintAfterSave) {
+            window.print();
+            shouldPrintAfterSave = false; // نرجّع الفلاج لحالته الطبيعية
+          }
+          
+          // إعادة تهيئة البنود بعد الطباعة
+          linesBody.innerHTML = "";
+          updateTotals();
+          jeDescInput.value = "";
+          
+          // نضيف سطرين فاضيين جديدين للتسهيل
+          if (accounts.length > 0) {
+            addLineRow();
+            addLineRow();
+          }
 
-        // نضيف سطرين فاضيين جديدين للتسهيل
-        if (accounts.length > 0) {
-          addLineRow();
-          addLineRow();
-        }
       } catch (err) {
         showFormMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error", false);
       }
@@ -928,6 +945,7 @@
           </script>
 </body>
 </html>
+
 
 
 

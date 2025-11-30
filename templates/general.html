@@ -515,20 +515,16 @@
               </div>
             </div>
 
-                  <div class="actions">
-                          <button type="submit" class="btn btn-primary">
-                            💾 حفظ القيد
-                          </button>
-                        
-                          <button type="button" class="btn btn-ghost" id="btnResetForm">
-                            ♻️ مسح الحقول
-                          </button>
-                        
-                          <!-- 🖨️ زر طباعة القيد -->
-                          <button type="button" class="btn btn-ghost" id="btnPrintEntry">
-                            🖨️ طباعة القيد
-                          </button>
-                  </div>
+                 <div class="actions">
+                  <button type="submit" class="btn btn-primary">
+                    💾🖨️ حفظ وطباعة القيد
+                  </button>
+                
+                  <button type="button" class="btn btn-ghost" id="btnResetForm">
+                    ♻️ مسح الحقول
+                  </button>
+                </div>
+
 
 
             <div id="formMessage" class="message"></div>
@@ -553,8 +549,7 @@
     const journalForm = document.getElementById("journalForm");
     const btnAddLine = document.getElementById("btnAddLine");
     const btnResetForm = document.getElementById("btnResetForm");
-    const btnPrintEntry = document.getElementById("btnPrintEntry");
-    let shouldPrintAfterSave = false;
+ 
 
 
 
@@ -753,18 +748,7 @@
       const d = String(today.getDate()).padStart(2, "0");
       jeDateInput.value = `${y}-${m}-${d}`;
     });
-      // 🖨️ طباعة القيد بعد الحفظ
-      btnPrintEntry.addEventListener("click", () => {
-        // نقول للفورم: بعد الحفظ اطبع
-        shouldPrintAfterSave = true;
-        // نستعمل نفس مسار الحفظ (submit) بكل الفاليديشن
-        if (typeof journalForm.requestSubmit === "function") {
-          journalForm.requestSubmit();
-        } else {
-          journalForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-        }
-      });
-
+      
 
     journalForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -859,13 +843,10 @@
 
         showFormMessage(msg, "success", true);
 
-          // 🖨️ لو جاي من زر الطباعة، اطبع قبل ما نمسح القيد من الشاشة
-          if (shouldPrintAfterSave) {
-            window.print();
-            shouldPrintAfterSave = false; // نرجّع الفلاج لحالته الطبيعية
-          }
+          // 🖨️ اطبع القيد بعد ما اتحفظ بنجاح
+          window.print();
           
-          // إعادة تهيئة البنود بعد الطباعة
+          // بعد الطباعة نفضي البنود
           linesBody.innerHTML = "";
           updateTotals();
           jeDescInput.value = "";
@@ -875,6 +856,7 @@
             addLineRow();
             addLineRow();
           }
+
 
       } catch (err) {
         showFormMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error", false);
@@ -945,6 +927,7 @@
           </script>
 </body>
 </html>
+
 
 
 

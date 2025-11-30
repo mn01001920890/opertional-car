@@ -515,14 +515,21 @@
               </div>
             </div>
 
-            <div class="actions">
-              <button type="submit" class="btn btn-primary">
-                💾 حفظ القيد
-              </button>
-              <button type="button" class="btn btn-ghost" id="btnResetForm">
-                ♻️ مسح الحقول
-              </button>
-            </div>
+                  <div class="actions">
+                          <button type="submit" class="btn btn-primary">
+                            💾 حفظ القيد
+                          </button>
+                        
+                          <button type="button" class="btn btn-ghost" id="btnResetForm">
+                            ♻️ مسح الحقول
+                          </button>
+                        
+                          <!-- 🖨️ زر طباعة القيد -->
+                          <button type="button" class="btn btn-ghost" id="btnPrintEntry">
+                            🖨️ طباعة القيد
+                          </button>
+                  </div>
+
 
             <div id="formMessage" class="message"></div>
           </form>
@@ -546,6 +553,8 @@
     const journalForm = document.getElementById("journalForm");
     const btnAddLine = document.getElementById("btnAddLine");
     const btnResetForm = document.getElementById("btnResetForm");
+    const btnPrintEntry = document.getElementById("btnPrintEntry");
+
 
     // ضبط تاريخ اليوم مبدئيًا
     (function setToday() {
@@ -742,6 +751,10 @@
       const d = String(today.getDate()).padStart(2, "0");
       jeDateInput.value = `${y}-${m}-${d}`;
     });
+    // 🖨️ طباعة القيد
+    btnPrintEntry.addEventListener("click", () => {
+      window.print();
+    });
 
     journalForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -915,5 +928,6 @@
           </script>
 </body>
 </html>
+
 
 

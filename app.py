@@ -758,13 +758,13 @@ def get_active_authorizations():
     return jsonify([a.to_dict() for a in auths])
 
 
-# إنهاء تفويض (يستخدم من زر الإنهاء) ✅ نسخة محدثة مع اختيار التجديد
+# إنهاء تفويض (يستخدم من زر الإنهاء) ✅ نسخة محدثة مع اختيار التجديد + اختيار قيد محاسبي
 @app.route("/api/authorizations/<int:auth_id>/end", methods=["PATCH"])
 def end_authorization(auth_id):
     """
     إنهاء تفويض:
     - يقفل التفويض الحالي (close_date, closed_amount, closing_note, status="منتهية")
-    - ينشئ قيد إقفال تفويض في اليومية (دايمًا لو فيه مبلغ)
+    - (اختياري) ينشئ قيد إقفال تفويض في اليومية لو with_journal = true وكان فيه مبلغ
     - حسب اختيار الفرونت إند:
         * renew = true  ⇒ إنشاء تفويض جديد للأسبوع التالي + تظل السيارة "مؤجرة"
         * renew = false ⇒ عدم إنشاء تفويض جديد + تحويل السيارة إلى "متاحة"
@@ -783,10 +783,10 @@ def end_authorization(auth_id):
         data = request.get_json(silent=True) or {}
 
         # ✅ اختيار التجديد أو لا:
-        #  - renew (bool) أو renew_option في الـ body
         renew_raw = data.get("renew")
         if renew_raw is None:
-            renew_raw = data.get("renew_option")  # اسم بديل لو حبيت تستخدمه في الفرونت
+            # اسم بديل لو حبيت تستخدمه في الفرونت
+            renew_raw = data.get("renew_option")
 
         # القيمة الافتراضية = True عشان توافق السلوك القديم (تجديد تلقائي)
         renew = True
@@ -795,7 +795,26 @@ def end_authorization(auth_id):
         elif isinstance(renew_raw, (int, float)):
             renew = bool(renew_raw)
         elif isinstance(renew_raw, str):
-            renew = renew_raw.strip().lower() in ("1", "true", "yes", "y", "renew", "تجديد")
+            renew = renew_raw.strip().lower() in (
+                "1", "true", "yes", "y", "renew", "تجديد"
+            )
+
+        # ✅ اختيار المعالجة المحاسبية (مع قيد ولا لأ)
+        with_journal_raw = data.get("with_journal")
+        if with_journal_raw is None:
+            # اسم بديل لو استخدمته في الفرونت
+            with_journal_raw = data.get("accounting_option")
+
+        # القيمة الافتراضية = True (نفس السلوك القديم: دايمًا كان بيعمل قيد)
+        with_journal = True
+        if isinstance(with_journal_raw, bool):
+            with_journal = with_journal_raw
+        elif isinstance(with_journal_raw, (int, float)):
+            with_journal = bool(with_journal_raw)
+        elif isinstance(with_journal_raw, str):
+            with_journal = with_journal_raw.strip().lower() in (
+                "1", "true", "yes", "y", "with_journal", "journal", "قيد", "محاسبي"
+            )
 
         closing_note = (data.get("closing_note") or "").strip() or None
         closed_amount_input = data.get("closed_amount")
@@ -846,8 +865,8 @@ def end_authorization(auth_id):
         auth.closed_amount = closed_amount_dec
         auth.closing_note = closing_note
 
-        # 🎯 إنشاء قيد اليومية لهذا التفويض المقفول (لو فيه مبلغ نهائي)
-        if final_amount and final_amount > 0:
+        # 🎯 إنشاء قيد اليومية لهذا التفويض المقفول (لو فيه مبلغ نهائي و with_journal = true)
+        if with_journal and final_amount and final_amount > 0:
             create_journal_for_closed_authorization(auth, final_amount)
 
         new_auth = None  # احتمال يكون فيه تفويض جديد أو لا حسب الاختيار
@@ -899,10 +918,15 @@ def end_authorization(auth_id):
             "description": f"سداد عن تفويض رقم {auth.id}",
         }
 
-        if renew:
-            message = "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد اليومية"
+        # 🔔 رسالة جاهزة (لو الـ Front حابب يستعملها)
+        if renew and with_journal:
+            message = "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد محاسبي للأسبوع المحاسبي"
+        elif renew and not with_journal:
+            message = "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي بدون تسجيل أي قيد محاسبي"
+        elif not renew and with_journal:
+            message = "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة مع تسجيل قيد محاسبي للأسبوع المحاسبي"
         else:
-            message = "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة مع تسجيل قيد اليومية (بدون إنشاء تفويض جديد)"
+            message = "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة بدون تسجيل أي قيد محاسبي"
 
         response = {
             "message": message,
@@ -911,6 +935,7 @@ def end_authorization(auth_id):
             "rental_days": rental_days,
             "total_amount": final_amount,
             "renew": renew,
+            "with_journal": with_journal,
             "suggested_receipt": suggested_receipt,
         }
 
@@ -1320,6 +1345,7 @@ with app.app_context():
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
 
 
 

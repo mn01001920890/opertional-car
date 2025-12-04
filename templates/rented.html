@@ -448,8 +448,9 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12.5px;
+      font-size: 12px;
       direction: rtl;
+      table-layout: fixed; /* تثبيت توزيع الأعمدة */
     }
 
     thead {
@@ -457,7 +458,7 @@
     }
 
     th, td {
-      padding: 6px 8px;
+      padding: 6px 6px;
       border-bottom: 1px solid #e5e7eb;
       text-align: right;
       white-space: nowrap;
@@ -465,7 +466,7 @@
 
     th {
       font-weight: 700;
-      font-size: 12px;
+      font-size: 11.5px;
       color: #374151;
     }
 
@@ -495,6 +496,30 @@
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
+    }
+
+    /* توزيع عرض الأعمدة على شاشة اللاب */
+    .col-id      { width: 4%; }
+    .col-car     { width: 14%; }
+    .col-driver  { width: 11%; }
+    .col-license { width: 9%; }
+    .col-issue   { width: 10%; }
+    .col-start   { width: 10%; }
+    .col-end     { width: 11%; }
+    .col-days    { width: 7%; text-align: center; }
+    .col-delay   { width: 7%; text-align: center; }
+    .col-rent    { width: 9%; }
+    .col-week    { width: 10%; }
+    .col-actions { width: 8%; }
+
+    /* السماح بلف بسيط في بعض الأعمدة لو النص طويل */
+    td.col-car,
+    td.col-driver,
+    td.col-issue,
+    td.col-start,
+    td.col-end {
+      white-space: normal;
+      line-height: 1.3;
     }
 
     /* ✅ التحكم في العرض حسب حجم الشاشة */
@@ -530,7 +555,9 @@
 
     .modal-card {
       width: 100%;
-      max-width: 520px;
+      max-width: 460px;      /* أصغر شوية */
+      max-height: 90vh;      /* ما يتعداش ارتفاع الشاشة */
+      overflow-y: auto;      /* Scroll داخلي لو المحتوى طويل */
       background: #020617;
       color: #f9fafb;
       border-radius: 16px;
@@ -771,18 +798,18 @@
         <table>
           <thead>
             <tr>
-              <th>#</th>
-              <th>السيارة</th>
-              <th>السائق</th>
-              <th>رقم الرخصة</th>
-              <th>تاريخ الإصدار</th>
-              <th>بداية التفويض</th>
-              <th>نهاية الجمعة المحاسبية</th>
-              <th>أيام التفويض</th>
-              <th>أيام التأخير</th>
-              <th>الإيجار اليومي</th>
-              <th>قيمة الأسبوع تقريبًا</th>
-              <th>إجراءات</th>
+              <th class="col-id">#</th>
+              <th class="col-car">السيارة</th>
+              <th class="col-driver">السائق</th>
+              <th class="col-license">الرخصة</th>
+              <th class="col-issue">الإصدار</th>
+              <th class="col-start">البداية</th>
+              <th class="col-end">نهاية الجمعة</th>
+              <th class="col-days">أيام التفويض</th>
+              <th class="col-delay">أيام التأخير</th>
+              <th class="col-rent">اليومي</th>
+              <th class="col-week">أسبوعيًا</th>
+              <th class="col-actions">إجراءات</th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -860,8 +887,7 @@
           placeholder="اكتب القيمة النهائية للتفويض عند الإقفال"
         />
         <div class="modal-hint">
-          يمكنك تعديل هذه القيمة (زيادة أو تخفيض) حسب الواقع الفعلي قبل تسجيل <strong>قيد إقفال التفويض</strong>
-          الذي سيظهر في صفحة العمليات ودفتر الأستاذ وفق شجرة الحسابات (مثلاً: إيراد إيجار سيارات / حساب السائق).
+          يمكنك تعديل القيمة قبل الإقفال حسب الرصيد الفعلي مع السائق.
         </div>
 
         <div class="modal-section-title">بيان الإقفال</div>
@@ -871,12 +897,12 @@
           placeholder="مثال: إقفال تفويض أسبوعي للسيارة رقم ... عن الفترة من ... إلى ..."
         ></textarea>
         <div class="modal-hint">
-          البيان سيظهر في اليومية / العمليات لتوضيح سبب وطبيعة الإقفال وربطه بالسائق والسيارة.
+          هذا البيان يظهر في صفحة العمليات ودفتر الأستاذ فقط للشرح.
         </div>
 
         <div class="modal-section-title">بعد الإقفال</div>
         <div class="modal-hint">
-          اختر هل تريد إنشاء تفويض جديد لنفس السيارة والسائق للأسبوع التالي، أم تحويل السيارة للحالة المتاحة بدون تجديد.
+          اختر ما سيحدث بعد الإقفال: تجديد أسبوع جديد أو جعل السيارة متاحة.
         </div>
         <div class="modal-choice-row">
           <label class="modal-choice">
@@ -891,8 +917,7 @@
 
         <div class="modal-section-title">طريقة المعالجة المحاسبية</div>
         <div class="modal-hint">
-          اختر هل تريد إقفال هذا التفويض مع تسجيل قيد محاسبي في صفحة العمليات،
-          أم إقفاله بدون أي قيد محاسبي (تحديث التفويض وحالة السيارة فقط).
+          يمكنك إقفال التفويض مع قيد محاسبي أو بدون قيد (تحديث حالة فقط).
         </div>
         <div class="modal-choice-row">
           <label class="modal-choice">
@@ -914,7 +939,7 @@
           class="modal-btn confirm"
           onclick="confirmCloseAuthorization()"
         >
-          ✅ تأكيد الإقفال وتسجيل القيد للأسبوع
+          ✅ تأكيد الإقفال
         </button>
       </div>
     </div>
@@ -1217,18 +1242,26 @@
         }
 
         tr.innerHTML = `
-          <td>${a.id}</td>
-          <td>${a.car_number || "—"}<br/><span class="label">${(a.car_model || "")} ${(a.car_type || "")}</span></td>
-          <td>${a.driver_name || "—"}</td>
-          <td>${a.driver_license_no || "—"}</td>
-          <td>${issueDate}</td>
-          <td>${startDate || "—"}</td>
-          <td>${plannedEnd || "—"}</td>
-          <td class="${isOverdue ? "td-overdue" : ""}">${days}</td>
-          <td class="${isOverdue ? "td-overdue" : ""}">${isOverdue ? overdueDays : "0"}</td>
-          <td>${dailyRent !== "—" ? dailyRent + " ر.س/يوم" : "غير محدد"}</td>
-          <td class="td-amount">${plannedAmount !== "—" ? plannedAmount + " ر.س" : "—"}</td>
-          <td>
+          <td class="col-id">${a.id}</td>
+          <td class="col-car">
+            ${a.car_number || "—"}
+            <br/>
+            <span class="label">${(a.car_model || "")} ${(a.car_type || "")}</span>
+          </td>
+          <td class="col-driver">${a.driver_name || "—"}</td>
+          <td class="col-license">${a.driver_license_no || "—"}</td>
+          <td class="col-issue">${issueDate}</td>
+          <td class="col-start">${startDate || "—"}</td>
+          <td class="col-end">${plannedEnd || "—"}</td>
+          <td class="col-days ${isOverdue ? "td-overdue" : ""}">${days}</td>
+          <td class="col-delay ${isOverdue ? "td-overdue" : ""}">${isOverdue ? overdueDays : "0"}</td>
+          <td class="col-rent">
+            ${dailyRent !== "—" ? dailyRent + " ر.س/يوم" : "غير محدد"}
+          </td>
+          <td class="col-week td-amount">
+            ${plannedAmount !== "—" ? plannedAmount + " ر.س" : "—"}
+          </td>
+          <td class="col-actions">
             <div class="td-actions">
               <button class="btn-sm-primary" onclick="openReceipt(${a.id})">🧾</button>
               <button class="btn-sm-danger" onclick="endAuthorization(${a.id}, this)">✅</button>
@@ -1353,7 +1386,7 @@
       document.getElementById("closeModalOverlay").style.display = "none";
       const btn = document.getElementById("confirmCloseBtn");
       btn.disabled = false;
-      btn.textContent = "✅ تأكيد الإقفال وتسجيل القيد للأسبوع";
+      btn.textContent = "✅ تأكيد الإقفال";
     }
 
     // تأكيد الإقفال فعليًا (استدعاء API)
@@ -1452,7 +1485,7 @@
           const msg = data.error || `لم يتم إقفال التفويض (HTTP ${res.status})`;
           showStatus(msg, true);
           btn.disabled = false;
-          btn.textContent = "✅ تأكيد الإقفال وتسجيل القيد للأسبوع";
+          btn.textContent = "✅ تأكيد الإقفال";
           return;
         }
 
@@ -1550,8 +1583,9 @@
       } catch (err) {
         console.error(err);
         showStatus("تعذر إقفال التفويض. تأكد من أن الخادم يعمل ثم أعد المحاولة.", true);
+        const btn = document.getElementById("confirmCloseBtn");
         btn.disabled = false;
-        btn.textContent = "✅ تأكيد الإقفال وتسجيل القيد للأسبوع";
+        btn.textContent = "✅ تأكيد الإقفال";
       }
     }
   </script>

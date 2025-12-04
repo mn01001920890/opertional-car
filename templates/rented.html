@@ -888,6 +888,22 @@
             ⛔ لا، تحويل السيارة إلى متاحة بدون تفويض جديد
           </label>
         </div>
+
+        <div class="modal-section-title">طريقة المعالجة المحاسبية</div>
+        <div class="modal-hint">
+          اختر هل تريد إقفال هذا التفويض مع تسجيل قيد محاسبي في صفحة العمليات،
+          أم إقفاله بدون أي قيد محاسبي (تحديث التفويض وحالة السيارة فقط).
+        </div>
+        <div class="modal-choice-row">
+          <label class="modal-choice">
+            <input type="radio" name="accountingOption" value="with_journal" checked />
+            📒 إقفال التفويض مع قيد محاسبي (يظهر في صفحة العمليات)
+          </label>
+          <label class="modal-choice">
+            <input type="radio" name="accountingOption" value="no_journal" />
+            🚫 إقفال التفويض بدون قيد محاسبي (تحديث التفويض وحالة السيارة فقط)
+          </label>
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -1159,10 +1175,6 @@
             <button class="btn-sm-danger" onclick="endAuthorization(${a.id}, this)">
               ✅ إنهاء التفويض
             </button>
-
-            <button class="btn-sm-outline" onclick="viewAuthorizationDetails(${a.id})">
-              🔍 تفاصيل إضافية (JSON)
-            </button>
           </div>
 
           <p class="small-note">
@@ -1220,7 +1232,6 @@
             <div class="td-actions">
               <button class="btn-sm-primary" onclick="openReceipt(${a.id})">🧾</button>
               <button class="btn-sm-danger" onclick="endAuthorization(${a.id}, this)">✅</button>
-              <button class="btn-sm-outline" onclick="viewAuthorizationDetails(${a.id})">🔍</button>
             </div>
           </td>
         `;
@@ -1323,8 +1334,13 @@
       // إعادة اختيار التجديد الافتراضي = تجديد
       const renewRadios = document.querySelectorAll('input[name="renewOption"]');
       renewRadios.forEach(r => {
-        if (r.value === "renew") r.checked = true;
-        else r.checked = false;
+        r.checked = (r.value === "renew");
+      });
+
+      // إعادة اختيار المعالجة المحاسبية الافتراضية = مع قيد محاسبي
+      const accRadios = document.querySelectorAll('input[name="accountingOption"]');
+      accRadios.forEach(r => {
+        r.checked = (r.value === "with_journal");
       });
 
       // إظهار المودال
@@ -1376,9 +1392,25 @@
         }
       });
 
-      const confirmText = localRenew
-        ? "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان مع إنشاء تفويض جديد للأسبوع التالي وتسجيل القيد؟"
-        : "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان وتحويل السيارة إلى متاحة بدون تفويض جديد وتسجيل القيد؟";
+      // قراءة اختيار المعالجة المحاسبية
+      const accRadios = document.querySelectorAll('input[name="accountingOption"]');
+      let withJournal = true; // الافتراضي مع قيد محاسبي
+      accRadios.forEach(r => {
+        if (r.checked && r.value === "no_journal") {
+          withJournal = false;
+        }
+      });
+
+      let confirmText;
+      if (withJournal) {
+        confirmText = localRenew
+          ? "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان مع إنشاء تفويض جديد للأسبوع التالي وتسجيل قيد محاسبي؟"
+          : "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان وتحويل السيارة إلى متاحة بدون تفويض جديد مع تسجيل قيد محاسبي؟";
+      } else {
+        confirmText = localRenew
+          ? "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان مع إنشاء تفويض جديد للأسبوع التالي بدون تسجيل أي قيد محاسبي؟"
+          : "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان وتحويل السيارة إلى متاحة بدون تفويض جديد وبدون تسجيل أي قيد محاسبي؟";
+      }
 
       if (!window.confirm(confirmText)) {
         return;
@@ -1388,11 +1420,16 @@
         btn.disabled = true;
         btn.textContent = "جاري الإقفال...";
 
-        showStatus("جارِ إقفال التفويض وحساب الأسبوع المحاسبي وتسجيل القيد...", false);
+        showStatus(
+          withJournal
+            ? "جارِ إقفال التفويض وحساب الأسبوع المحاسبي وتسجيل القيد في صفحة العمليات..."
+            : "جارِ إقفال التفويض وتحديث حالة السيارة بدون تسجيل أي قيد محاسبي...",
+          false
+        );
 
         // الباك إند هنا مسؤول عن:
         // - تحديث التفويض (closed_amount, closing_note, close_date)
-        // - إنشاء قيد إقفال في اليومية العامة حسب شجرة الحسابات
+        // - (اختياري) إنشاء قيد إقفال في اليومية العامة حسب شجرة الحسابات لو with_journal = true
         // - ربط القيد بصفحة العمليات
         // - إنشاء تفويض جديد للأسبوع التالي لنفس السيارة والسائق في حالة التجديد
         const res = await fetch(`/api/authorizations/${pendingCloseAuth.id}/end`, {
@@ -1401,7 +1438,8 @@
           body: JSON.stringify({
             closed_amount: amountNum,
             closing_note: noteStr,
-            renew: localRenew
+            renew: localRenew,
+            with_journal: withJournal
           })
         });
 
@@ -1420,6 +1458,8 @@
 
         // القيمة النهائية لقرار التجديد من الباك إند (لو رجع)
         const serverRenew = typeof data.renew === "boolean" ? data.renew : localRenew;
+        const serverWithJournal =
+          typeof data.with_journal === "boolean" ? data.with_journal : withJournal;
 
         // إزالة التفويض المنتهي من القائمة الحالية
         allAuthorizations = allAuthorizations.filter(
@@ -1453,13 +1493,16 @@
           (data.closed_authorization && data.closed_authorization.id) ||
           pendingCloseAuth.id;
 
-        const opsUrl = `/operations?type=auth_close&auth_id=${closedAuthId}`;
-        const opsLinkHtml = `
-          <a href="${opsUrl}"
-             style="margin-right:8px;color:#1d4ed8;text-decoration:underline;font-weight:600;">
-            📄 عرض هذا القيد في صفحة العمليات
-          </a>
-        `;
+        let opsLinkHtml = "";
+        if (serverWithJournal) {
+          const opsUrl = `/operations?type=auth_close&auth_id=${closedAuthId}`;
+          opsLinkHtml = `
+            <a href="${opsUrl}"
+               style="margin-right:8px;color:#1d4ed8;text-decoration:underline;font-weight:600;">
+              📄 عرض هذا القيد في صفحة العمليات
+            </a>
+          `;
+        }
 
         // تجهيز لينك سند التحصيل التلقائي من suggested_receipt
         let receiptLinkHtml = "";
@@ -1481,11 +1524,18 @@
           `;
         }
 
-        const baseText =
-          data.message ||
-          (serverRenew
-            ? "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي وتسجيل القيد للأسبوع المحاسبي"
-            : "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة وتسجيل القيد للأسبوع المحاسبي");
+        let baseText;
+        if (data.message) {
+          baseText = data.message;
+        } else if (serverWithJournal) {
+          baseText = serverRenew
+            ? "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد محاسبي للأسبوع المحاسبي"
+            : "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة مع تسجيل قيد محاسبي للأسبوع المحاسبي";
+        } else {
+          baseText = serverRenew
+            ? "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي بدون تسجيل أي قيد محاسبي"
+            : "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة بدون تسجيل أي قيد محاسبي";
+        }
 
         const htmlMessage = `${baseText}${msgExtra}.<br>${opsLinkHtml}${
           receiptLinkHtml ? "<br>" + receiptLinkHtml : ""
@@ -1494,7 +1544,7 @@
         // إخفاء المودال بعد الحساب
         cancelCloseModal();
 
-        // ✅ عرض رسالة فيها لينك مباشر لصفحة العمليات + سند التحصيل
+        // ✅ عرض رسالة فيها لينك مباشر (لو في قيد) + سند التحصيل
         showStatus(htmlMessage, false);
 
       } catch (err) {
@@ -1504,38 +1554,27 @@
         btn.textContent = "✅ تأكيد الإقفال وتسجيل القيد للأسبوع";
       }
     }
-
-    // عرض JSON للتفويض (للتصحيح فقط)
-    function viewAuthorizationDetails(authId) {
-      const auth = allAuthorizations.find(a => String(a.id) === String(authId));
-      if (!auth) {
-        alert("لم يتم العثور على بيانات هذا التفويض في القائمة الحالية.");
-        return;
-      }
-      alert(JSON.stringify(auth, null, 2));
-    }
   </script>
-             <script>
-            // 🔒 منع كليك يمين
-            document.addEventListener('contextmenu', function (e) {
-              e.preventDefault();
-            });
-          
-            // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
-            document.addEventListener('keydown', function (e) {
-              // F12
-              if (e.key === "F12") {
-                e.preventDefault();
-              }
-          
-              // Ctrl + Shift + I أو Ctrl + Shift + J أو Ctrl + U
-              if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || 
-                  (e.ctrlKey && e.key === 'U')) {
-                e.preventDefault();
-              }
-            });
-          </script>
+
+  <script>
+    // 🔒 منع كليك يمين
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    });
+
+    // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
+    document.addEventListener('keydown', function (e) {
+      // F12
+      if (e.key === "F12") {
+        e.preventDefault();
+      }
+
+      // Ctrl + Shift + I أو Ctrl + Shift + J أو Ctrl + U
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+          (e.ctrlKey && e.key === 'U')) {
+        e.preventDefault();
+      }
+    });
+  </script>
 </body>
 </html>
-
-

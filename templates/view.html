@@ -82,7 +82,7 @@
     .page-content {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 80px 16px 24px; /* مساحة للهيدر */
+      padding: 80px 16px 24px;
     }
 
     h2 {
@@ -101,7 +101,7 @@
 
     /* 🔍 البحث */
     .search-box {
-      max-width: 400px;
+      max-width: 440px;
       margin: 0 auto 16px auto;
       display: flex;
       flex-direction: column;
@@ -115,7 +115,7 @@
     }
 
     .search-input {
-      padding: 8px 10px;
+      padding: 10px 12px;
       border-radius: 999px;
       border: none;
       outline: none;
@@ -141,7 +141,7 @@
     .auth-table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1100px;
+      min-width: 1040px;
     }
 
     .auth-table thead {
@@ -151,31 +151,59 @@
 
     .auth-table th,
     .auth-table td {
-      padding: 8px 6px;
+      padding: 10px 8px;
       text-align: center;
       font-size: 12px;
       border-bottom: 1px solid #eee;
       color: #333;
       white-space: nowrap;
+      vertical-align: top;
     }
 
-    .auth-table tr:last-child td {
-      border-bottom: none;
+    /* عمود التفاصيل يكون قابل للّف */
+    .auth-table th.details-col,
+    .auth-table td.details-cell {
+      white-space: normal;
+      text-align: right;
+      min-width: 260px;
+      max-width: 360px;
+      line-height: 1.6;
     }
+
+    .auth-table td.details-cell .details-text {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .auth-table tr:last-child td { border-bottom: none; }
 
     .status-closed {
       color: #fff;
       background: #6c757d;
-      padding: 2px 8px;
+      padding: 2px 10px;
       border-radius: 999px;
       font-size: 11px;
+      display: inline-block;
     }
 
     .link {
       color: #0d6efd;
-      font-weight: 600;
+      font-weight: 800;
       text-decoration: underline;
       cursor: pointer;
+    }
+
+    .money-text {
+      color: #198754;
+      font-weight: 900;
+    }
+
+    .muted {
+      color: #666;
+      font-weight: 600;
+      font-size: 11px;
     }
 
     /* 📱 كروت للموبايل */
@@ -184,8 +212,8 @@
     .card {
       background:#fff;
       color:#333;
-      padding:15px;
-      margin-bottom:15px;
+      padding:14px;
+      margin-bottom:14px;
       border-radius:14px;
       box-shadow:0 4px 15px rgba(0,0,0,.25);
       animation:fadeIn .4s ease-in-out;
@@ -196,18 +224,37 @@
       to{opacity:1;transform:translateY(0)}
     }
 
-    .row{margin:5px 0;font-size:14px}
-    .label{font-weight:bold;color:#0d6efd}
+    .row{margin:6px 0;font-size:14px; line-height: 1.55;}
+    .label{font-weight:900;color:#0d6efd}
 
-    .cost-text {
-      color: #28a745;
-      font-weight: 700;
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: #f2f6ff;
+      border: 1px solid #e6eeff;
+      margin: 10px 0 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill .money-text { font-size: 16px; }
+
+    .details-box {
+      background: #f8f9fa;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 10px 10px;
+      margin-top: 10px;
+      text-align: right;
     }
 
     @media (max-width: 768px) {
       .page-title{font-size:16px;}
       .table-wrapper { display: none; }
       .card-list { display: block; }
+      h2 { font-size: 20px; }
     }
 
     @media (min-width: 769px) {
@@ -236,12 +283,12 @@
 
     <!-- 🔍 البحث -->
     <div class="search-box">
-      <span class="search-label">ابحث برقم السيارة أو رقم رخصة السائق أو اسم السائق</span>
+      <span class="search-label">ابحث برقم التفويض أو رقم السيارة أو اسم السائق أو التفاصيل</span>
       <input
         id="searchInput"
         class="search-input"
         type="text"
-        placeholder="مثال: 123ABC أو رقم الرخصة أو اسم السائق"
+        placeholder="مثال: #12 أو 123ABC أو اسم السائق"
         oninput="applyFilter()"
       />
     </div>
@@ -251,8 +298,8 @@
       <table class="auth-table">
         <thead>
           <tr>
+            <th>رقم التفويض</th>
             <th>السائق</th>
-            <th>رقم رخصة السائق</th>
             <th>رقم السيارة</th>
             <th>الموديل</th>
             <th>النوع</th>
@@ -262,7 +309,8 @@
             <th>تاريخ الإقفال</th>
             <th>عدد الأيام</th>
             <th>الإيجار/يوم</th>
-            <th>التكلفة الإجمالية</th>
+            <th>قيمة الإقفال</th>
+            <th class="details-col">التفاصيل</th>
             <th>الحالة</th>
           </tr>
         </thead>
@@ -279,11 +327,10 @@
   <script>
     let closedAuthorizations = [];
 
-    // تنسيق التاريخ: 2025-11-13 13:17:37
     function formatDateTime(value){
       if(!value) return "—";
       const d = new Date(value);
-      if (isNaN(d)) return value; // لو جالك نص جاهز من الباك إند
+      if (isNaN(d)) return value;
       const pad = n => String(n).padStart(2, "0");
       const year  = d.getFullYear();
       const month = pad(d.getMonth() + 1);
@@ -294,7 +341,6 @@
       return `${year}-${month}-${day} ${hrs}:${mins}:${secs}`;
     }
 
-    // حساب عدد الأيام بين تاريخين (باليوم فقط)
     function calcDaysBetween(startStr, endStr){
       if(!startStr || !endStr) return null;
       const s = new Date(startStr);
@@ -310,9 +356,18 @@
       return diffDays;
     }
 
-    function formatCost(total){
-      if (total == null) return "—";
-      return `${total.toFixed(2)} ريال`;
+    function formatMoney(val){
+      if (val == null || !isFinite(Number(val))) return "—";
+      return `${Number(val).toFixed(2)} ريال`;
+    }
+
+    function safeText(v){
+      return (v == null ? "" : String(v)).trim();
+    }
+
+    function getAuthId(item){
+      // يدعم اختلاف أسماء الحقل حسب الباك إند
+      return item.authorization_id ?? item.auth_id ?? item.id ?? item.authorization_no ?? item.number ?? null;
     }
 
     async function loadData(){
@@ -320,17 +375,16 @@
       const cardsBox  = document.getElementById("authCards");
       const summary   = document.getElementById("summary");
 
-      tableBody.innerHTML = "<tr><td colspan='13' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+      tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
       cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
       summary.textContent = "";
 
       try{
-        // ✅ نستخدم راوت التفويضات المقفلة فقط
         const res = await fetch("/api/authorizations/closed");
         const data = await res.json();
 
         if (!Array.isArray(data)) {
-          tableBody.innerHTML = "<tr><td colspan='13' style='text-align:center'>⚠️ لم يتم العثور على بيانات.</td></tr>";
+          tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>⚠️ لم يتم العثور على بيانات.</td></tr>";
           cardsBox.innerHTML  = "<p style='text-align:center'>⚠️ لم يتم العثور على بيانات.</p>";
           return;
         }
@@ -339,7 +393,7 @@
         applyFilter();
       }catch(err){
         console.error(err);
-        tableBody.innerHTML = "<tr><td colspan='13' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>❌ حدث خطأ أثناء التحميل.</p>";
       }
     }
@@ -351,10 +405,13 @@
       let filtered = closedAuthorizations;
       if (term){
         filtered = closedAuthorizations.filter(it => {
-          const car   = (it.car_number || "").toLowerCase();
-          const lic   = (it.driver_license_no || "").toLowerCase();
-          const name  = (it.driver_name || "").toLowerCase();
-          return car.includes(term) || lic.includes(term) || name.includes(term);
+          const car   = safeText(it.car_number).toLowerCase();
+          const name  = safeText(it.driver_name).toLowerCase();
+          const lic   = safeText(it.driver_license_no).toLowerCase(); // للبحث فقط
+          const det   = safeText(it.details).toLowerCase();
+          const note  = safeText(it.closing_note).toLowerCase();
+          const id    = String(getAuthId(it) ?? "").toLowerCase();
+          return car.includes(term) || name.includes(term) || lic.includes(term) || det.includes(term) || note.includes(term) || id.includes(term);
         });
       }
 
@@ -372,117 +429,118 @@
       summary.textContent = `إجمالي التفويضات المقفلة: ${totalClosed} — المعروضة الآن: ${countShown}`;
 
       if (!list || list.length === 0) {
-        tableBody.innerHTML = "<tr><td colspan='13' style='text-align:center'>⚪ لا توجد تفويضات مطابقة لنتيجة البحث.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>⚪ لا توجد تفويضات مطابقة لنتيجة البحث.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>⚪ لا توجد تفويضات مطابقة لنتيجة البحث.</p>";
         return;
       }
 
-      // جدول (للّاب)
       tableBody.innerHTML = list.map(item => {
         const issueFmt   = formatDateTime(item.issue_date);
         const startFmt   = formatDateTime(item.start_date);
         const plannedFmt = formatDateTime(item.planned_end_date || item.end_date);
         const closeFmt   = formatDateTime(item.close_date);
 
-        // لو الباك إند مرجع rental_days / planned_amount نستخدمهم
-        let days  = (typeof item.rental_days === "number") ? item.rental_days : null;
-        let total = (typeof item.planned_amount === "number") ? item.planned_amount : null;
-
-        // لو مش موجودين، نحسب يدويًا: issue_date → planned_end_date
+        let days = (typeof item.rental_days === "number") ? item.rental_days : null;
         if (days == null) {
-          days = calcDaysBetween(item.issue_date, item.planned_end_date || item.end_date || item.close_date);
-        }
-        if (total == null && days != null && item.daily_rent != null){
-          const rentNum = Number(item.daily_rent);
-          if (isFinite(rentNum)){
-            total = days * rentNum;
-          }
+          days = calcDaysBetween(item.start_date || item.issue_date, item.planned_end_date || item.end_date || item.close_date);
         }
 
         const daysText     = days != null ? `${days} يوم` : "—";
-        const dailyRentTxt = item.daily_rent != null ? `${item.daily_rent} ريال` : "—";
-        const costText     = formatCost(total);
+        const dailyRentTxt = item.daily_rent != null ? `${Number(item.daily_rent).toFixed(2)} ريال` : "—";
 
-        const driverSafe = (item.driver_name || "").replace(/'/g, "\\'");
-        const carSafe    = (item.car_number || "").replace(/'/g, "\\'");
+        const closedValTxt = formatMoney(item.closed_amount);
+
+        const det = safeText(item.details) || "—";
+        const note = safeText(item.closing_note);
+        const detailsFull = note ? `${det}\n—\nملاحظة الإقفال: ${note}` : det;
+
+        const driverSafe = safeText(item.driver_name).replace(/'/g, "\\'");
+        const carSafe    = safeText(item.car_number).replace(/'/g, "\\'");
+        const authId     = getAuthId(item);
+        const authText   = authId != null ? `#${authId}` : "—";
 
         return `
           <tr>
+            <td>${authText}</td>
+
             <td>
               <span class="link" onclick="goDriver('${encodeURIComponent(driverSafe)}')">
-                ${item.driver_name || "—"}
+                ${safeText(item.driver_name) || "—"}
               </span>
             </td>
-            <td>${item.driver_license_no || "—"}</td>
+
             <td>
               <span class="link" onclick="goCar('${encodeURIComponent(carSafe)}')">
-                ${item.car_number || "—"}
+                ${safeText(item.car_number) || "—"}
               </span>
             </td>
-            <td>${item.car_model || "—"}</td>
-            <td>${item.car_type  || "—"}</td>
+
+            <td>${safeText(item.car_model) || "—"}</td>
+            <td>${safeText(item.car_type)  || "—"}</td>
             <td>${issueFmt}</td>
             <td>${startFmt}</td>
             <td>${plannedFmt}</td>
             <td>${closeFmt}</td>
             <td>${daysText}</td>
             <td>${dailyRentTxt}</td>
-            <td><span class="cost-text">${costText}</span></td>
+            <td><span class="money-text">${closedValTxt}</span></td>
+
+            <td class="details-cell" title="${detailsFull.replace(/"/g,'&quot;')}">
+              <div class="details-text">${detailsFull.replace(/\n/g, "<br>")}</div>
+            </td>
+
             <td><span class="status-closed">مقفلة</span></td>
           </tr>
         `;
       }).join("");
 
-      // كروت (للموبايل)
       cardsBox.innerHTML = list.map(item => {
         const issueFmt   = formatDateTime(item.issue_date);
         const startFmt   = formatDateTime(item.start_date);
         const plannedFmt = formatDateTime(item.planned_end_date || item.end_date);
         const closeFmt   = formatDateTime(item.close_date);
 
-        let days  = (typeof item.rental_days === "number") ? item.rental_days : null;
-        let total = (typeof item.planned_amount === "number") ? item.planned_amount : null;
-
+        let days = (typeof item.rental_days === "number") ? item.rental_days : null;
         if (days == null) {
-          days = calcDaysBetween(item.issue_date, item.planned_end_date || item.end_date || item.close_date);
-        }
-        if (total == null && days != null && item.daily_rent != null){
-          const rentNum = Number(item.daily_rent);
-          if (isFinite(rentNum)){
-            total = days * rentNum;
-          }
+          days = calcDaysBetween(item.start_date || item.issue_date, item.planned_end_date || item.end_date || item.close_date);
         }
 
         const daysText     = days != null ? `${days} يوم` : "—";
-        const dailyRentTxt = item.daily_rent != null ? `${item.daily_rent} ريال` : "—";
-        const costText     = formatCost(total);
+        const dailyRentTxt = item.daily_rent != null ? `${Number(item.daily_rent).toFixed(2)} ريال` : "—";
 
-        const driverSafe = (item.driver_name || "").replace(/'/g, "\\'");
-        const carSafe    = (item.car_number || "").replace(/'/g, "\\'");
+        const closedValTxt = formatMoney(item.closed_amount);
+
+        const det = safeText(item.details);
+        const note = safeText(item.closing_note);
+
+        const driverSafe = safeText(item.driver_name).replace(/'/g, "\\'");
+        const carSafe    = safeText(item.car_number).replace(/'/g, "\\'");
+        const authId     = getAuthId(item);
+        const authText   = authId != null ? `#${authId}` : "—";
 
         return `
           <div class="card">
             <div class="row">
-              <span class="label">السائق:</span>
-              <span class="link" onclick="goDriver('${encodeURIComponent(driverSafe)}')">
-                ${item.driver_name || "—"}
-              </span>
+              <span class="label">رقم التفويض:</span>
+              <span>${authText}</span>
             </div>
 
             <div class="row">
-              <span class="label">رقم رخصة السائق:</span>
-              ${item.driver_license_no || "—"}
+              <span class="label">السائق:</span>
+              <span class="link" onclick="goDriver('${encodeURIComponent(driverSafe)}')">
+                ${safeText(item.driver_name) || "—"}
+              </span>
             </div>
 
             <div class="row">
               <span class="label">رقم السيارة:</span>
               <span class="link" onclick="goCar('${encodeURIComponent(carSafe)}')">
-                ${item.car_number || "—"}
+                ${safeText(item.car_number) || "—"}
               </span>
             </div>
 
-            <div class="row"><span class="label">الموديل:</span> ${item.car_model || "—"}</div>
-            <div class="row"><span class="label">النوع:</span> ${item.car_type  || "—"}</div>
+            <div class="row"><span class="label">الموديل:</span> ${safeText(item.car_model) || "—"}</div>
+            <div class="row"><span class="label">النوع:</span> ${safeText(item.car_type)  || "—"}</div>
 
             <div class="row"><span class="label">تاريخ الإصدار:</span> ${issueFmt}</div>
             <div class="row"><span class="label">بداية التفويض:</span> ${startFmt}</div>
@@ -491,12 +549,19 @@
 
             <div class="row"><span class="label">عدد الأيام:</span> ${daysText}</div>
             <div class="row"><span class="label">الإيجار اليومي:</span> ${dailyRentTxt}</div>
-            <div class="row">
-              <span class="label">التكلفة الإجمالية:</span>
-              <span class="cost-text">${costText}</span>
+
+            <div class="pill">
+              <span class="label">قيمة الإقفال:</span>
+              <span class="money-text">${closedValTxt}</span>
+              ${item.closed_amount == null ? `<span class="muted">(غير مسجلة)</span>` : ``}
             </div>
 
-            <div class="row">
+            <div class="details-box">
+              <div class="row"><span class="label">التفاصيل:</span> ${det || "—"}</div>
+              ${note ? `<div class="row"><span class="label">ملاحظة الإقفال:</span> ${note}</div>` : ``}
+            </div>
+
+            <div class="row" style="margin-top:10px;">
               <span class="label">الحالة:</span>
               <span class="status-closed">مقفلة</span>
             </div>
@@ -516,27 +581,22 @@
     loadData();
   </script>
 
-                     <script>
-                    // 🔒 منع كليك يمين
-                    document.addEventListener('contextmenu', function (e) {
-                      e.preventDefault();
-                    });
-                  
-                    // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
-                    document.addEventListener('keydown', function (e) {
-                      // F12
-                      if (e.key === "F12") {
-                        e.preventDefault();
-                      }
-                  
-                      // Ctrl + Shift + I أو Ctrl + Shift + J أو Ctrl + U
-                      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || 
-                          (e.ctrlKey && e.key === 'U')) {
-                        e.preventDefault();
-                      }
-                    });
-                  </script>
+  <script>
+    // 🔒 منع كليك يمين
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    });
+
+    // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
+    document.addEventListener('keydown', function (e) {
+      if (e.key === "F12") e.preventDefault();
+
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+          (e.ctrlKey && e.key === 'U')) {
+        e.preventDefault();
+      }
+    });
+  </script>
+
 </body>
 </html>
-
-

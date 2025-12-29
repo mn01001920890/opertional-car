@@ -22,16 +22,30 @@ def favicon():
 
 
 # ---------------- DB Config (Vercel/Neon) ----------------
+def normalize_database_url(url: str) -> str:
+    if not url:
+        return url
+    # إصلاح مخطط الرابط القديم إن وجد
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return url
+
+
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+DATABASE_URL = normalize_database_url(DATABASE_URL)
+
 if not DATABASE_URL:
     raise ValueError("❌ لم يتم ضبط متغير البيئة DATABASE_URL (أو POSTGRES_URL) في Vercel")
 
-# إصلاح مخطط الرابط القديم إن وجد
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# اختياري: يحسن الثبات مع قواعد بيانات سحابية
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 280,
+}
+
 db = SQLAlchemy(app)
 
 
@@ -49,6 +63,15 @@ def get_friday_end(base_dt: datetime) -> datetime:
     friday = base_dt + timedelta(days=days_to_friday)
     friday_end = friday.replace(hour=23, minute=59, second=59, microsecond=0)
     return friday_end
+
+
+def safe_decimal(val, default=None):
+    if val in (None, "", " "):
+        return default
+    try:
+        return Decimal(str(val))
+    except (InvalidOperation, ValueError, TypeError):
+        return default
 
 
 # ---------------- Models ----------------
@@ -90,7 +113,6 @@ class Authorization(db.Model):
         rental_days = None
         planned_amount = None
 
-        # الأساس في العد = start_date لو موجود، غير كده نرجع لـ issue_date
         base_start = self.start_date or self.issue_date
 
         if base_start and self.end_date and self.daily_rent is not None:
@@ -110,7 +132,6 @@ class Authorization(db.Model):
             # 4 تواريخ أساسية
             "issue_date": self.issue_date.strftime("%Y-%m-%d %H:%M:%S") if self.issue_date else "",
             "start_date": self.start_date.isoformat() if self.start_date else None,
-            # نستخدم end_date كتاريخ نهاية الجمعة (planned_end_date)
             "end_date": self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else "",
             "planned_end_date": self.end_date.strftime("%Y-%m-%d %H:%M:%S") if self.end_date else "",
             "close_date": self.close_date.strftime("%Y-%m-%d %H:%M:%S") if self.close_date else "",
@@ -270,7 +291,6 @@ class JournalEntry(db.Model):
         - driver_name / car_number لو متاحة من التفويض أو السند
         - ref_text: نص عربي بسيط يوضح المرجع
         """
-        # تحديد نوع المصدر
         source_type = "manual"
         ref_text = "قيد يدوي"
 
@@ -284,7 +304,6 @@ class JournalEntry(db.Model):
             source_type = "auth_close"
             ref_text = f"تفويض رقم {self.ref_authorization_id}"
 
-        # محاولة جلب اسم السائق ورقم السيارة من العلاقات
         driver_name = None
         car_number = None
 
@@ -295,9 +314,7 @@ class JournalEntry(db.Model):
             driver_name = auth.driver_name
             car_number = auth.car_number
         elif receipt:
-            # من السند نفسه
             driver_name = receipt.driver_name or (receipt.driver.name if receipt.driver else None)
-            # لو السند مربوط بتفويض نجيب رقم العربية
             if receipt.authorization:
                 car_number = receipt.authorization.car_number
 
@@ -307,11 +324,10 @@ class JournalEntry(db.Model):
             "description": self.description,
             "ref_authorization_id": self.ref_authorization_id,
             "ref_receipt_id": self.ref_receipt_id,
-            # الحقول الجديدة لصفحة العمليات
-            "source_type": source_type,     # auth_close / receipt / manual
-            "driver_name": driver_name,     # لو متوفر
-            "car_number": car_number,       # لو متوفر
-            "ref_text": ref_text,           # نص المرجع بالعربي
+            "source_type": source_type,
+            "driver_name": driver_name,
+            "car_number": car_number,
+            "ref_text": ref_text,
         }
         if with_lines:
             base["lines"] = [ln.to_dict() for ln in self.lines]
@@ -338,7 +354,6 @@ class JournalLine(db.Model):
             "id": self.id,
             "journal_entry_id": self.journal_entry_id,
             "account_id": self.account_id,
-            # ✅ عشان صفحة العمليات تقدر تعرض اسم الحساب وكوده
             "account_name": self.account.name if self.account else None,
             "account_code": str(self.account.id) if self.account else None,
             "debit": float(self.debit or 0),
@@ -394,28 +409,53 @@ def ensure_driver_sub_account(driver: Driver):
     return acc
 
 
+def ensure_core_accounts():
+    """
+    يتأكد من وجود الحسابات الأساسية:
+    - الصندوق (asset)
+    - إيراد إيجار سيارات (revenue)
+    """
+    changed = False
+
+    cash = Account.query.filter_by(name="الصندوق").first()
+    if not cash:
+        cash = Account(name="الصندوق", type="asset", is_group=False)
+        db.session.add(cash)
+        changed = True
+
+    revenue = Account.query.filter_by(name="إيراد إيجار سيارات").first()
+    if not revenue:
+        revenue = Account(name="إيراد إيجار سيارات", type="revenue", is_group=False)
+        db.session.add(revenue)
+        changed = True
+
+    # مهم: نضمن وجود root للسائقين
+    _ = ensure_driver_root_account()
+    changed = True
+
+    if changed:
+        db.session.commit()
+
+
 def create_journal_for_closed_authorization(auth, total_amount):
     """
     ينشئ قيد يومية عند إقفال التفويض:
-    من حـ/ السائق (الفرعي إن وجد) أو حـ/ السائقين العام (مدين)
+    من حـ/ حساب السائق (مدين)
     إلى حـ/ إيراد إيجار سيارات (دائن)
     """
     try:
         if not total_amount or total_amount <= 0:
             return
 
-        revenue_account = Account.query.filter_by(name="سلف سائقين").first()
+        revenue_account = Account.query.filter_by(name="إيراد إيجار سيارات").first()
         if not revenue_account:
-            # لو حساب الإيراد مش موجود ما نعملش قيد
             return
 
         driver_account = None
         if auth and auth.driver_id:
-            # نحاول نستخدم حساب السائق الفرعي
             driver_account = ensure_driver_sub_account(auth.driver)
 
         if not driver_account:
-            # fallback على الحساب العام للسائقين
             driver_account = ensure_driver_root_account()
 
         if not driver_account:
@@ -427,11 +467,10 @@ def create_journal_for_closed_authorization(auth, total_amount):
             ref_authorization_id=auth.id if auth else None,
         )
         db.session.add(je)
-        db.session.flush()  # عشان je.id يتولد
+        db.session.flush()
 
         amount_dec = Decimal(str(total_amount))
 
-        # من حـ/ السائق / السائقين (مدين)
         line1 = JournalLine(
             journal_entry_id=je.id,
             account_id=driver_account.id,
@@ -439,7 +478,6 @@ def create_journal_for_closed_authorization(auth, total_amount):
             credit=Decimal("0"),
         )
 
-        # إلى حـ/ إيراد إيجار سيارات (دائن)
         line2 = JournalLine(
             journal_entry_id=je.id,
             account_id=revenue_account.id,
@@ -448,7 +486,6 @@ def create_journal_for_closed_authorization(auth, total_amount):
         )
 
         db.session.add_all([line1, line2])
-        # مفيش commit هنا؛ الـ Route نفسه هو اللي بيعمل commit
     except Exception:
         traceback.print_exc()
 
@@ -457,7 +494,7 @@ def create_journal_for_cash_receipt(receipt: CashReceipt):
     """
     ينشئ قيد يومية لسند تحصيل نقدي:
     من حـ/ الصندوق (مدين)
-    إلى حـ/ حساب السائق (الفرعي إن وجد) أو حـ/ السائقين العام (دائن)
+    إلى حـ/ حساب السائق (دائن)
     """
     try:
         if not receipt or not receipt.amount or receipt.amount <= 0:
@@ -465,7 +502,6 @@ def create_journal_for_cash_receipt(receipt: CashReceipt):
 
         cash_account = Account.query.filter_by(name="الصندوق").first()
         if not cash_account:
-            # بدون حساب الصندوق ما نقدرش نعمل قيد
             return
 
         driver_account = None
@@ -489,7 +525,6 @@ def create_journal_for_cash_receipt(receipt: CashReceipt):
 
         amount_dec = Decimal(str(receipt.amount))
 
-        # من حـ/ الصندوق (مدين)
         line1 = JournalLine(
             journal_entry_id=je.id,
             account_id=cash_account.id,
@@ -497,7 +532,6 @@ def create_journal_for_cash_receipt(receipt: CashReceipt):
             credit=Decimal("0"),
         )
 
-        # إلى حـ/ حساب السائق (دائن)
         line2 = JournalLine(
             journal_entry_id=je.id,
             account_id=driver_account.id,
@@ -506,7 +540,6 @@ def create_journal_for_cash_receipt(receipt: CashReceipt):
         )
 
         db.session.add_all([line1, line2])
-        # الـ commit في الـ Route
     except Exception:
         traceback.print_exc()
 
@@ -516,11 +549,10 @@ def create_journal_for_cash_receipt(receipt: CashReceipt):
 def index_page():
     return render_template("index.html")
 
-# صفحة لوحة التحكم بعد تسجيل الدخول
+
 @app.route("/dashboard")
 def dashboard_page():
     return render_template("dashboard.html")
-
 
 
 @app.route("/issue")
@@ -577,12 +609,12 @@ def receipt_page():
 def operations_page():
     return render_template("operations.html")
 
-# ✅ جديد: صفحة عرض القيود اليدوية
+
 @app.route("/journal-list")
 def journal_list_page():
     return render_template("journal-list.html")
 
-# ✅ جديد: صفحة قائمة سندات التحصيل
+
 @app.route("/receipts-list")
 def receipts_list_page():
     return render_template("receipts-list.html")
@@ -595,34 +627,29 @@ def api_health():
 
 @app.route("/api/debug/dburl")
 def api_debug_dburl():
-    return jsonify(
-        {"DATABASE_URL_present": bool(os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL"))}
-    )
+    return jsonify({"DATABASE_URL_present": bool(os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL"))})
 
 
 # ---------------- APIs ----------------
-# إصدار تفويض جديد
 @app.route("/api/issue", methods=["POST"])
 def add_authorization():
     try:
         data = request.get_json() or {}
 
-        # 0) تحقق من الحقول الأساسية
         driver_name = (data.get("driver_name") or "").strip()
         car_plate = (data.get("car_number") or "").strip()
+
         if not driver_name:
             return jsonify({"error": "برجاء اختيار السائق"}), 400
         if not car_plate:
             return jsonify({"error": "برجاء اختيار السيارة"}), 400
 
-        # 1) السيارة + حالتها
         car = Car.query.filter_by(plate=car_plate).first()
         if not car:
             return jsonify({"error": "السيارة غير موجودة في قاعدة البيانات"}), 400
         if (car.status or "").strip() != "متاحة":
             return jsonify({"error": f"السيارة غير متاحة حالياً (الحالة: {car.status})"}), 400
 
-        # 2) منع ازدواج التفويض المفتوح (بناء على close_date)
         open_auth = (
             Authorization.query.filter_by(car_number=car_plate)
             .filter(Authorization.close_date.is_(None))
@@ -631,11 +658,9 @@ def add_authorization():
         if open_auth:
             return jsonify({"error": "هناك تفويض مفتوح لهذه السيارة بالفعل"}), 400
 
-        # 3) جلب رقم رخصة السائق (اختياري)
         driver_obj = Driver.query.filter_by(name=driver_name).first()
         driver_license_no = driver_obj.license_no if driver_obj and driver_obj.license_no else None
 
-        # 4) تجهيز التاريخ
         issue_date = datetime.utcnow()
 
         start_date = None
@@ -644,29 +669,22 @@ def add_authorization():
             try:
                 start_date = datetime.fromisoformat(sd)
             except Exception:
-                return jsonify(
-                    {
-                        "error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601 مثل 2025-11-12T10:30",
-                    }
-                ), 400
-        # لو ما فيش start_date نستخدم issue_date
+                return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601 مثل 2025-11-12T10:30"}), 400
+
         if not start_date:
             start_date = issue_date
 
-        # 5) حساب نهاية التفويض: أول جمعة بعد تاريخ بداية التفويض (start_date)
         planned_end = get_friday_end(start_date)
 
-        # 6) الموديل/النوع/الإيجار
         car_model = data.get("car_model") or car.model
         car_type = data.get("car_type") or car.car_type
 
-        # الإيجار اليومي: لو مبعوت استخدمه بعد تحويله لDecimal، وإلا خُد من العربية
         daily_rent = car.daily_rent
         if data.get("daily_rent") not in (None, "", " "):
-            try:
-                daily_rent = Decimal(str(data.get("daily_rent")))
-            except (InvalidOperation, ValueError, TypeError):
+            daily_rent_dec = safe_decimal(data.get("daily_rent"))
+            if daily_rent_dec is None:
                 return jsonify({"error": "قيمة الإيجار اليومي غير صحيحة"}), 400
+            daily_rent = daily_rent_dec
 
         new_auth = Authorization(
             driver_name=driver_name,
@@ -680,39 +698,29 @@ def add_authorization():
             daily_rent=daily_rent,
             details=data.get("details"),
             status="مؤجرة",
-            end_date=planned_end,  # تاريخ الجمعة (planned_end_date)
+            end_date=planned_end,
             close_date=None,
         )
 
-        try:
-            db.session.add(new_auth)
-            car.status = "مؤجرة"
-            db.session.commit()
-            return jsonify(
-                {
-                    "message": "✅ Authorization added successfully",
-                    "authorization": new_auth.to_dict(),
-                }
-            ), 201
-        except Exception as e:
-            db.session.rollback()
-            traceback.print_exc()
-            return jsonify({"error": f"DB error: {str(e)}"}), 500
+        db.session.add(new_auth)
+        car.status = "مؤجرة"
+        db.session.commit()
 
-    except Exception as outer:
+        return jsonify({"message": "✅ Authorization added successfully", "authorization": new_auth.to_dict()}), 201
+
+    except Exception as e:
+        db.session.rollback()
         traceback.print_exc()
-        return jsonify({"error": f"Server error: {str(outer)}"}), 500
+        return jsonify({"error": f"Server/DB error: {str(e)}"}), 500
 
 
-# جلب كل التفويضات (مع فلترة اختيارية)
 @app.route("/api/authorizations", methods=["GET"])
 def get_authorizations():
     """
-    إرجاع قائمة التفويضات مع دعم فلترة اختيارية:
-    - ?status=active  → تفويضات مفتوحة (close_date IS NULL)
-    - ?status=closed  → تفويضات مغلقة (close_date IS NOT NULL)
-    - ?car_number=123 → البحث برقم السيارة (contains)
-    - ?license_no=ABC → البحث برقم رخصة السائق (contains)
+    - ?status=active  → close_date IS NULL
+    - ?status=closed  → close_date IS NOT NULL
+    - ?car_number=123 → contains
+    - ?license_no=ABC → contains
     """
     query = Authorization.query
 
@@ -724,13 +732,11 @@ def get_authorizations():
 
     car_number = (request.args.get("car_number") or "").strip()
     if car_number:
-        like = f"%{car_number}%"
-        query = query.filter(Authorization.car_number.ilike(like))
+        query = query.filter(Authorization.car_number.ilike(f"%{car_number}%"))
 
     license_no = (request.args.get("license_no") or "").strip()
     if license_no:
-        like = f"%{license_no}%"
-        query = query.filter(Authorization.driver_license_no.ilike(like))
+        query = query.filter(Authorization.driver_license_no.ilike(f"%{license_no}%"))
 
     auths = query.order_by(Authorization.id.desc()).all()
     return jsonify([a.to_dict() for a in auths])
@@ -738,7 +744,6 @@ def get_authorizations():
 
 @app.route("/api/authorizations/closed", methods=["GET"])
 def get_closed_authorizations():
-    """تفويضات مغلقة فقط (close_date IS NOT NULL)."""
     auths = (
         Authorization.query.filter(Authorization.close_date.is_not(None))
         .order_by(Authorization.id.desc())
@@ -749,7 +754,6 @@ def get_closed_authorizations():
 
 @app.route("/api/authorizations/active", methods=["GET"])
 def get_active_authorizations():
-    """تفويضات مفتوحة فقط (close_date IS NULL)."""
     auths = (
         Authorization.query.filter(Authorization.close_date.is_(None))
         .order_by(Authorization.id.desc())
@@ -758,17 +762,15 @@ def get_active_authorizations():
     return jsonify([a.to_dict() for a in auths])
 
 
-# إنهاء تفويض (يستخدم من زر الإنهاء) ✅ نسخة محدثة مع اختيار التجديد + اختيار قيد محاسبي
 @app.route("/api/authorizations/<int:auth_id>/end", methods=["PATCH"])
 def end_authorization(auth_id):
     """
     إنهاء تفويض:
-    - يقفل التفويض الحالي (close_date, closed_amount, closing_note, status="منتهية")
-    - (اختياري) ينشئ قيد إقفال تفويض في اليومية لو with_journal = true وكان فيه مبلغ
-    - حسب اختيار الفرونت إند:
-        * renew = true  ⇒ إنشاء تفويض جديد للأسبوع التالي + تظل السيارة "مؤجرة"
-        * renew = false ⇒ عدم إنشاء تفويض جديد + تحويل السيارة إلى "متاحة"
-    - يرجع أيضًا suggested_receipt عشان تفتح بها شاشة سند تحصيل تلقائي.
+    - يقفل التفويض الحالي
+    - (اختياري) ينشئ قيد إقفال تفويض لو with_journal = true
+    - renew = true  ⇒ إنشاء تفويض جديد للأسبوع التالي + السيارة تظل "مؤجرة"
+    - renew = false ⇒ لا تفويض جديد + السيارة "متاحة"
+    - يرجع suggested_receipt لفتح سند تحصيل تلقائي.
     """
     auth = Authorization.query.get(auth_id)
     if not auth:
@@ -779,106 +781,82 @@ def end_authorization(auth_id):
     car = Car.query.filter_by(plate=auth.car_number).first()
 
     try:
-        # 🔹 قراءة بيانات الإقفال من الطلب
         data = request.get_json(silent=True) or {}
 
-        # ✅ اختيار التجديد أو لا:
         renew_raw = data.get("renew")
         if renew_raw is None:
-            # اسم بديل لو حبيت تستخدمه في الفرونت
             renew_raw = data.get("renew_option")
 
-        # القيمة الافتراضية = True عشان توافق السلوك القديم (تجديد تلقائي)
         renew = True
         if isinstance(renew_raw, bool):
             renew = renew_raw
         elif isinstance(renew_raw, (int, float)):
             renew = bool(renew_raw)
         elif isinstance(renew_raw, str):
-            renew = renew_raw.strip().lower() in (
-                "1", "true", "yes", "y", "renew", "تجديد"
-            )
+            renew = renew_raw.strip().lower() in ("1", "true", "yes", "y", "renew", "تجديد")
 
-        # ✅ اختيار المعالجة المحاسبية (مع قيد ولا لأ)
         with_journal_raw = data.get("with_journal")
         if with_journal_raw is None:
-            # اسم بديل لو استخدمته في الفرونت
             with_journal_raw = data.get("accounting_option")
 
-        # القيمة الافتراضية = True (نفس السلوك القديم: دايمًا كان بيعمل قيد)
         with_journal = True
         if isinstance(with_journal_raw, bool):
             with_journal = with_journal_raw
         elif isinstance(with_journal_raw, (int, float)):
             with_journal = bool(with_journal_raw)
         elif isinstance(with_journal_raw, str):
-            with_journal = with_journal_raw.strip().lower() in (
-                "1", "true", "yes", "y", "with_journal", "journal", "قيد", "محاسبي"
-            )
+            with_journal = with_journal_raw.strip().lower() in ("1", "true", "yes", "y", "with_journal", "journal", "قيد", "محاسبي")
 
         closing_note = (data.get("closing_note") or "").strip() or None
         closed_amount_input = data.get("closed_amount")
 
-        # تاريخ الإقفال الفعلي
         close_dt = datetime.utcnow()
         auth.close_date = close_dt
         auth.status = "منتهية"
 
-        # لو end_date (نهاية الجمعة) مش متخزّن لأي سبب، نحسبه الآن من start_date أو issue_date
         if not auth.end_date:
             base_for_end = auth.start_date or auth.issue_date
             if base_for_end:
                 auth.end_date = get_friday_end(base_for_end)
 
-        # ✅ حساب عدد الأيام والمبلغ المحاسبي (start_date → end_date)
         rental_days = None
         auto_amount = None
         base_start = auth.start_date or auth.issue_date
         if base_start and auth.end_date and auth.daily_rent is not None:
             start_d = base_start.date()
             end_d = auth.end_date.date()
-            days = (end_d - start_d).days + 1  # +1 يشمل يوم البداية
+            days = (end_d - start_d).days + 1
             if days < 0:
                 days = 0
             rental_days = days
             auto_amount = float(auth.daily_rent) * days
 
-        # 🔹 تحديد المبلغ النهائي: يدوي من المودال أو المحسوب تلقائيًا
         final_amount = auto_amount
         closed_amount_dec = None
 
         if closed_amount_input not in (None, "", " "):
-            try:
-                closed_amount_dec = Decimal(str(closed_amount_input))
-                if closed_amount_dec <= 0:
-                    closed_amount_dec = None
-                else:
-                    final_amount = float(closed_amount_dec)
-            except (InvalidOperation, ValueError, TypeError):
-                closed_amount_dec = None
+            tmp = safe_decimal(closed_amount_input)
+            if tmp is not None and tmp > 0:
+                closed_amount_dec = tmp
+                final_amount = float(tmp)
 
-        # لو ما تمش إدخال مبلغ يدوي صالح، نخزن المحسوب تلقائيًا داخل closed_amount لو موجود
         if closed_amount_dec is None and auto_amount is not None:
             closed_amount_dec = Decimal(str(round(auto_amount, 2)))
 
-        # حفظ المبلغ والملاحظة في جدول التفويض
         auth.closed_amount = closed_amount_dec
         auth.closing_note = closing_note
 
-        # 🎯 إنشاء قيد اليومية لهذا التفويض المقفول (لو فيه مبلغ نهائي و with_journal = true)
         if with_journal and final_amount and final_amount > 0:
             create_journal_for_closed_authorization(auth, final_amount)
 
-        new_auth = None  # احتمال يكون فيه تفويض جديد أو لا حسب الاختيار
+        new_auth = None
 
-        # 🔁 لو اختارت تجديد: نعمل تفويض جديد للأسبوع القادم ونخلي العربية "مؤجرة"
         if renew:
             if auth.end_date:
-                new_issue = auth.end_date + timedelta(days=1)  # السبت التالي
+                new_issue = auth.end_date + timedelta(days=1)
             else:
                 new_issue = close_dt + timedelta(days=1)
 
-            # نخلي الساعة 09:00 (تقديرية)
             new_issue = new_issue.replace(hour=9, minute=0, second=0, microsecond=0)
             new_end = get_friday_end(new_issue)
 
@@ -899,17 +877,14 @@ def end_authorization(auth_id):
             )
             db.session.add(new_auth)
 
-            # السيارة تظل "مؤجرة"
             if car:
                 car.status = "مؤجرة"
         else:
-            # ❌ عدم التجديد → السيارة ترجع "متاحة"
             if car:
                 car.status = "متاحة"
 
         db.session.commit()
 
-        # 🔗 تجهيز بيانات سند تحصيل تلقائي (الفرونت إند يفتح /receipt بهذه البيانات)
         suggested_receipt = {
             "authorization_id": auth.id,
             "driver_id": auth.driver_id,
@@ -918,17 +893,16 @@ def end_authorization(auth_id):
             "description": f"سداد عن تفويض رقم {auth.id}",
         }
 
-        # 🔔 رسالة جاهزة (لو الـ Front حابب يستعملها)
         if renew and with_journal:
-            message = "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد محاسبي للأسبوع المحاسبي"
+            message = "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد محاسبي"
         elif renew and not with_journal:
             message = "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي بدون تسجيل أي قيد محاسبي"
-        elif not renew and with_journal:
-            message = "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة مع تسجيل قيد محاسبي للأسبوع المحاسبي"
+        elif (not renew) and with_journal:
+            message = "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة مع تسجيل قيد محاسبي"
         else:
             message = "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة بدون تسجيل أي قيد محاسبي"
 
-        response = {
+        return jsonify({
             "message": message,
             "closed_authorization": auth.to_dict(),
             "new_authorization": new_auth.to_dict() if new_auth else None,
@@ -937,9 +911,7 @@ def end_authorization(auth_id):
             "renew": renew,
             "with_journal": with_journal,
             "suggested_receipt": suggested_receipt,
-        }
-
-        return jsonify(response), 200
+        }), 200
 
     except Exception as e:
         db.session.rollback()
@@ -948,9 +920,6 @@ def end_authorization(auth_id):
 
 
 # ----- Cars APIs -----
-
-
-
 @app.route("/api/cars", methods=["GET"])
 def list_cars():
     cars = Car.query.order_by(Car.id.desc()).all()
@@ -965,11 +934,13 @@ def add_car():
         if not plate:
             return jsonify({"error": "رقم اللوحة مطلوب"}), 400
 
+        daily_rent_dec = safe_decimal(data.get("daily_rent"))
+
         car = Car(
             plate=plate,
             model=data.get("model"),
             car_type=data.get("car_type"),
-            daily_rent=Decimal(str(data.get("daily_rent"))) if data.get("daily_rent") else None,
+            daily_rent=daily_rent_dec,
             status=data.get("status") or "متاحة",
         )
         db.session.add(car)
@@ -987,14 +958,10 @@ def cars_status():
     available = len([c for c in cars if (c.status or "").strip() == "متاحة"])
     rented = len([c for c in cars if (c.status or "").strip() == "مؤجرة"])
     repair = len([c for c in cars if (c.status or "").strip() == "تحت الصيانة"])
-
     return jsonify({"total": total, "available": available, "rented": rented, "repair": repair})
 
 
 # ----- Drivers APIs -----
-
-
-
 @app.route("/api/drivers", methods=["GET"])
 def list_drivers():
     drivers = Driver.query.order_by(Driver.id.desc()).all()
@@ -1023,26 +990,17 @@ def add_driver():
 
 
 # ----- Accounts APIs -----
-
-
-
 @app.route("/api/accounts", methods=["GET", "POST"])
 def accounts_api():
-    """
-    GET  → يرجع قائمة الحسابات (لـ Dropdown + جدول العرض)
-    POST → إضافة حساب جديد (من صفحة accounts.html)
-    """
     if request.method == "GET":
         accounts = Account.query.order_by(Account.id.asc()).all()
         return jsonify([acc.to_dict() for acc in accounts])
 
-    # POST
     data = request.get_json() or {}
     name = (data.get("name") or "").strip()
     if not name:
         return jsonify({"error": "اسم الحساب مطلوب"}), 400
 
-    # منع تكرار الاسم
     existing = Account.query.filter_by(name=name).first()
     if existing:
         return jsonify({"error": "هذا الحساب موجود بالفعل"}), 400
@@ -1067,10 +1025,6 @@ def accounts_api():
 
 @app.route("/api/accounts/driver", methods=["POST"])
 def create_driver_account_api():
-    """
-    إنشاء حساب فرعي لسائق داخل شجرة حساب "حساب السائقين".
-    تُستخدم من صفحة drivers.html بعد إضافة السائق.
-    """
     data = request.get_json() or {}
 
     driver_id = data.get("driver_id")
@@ -1081,26 +1035,14 @@ def create_driver_account_api():
     if not driver:
         return jsonify({"error": "السائق غير موجود في قاعدة البيانات"}), 404
 
-    # لو الحساب موجود مسبقاً، نرجّعه بدل ما نكرّره
     existing = Account.query.filter_by(related_driver_id=driver.id).first()
     if existing:
-        return jsonify(
-            {
-                "message": "✅ الحساب الخاص بالسائق موجود بالفعل",
-                "account": existing.to_dict(),
-                "already_exists": True,
-            }
-        ), 200
+        return jsonify({"message": "✅ الحساب الخاص بالسائق موجود بالفعل", "account": existing.to_dict(), "already_exists": True}), 200
 
     try:
         acc = ensure_driver_sub_account(driver)
         db.session.commit()
-        return jsonify(
-            {
-                "message": "✅ تم إنشاء حساب فرعي للسائق في شجرة الحسابات",
-                "account": acc.to_dict(),
-            }
-        ), 201
+        return jsonify({"message": "✅ تم إنشاء حساب فرعي للسائق في شجرة الحسابات", "account": acc.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
         traceback.print_exc()
@@ -1108,20 +1050,12 @@ def create_driver_account_api():
 
 
 # ----- Ledger API -----
-
-
-
 @app.route("/api/accounts/<int:account_id>/ledger", methods=["GET"])
 def get_account_ledger(account_id):
-    """
-    دفتر أستاذ مبسط لحساب واحد:
-    يرجع جميع بنود اليومية المرتبطة بالحساب مع رصيد تراكمي.
-    """
     account = Account.query.get(account_id)
     if not account:
         return jsonify({"error": "الحساب غير موجود"}), 404
 
-    # نرتّب حسب تاريخ القيد ثم رقم السطر
     lines = (
         JournalLine.query.join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
         .filter(JournalLine.account_id == account_id)
@@ -1138,35 +1072,25 @@ def get_account_ledger(account_id):
         credit = line.credit or Decimal("0")
         running_balance += debit - credit
 
-        ledger_rows.append(
-            {
-                "entry_id": je.id,
-                "date": je.date.strftime("%Y-%m-%d %H:%M:%S") if je.date else "",
-                "description": je.description,
-                "debit": float(debit or 0),
-                "credit": float(credit or 0),
-                "balance": float(running_balance),
-            }
-        )
+        ledger_rows.append({
+            "entry_id": je.id,
+            "date": je.date.strftime("%Y-%m-%d %H:%M:%S") if je.date else "",
+            "description": je.description,
+            "debit": float(debit or 0),
+            "credit": float(credit or 0),
+            "balance": float(running_balance),
+        })
 
     return jsonify({"account": account.to_dict(), "lines": ledger_rows})
 
 
-# ----- General Journal APIs (لليومية العامة) -----
-
-
-
+# ----- General Journal APIs -----
 @app.route("/api/journal_entries", methods=["GET", "POST"])
 def journal_entries_api():
-    """
-    GET  → قائمة بسيطة بقيود اليومية (تستخدمها صفحة general.html و operations.html)
-    POST → إنشاء قيد يدوي (من صفحة اليومية العامة)
-    """
     if request.method == "GET":
         entries = JournalEntry.query.order_by(JournalEntry.date.desc(), JournalEntry.id.desc()).all()
         return jsonify([e.to_dict(with_lines=True) for e in entries])
 
-    # POST – إنشاء قيد يدوي
     data = request.get_json() or {}
     desc = (data.get("description") or "").strip()
     date_str = (data.get("date") or "").strip()
@@ -1175,7 +1099,6 @@ def journal_entries_api():
     if not lines_data:
         return jsonify({"error": "لا يوجد بنود في القيد"}), 400
 
-    # تحويل التاريخ لو مبعوت، وإلا نستخدم الآن
     je_date = datetime.utcnow()
     if date_str:
         try:
@@ -1196,18 +1119,12 @@ def journal_entries_api():
             if not acc:
                 continue
 
-            debit_val = ln.get("debit") or 0
-            credit_val = ln.get("credit") or 0
-
-            try:
-                debit_dec = (
-                    Decimal(str(debit_val)) if debit_val not in (None, "", " ") else Decimal("0")
-                )
-                credit_dec = (
-                    Decimal(str(credit_val)) if credit_val not in (None, "", " ") else Decimal("0")
-                )
-            except (InvalidOperation, ValueError, TypeError):
-                continue
+            debit_dec = safe_decimal(ln.get("debit"), default=Decimal("0"))
+            credit_dec = safe_decimal(ln.get("credit"), default=Decimal("0"))
+            if debit_dec is None:
+                debit_dec = Decimal("0")
+            if credit_dec is None:
+                credit_dec = Decimal("0")
 
             line = JournalLine(
                 journal_entry_id=je.id,
@@ -1223,18 +1140,11 @@ def journal_entries_api():
         traceback.print_exc()
         return jsonify({"error": f"DB error: {str(e)}"}), 500
 
-    return jsonify(
-        {"message": "✅ تم إنشاء قيد اليومية بنجاح", "journal_entry": je.to_dict(with_lines=True)}
-    ), 201
+    return jsonify({"message": "✅ تم إنشاء قيد اليومية بنجاح", "journal_entry": je.to_dict(with_lines=True)}), 201
 
 
-# 🔹 API جديد: قيود يدوية فقط (بدون تفويض وبدون سند تحصيل)
 @app.route("/api/journal_entries/manual", methods=["GET"])
 def manual_journal_entries_api():
-    """
-    يرجع فقط القيود اليدوية (التي ليس لها ref_authorization_id ولا ref_receipt_id)
-    لاستخدامها في صفحة عرض القيود اليدوية.
-    """
     entries = (
         JournalEntry.query
         .filter(JournalEntry.ref_authorization_id.is_(None))
@@ -1245,21 +1155,13 @@ def manual_journal_entries_api():
     return jsonify([e.to_dict(with_lines=True) for e in entries])
 
 
-# ----- Cash Receipts APIs (سندات التحصيل النقدي) -----
-
-
-
+# ----- Cash Receipts APIs -----
 @app.route("/api/receipts", methods=["GET", "POST"])
 def receipts_api():
-    """
-    GET  → يرجع قائمة سندات التحصيل النقدي.
-    POST → إنشاء سند تحصيل نقدي جديد + قيد محاسبي (من /receipt.html).
-    """
     if request.method == "GET":
         receipts = CashReceipt.query.order_by(CashReceipt.date.desc(), CashReceipt.id.desc()).all()
         return jsonify([r.to_dict() for r in receipts])
 
-    # POST – إنشاء سند تحصيل
     data = request.get_json() or {}
 
     driver_name = (data.get("driver_name") or "").strip()
@@ -1272,15 +1174,12 @@ def receipts_api():
     if amount_val in (None, "", " "):
         return jsonify({"error": "قيمة المبلغ مطلوبة"}), 400
 
-    try:
-        amount_dec = Decimal(str(amount_val))
-    except (InvalidOperation, ValueError, TypeError):
+    amount_dec = safe_decimal(amount_val)
+    if amount_dec is None:
         return jsonify({"error": "قيمة المبلغ غير صحيحة"}), 400
-
     if amount_dec <= 0:
         return jsonify({"error": "قيمة المبلغ يجب أن تكون أكبر من صفر"}), 400
 
-    # التاريخ
     rc_date = datetime.utcnow()
     if date_str:
         try:
@@ -1288,7 +1187,6 @@ def receipts_api():
         except Exception:
             return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601"}), 400
 
-    # لو عندك driver_id مش مبعوت لكن الاسم موجود، نحاول نجيبه
     driver_obj = None
     if driver_id:
         driver_obj = Driver.query.get(driver_id)
@@ -1298,7 +1196,6 @@ def receipts_api():
     if driver_obj and not driver_name:
         driver_name = driver_obj.name
 
-    # تفويض مرجعي اختياري
     auth_obj = None
     if auth_id:
         auth_obj = Authorization.query.get(auth_id)
@@ -1314,18 +1211,12 @@ def receipts_api():
 
     try:
         db.session.add(receipt)
-        db.session.flush()  # عشان receipt.id
+        db.session.flush()
 
-        # إنشاء قيد اليومية (من الصندوق إلى حساب السائقين)
         create_journal_for_cash_receipt(receipt)
 
         db.session.commit()
-        return jsonify(
-            {
-                "message": "✅ تم إنشاء سند التحصيل النقدي وتسجيل القيد المحاسبي",
-                "receipt": receipt.to_dict(),
-            }
-        ), 201
+        return jsonify({"message": "✅ تم إنشاء سند التحصيل النقدي وتسجيل القيد المحاسبي", "receipt": receipt.to_dict()}), 201
 
     except Exception as e:
         db.session.rollback()
@@ -1333,23 +1224,16 @@ def receipts_api():
         return jsonify({"error": f"DB error: {str(e)}"}), 500
 
 
-# ---------------- Auto create tables ----------------
+# ---------------- Auto create tables + ensure core accounts ----------------
 with app.app_context():
     try:
         db.create_all()
+        ensure_core_accounts()
     except Exception as e:
-        # في حالة أي خطأ أثناء إنشاء الجداول
-        print("❌ DB create_all error:", e)
+        print("❌ DB init error:", e)
+        traceback.print_exc()
 
 
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-
-
-
-
-
-
-
-

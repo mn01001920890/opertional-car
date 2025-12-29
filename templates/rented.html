@@ -16,9 +16,7 @@
       --success: #16a34a;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -28,12 +26,9 @@
       min-height: 100vh;
     }
 
-    /* 🔝 شريط علوي ثابت + مجموعة تنقّل */
     .top-bar {
       position: fixed;
-      top: 0;
-      right: 0;
-      left: 0;
+      top: 0; right: 0; left: 0;
       z-index: 1000;
       background: rgba(0, 0, 0, 0.25);
       backdrop-filter: blur(8px);
@@ -104,15 +99,12 @@
       white-space: nowrap;
     }
 
-    .small-link-btn:hover {
-      background: rgba(255,255,255,0.22);
-    }
+    .small-link-btn:hover { background: rgba(255,255,255,0.22); }
 
-    /* محتوى الصفحة */
     .page-content {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 80px 16px 24px; /* مساحة للهيدر الثابت */
+      padding: 80px 16px 24px;
     }
 
     h2 {
@@ -128,14 +120,7 @@
       margin-bottom: 18px;
     }
 
-    /* شريط الفلترة والعداد */
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
 
     .toolbar-card {
       background: rgba(255,255,255,0.95);
@@ -163,13 +148,7 @@
       white-space: nowrap;
     }
 
-    .search-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex: 1;
-      min-width: 200px;
-    }
+    .search-group { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px; }
 
     .search-input {
       width: 100%;
@@ -186,11 +165,7 @@
       box-shadow: 0 0 0 2px rgba(13,110,253,0.18);
     }
 
-    .search-label {
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
+    .search-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
     .badge {
       font-size: 11px;
@@ -201,7 +176,6 @@
       white-space: nowrap;
     }
 
-    /* كروت التفويضات (موبايل / شاشات صغيرة) */
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -209,15 +183,11 @@
     }
 
     @media (max-width: 1024px) {
-      .cards-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
+      .cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 700px) {
-      .cards-grid {
-        grid-template-columns: 1fr;
-      }
+      .cards-grid { grid-template-columns: 1fr; }
     }
 
     .card {
@@ -232,21 +202,12 @@
       border: 1px solid #e5e7eb;
     }
 
-    /* ✅ كارت متأخر (بعد الجمعة) */
     .card-overdue {
       border: 2px solid var(--danger);
-      box-shadow:
-        0 0 0 1px rgba(220,38,38,0.18),
-        var(--shadow);
+      box-shadow: 0 0 0 1px rgba(220,38,38,0.18), var(--shadow);
     }
 
-    .card-header-line {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 2px;
-    }
+    .card-header-line { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 2px; }
 
     .card-title {
       margin: 0;
@@ -278,66 +239,21 @@
       white-space: nowrap;
     }
 
-    .status-pill.green {
-      background: #22c55e;
-    }
+    .status-pill.overdue { background: var(--danger); }
 
-    .status-pill.overdue {
-      background: var(--danger);
-    }
+    .row { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; }
+    .row span { display: inline-flex; align-items: center; gap: 4px; }
 
-    .row {
-      display: flex;
-      justify-content: space-between;
-      gap: 6px;
-      font-size: 13px;
-    }
+    .label { color: var(--muted); font-size: 12px; }
+    .value { font-weight: 600; }
+    .value-strong { font-weight: 800; color: #16a34a; }
+    .value-overdue { color: var(--danger); font-weight: 800; }
 
-    .row span {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
+    .overdue-text { font-size: 11px; color: var(--danger); font-weight: 700; margin-top: 2px; }
 
-    .label {
-      color: var(--muted);
-      font-size: 12px;
-    }
+    .divider { height: 1px; background: #e5e7eb; margin: 6px 0; }
 
-    .value {
-      font-weight: 600;
-    }
-
-    .value-strong {
-      font-weight: 800;
-      color: #16a34a;
-    }
-
-    /* 🔴 تمييز المدد المتأخرة */
-    .value-overdue {
-      color: var(--danger);
-      font-weight: 800;
-    }
-
-    .overdue-text {
-      font-size: 11px;
-      color: var(--danger);
-      font-weight: 700;
-      margin-top: 2px;
-    }
-
-    .divider {
-      height: 1px;
-      background: #e5e7eb;
-      margin: 6px 0;
-    }
-
-    .actions-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 4px;
-    }
+    .actions-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 
     .btn-sm-primary,
     .btn-sm-danger,
@@ -361,19 +277,14 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
 
-    .btn-sm-primary:hover {
-      transform: translateY(-1px);
-      opacity: 0.95;
-    }
+    .btn-sm-primary:hover { transform: translateY(-1px); opacity: 0.95; }
 
     .btn-sm-danger {
       background: #fee2e2;
       color: var(--danger);
     }
 
-    .btn-sm-danger:hover {
-      background: #fecaca;
-    }
+    .btn-sm-danger:hover { background: #fecaca; }
 
     .btn-sm-outline {
       background: #f9fafb;
@@ -381,9 +292,7 @@
       border: 1px solid #e5e7eb;
     }
 
-    .btn-sm-outline:hover {
-      background: #e5e7eb;
-    }
+    .btn-sm-outline:hover { background: #e5e7eb; }
 
     .empty-state {
       margin-top: 18px;
@@ -398,9 +307,7 @@
       gap: 4px;
     }
 
-    .empty-state strong {
-      font-weight: 700;
-    }
+    .empty-state strong { font-weight: 700; }
 
     .status-bar {
       margin-top: 10px;
@@ -424,17 +331,9 @@
       border: 1px solid #fecaca;
     }
 
-    .small-note {
-      font-size: 11px;
-      color: #6b7280;
-      margin-top: 4px;
-    }
+    .small-note { font-size: 11px; color: #6b7280; margin-top: 4px; }
 
-    /* 👇👇 جدول على شاشات اللاب / الكبيرة فقط */
-    .table-wrapper {
-      display: none;
-      margin-top: 14px;
-    }
+    .table-wrapper { display: none; margin-top: 14px; }
 
     .table-card {
       background: rgba(255,255,255,0.98);
@@ -450,12 +349,10 @@
       border-collapse: collapse;
       font-size: 12px;
       direction: rtl;
-      table-layout: fixed; /* تثبيت توزيع الأعمدة */
+      table-layout: fixed;
     }
 
-    thead {
-      background: #f3f4f6;
-    }
+    thead { background: #f3f4f6; }
 
     th, td {
       padding: 6px 6px;
@@ -464,41 +361,18 @@
       white-space: nowrap;
     }
 
-    th {
-      font-weight: 700;
-      font-size: 11.5px;
-      color: #374151;
-    }
+    th { font-weight: 700; font-size: 11.5px; color: #374151; }
 
-    tbody tr:nth-child(even) {
-      background: #f9fafb;
-    }
+    tbody tr:nth-child(even) { background: #f9fafb; }
 
-    tbody tr.row-overdue {
-      background: #fef2f2;
-    }
+    tbody tr.row-overdue { background: #fef2f2; }
+    tbody tr.row-overdue td { border-bottom-color: #fecaca; }
 
-    tbody tr.row-overdue td {
-      border-bottom-color: #fecaca;
-    }
+    .td-overdue { color: var(--danger); font-weight: 700; }
+    .td-amount { font-weight: 700; color: #16a34a; }
 
-    .td-overdue {
-      color: var(--danger);
-      font-weight: 700;
-    }
+    .td-actions { display: flex; flex-wrap: wrap; gap: 4px; }
 
-    .td-amount {
-      font-weight: 700;
-      color: #16a34a;
-    }
-
-    .td-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-
-    /* توزيع عرض الأعمدة على شاشة اللاب */
     .col-id      { width: 4%; }
     .col-car     { width: 14%; }
     .col-driver  { width: 11%; }
@@ -512,36 +386,22 @@
     .col-week    { width: 10%; }
     .col-actions { width: 8%; }
 
-    /* السماح بلف بسيط في بعض الأعمدة لو النص طويل */
     td.col-car,
     td.col-driver,
     td.col-issue,
     td.col-start,
-    td.col-end {
-      white-space: normal;
-      line-height: 1.3;
-    }
+    td.col-end { white-space: normal; line-height: 1.3; }
 
-    /* ✅ التحكم في العرض حسب حجم الشاشة */
     @media (min-width: 900px) {
-      .cards-grid {
-        display: none;
-      }
-      .table-wrapper {
-        display: block;
-      }
+      .cards-grid { display: none; }
+      .table-wrapper { display: block; }
     }
 
     @media (max-width: 899px) {
-      .cards-grid {
-        display: grid;
-      }
-      .table-wrapper {
-        display: none;
-      }
+      .cards-grid { display: grid; }
+      .table-wrapper { display: none; }
     }
 
-    /* 🌙 مودال إقفال التفويض */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -555,9 +415,9 @@
 
     .modal-card {
       width: 100%;
-      max-width: 460px;      /* أصغر شوية */
-      max-height: 90vh;      /* ما يتعداش ارتفاع الشاشة */
-      overflow-y: auto;      /* Scroll داخلي لو المحتوى طويل */
+      max-width: 460px;
+      max-height: 90vh;
+      overflow-y: auto;
       background: #020617;
       color: #f9fafb;
       border-radius: 16px;
@@ -599,25 +459,12 @@
       color: #e5e7eb;
     }
 
-    .modal-body {
-      font-size: 0.88rem;
-    }
+    .modal-body { font-size: 0.88rem; }
 
-    .modal-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 6px;
-      margin-bottom: 4px;
-    }
+    .modal-row { display: flex; justify-content: space-between; gap: 6px; margin-bottom: 4px; }
 
-    .modal-label {
-      color: #9ca3af;
-      font-size: 0.8rem;
-    }
-
-    .modal-value {
-      font-weight: 600;
-    }
+    .modal-label { color: #9ca3af; font-size: 0.8rem; }
+    .modal-value { font-weight: 600; }
 
     .modal-section-title {
       margin-top: 8px;
@@ -647,10 +494,7 @@
       box-shadow: 0 0 0 1px rgba(37,99,235,0.5);
     }
 
-    .modal-textarea {
-      min-height: 70px;
-      resize: vertical;
-    }
+    .modal-textarea { min-height: 70px; resize: vertical; }
 
     .modal-footer {
       margin-top: 10px;
@@ -679,9 +523,7 @@
       border: 1px solid rgba(148,163,184,0.7);
     }
 
-    .modal-btn.cancel:hover {
-      background: rgba(15,23,42,0.9);
-    }
+    .modal-btn.cancel:hover { background: rgba(15,23,42,0.9); }
 
     .modal-btn.confirm {
       background: linear-gradient(135deg, #22c55e, #16a34a);
@@ -689,49 +531,35 @@
       box-shadow: 0 8px 20px rgba(22,163,74,0.4);
     }
 
-    .modal-btn.confirm[disabled] {
-      opacity: 0.6;
-      cursor: wait;
-      box-shadow: none;
-    }
+    .modal-btn.confirm[disabled] { opacity: 0.6; cursor: wait; box-shadow: none; }
 
-    .modal-hint {
+    .modal-hint { font-size: 0.78rem; color: #9ca3af; margin-top: 2px; }
+
+    .modal-choice-row { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+
+    .modal-choice { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #e5e7eb; }
+    .modal-choice input[type="radio"] { accent-color: #22c55e; cursor: pointer; }
+
+    /* ⭐ شريط صغير لتوضيح ان التاريخ اتغير */
+    .mini-warn {
+      margin-top: 6px;
       font-size: 0.78rem;
-      color: #9ca3af;
-      margin-top: 2px;
-    }
-
-    /* خيارات التجديد في المودال */
-    .modal-choice-row {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin-top: 4px;
-    }
-
-    .modal-choice {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.82rem;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px dashed rgba(148,163,184,0.7);
       color: #e5e7eb;
-    }
-
-    .modal-choice input[type="radio"] {
-      accent-color: #22c55e;
-      cursor: pointer;
+      background: rgba(2,6,23,0.55);
+      display: none;
     }
   </style>
 </head>
 
 <body>
-  <!-- 🔝 الهيدر الثابت -->
   <header class="top-bar">
     <div class="nav-group">
       <button class="back-btn" onclick="location.href='/dashboard'">🏠 الرئيسية</button>
       <button class="back-btn" onclick="location.href='/cars'">🚗 السيارات</button>
       <button class="back-btn" onclick="location.href='/drivers'">🧑‍✈️ السائقون</button>
-      <!-- ✅ صفحة عرض كل التفويضات هي /view في الباك إند -->
       <button class="back-btn" onclick="location.href='/view'">📄 التفويضات</button>
       <button class="back-btn" onclick="location.href='/operations'">🧾 العمليات</button>
     </div>
@@ -739,12 +567,8 @@
     <h1 class="page-title">🚗 السيارات المؤجرة (التفويضات النشطة)</h1>
 
     <div class="top-right-actions">
-      <button class="small-link-btn" onclick="location.href='/issue'">
-        ➕ إصدار تفويض جديد
-      </button>
-      <button class="small-link-btn" onclick="location.href='/receipt'">
-        🧾 سند تحصيل جديد
-      </button>
+      <button class="small-link-btn" onclick="location.href='/issue'">➕ إصدار تفويض جديد</button>
+      <button class="small-link-btn" onclick="location.href='/receipt'">🧾 سند تحصيل جديد</button>
     </div>
   </header>
 
@@ -755,11 +579,9 @@
       <strong>التفويضات التي تجاوزت نهاية الأسبوع المحاسبي (الجمعة)</strong> باللون الأحمر وترتيبها في بداية الصفحة.
       <br/>
       عدد الأيام المحاسبية محسوب من <strong>تاريخ بداية التفويض (start_date)</strong> حتى
-      <strong>نهاية الجمعة المحاسبية (planned_end)</strong> شامل يوم البداية، ويتم استخدامه لاحقًا
-      في <strong>قيد إقفال التفويض</strong> في صفحة العمليات ودفتر الأستاذ وفق شجرة الحسابات.
+      <strong>نهاية الجمعة المحاسبية (end_date)</strong>.
     </p>
 
-    <!-- شريط الفلترة والعداد -->
     <section class="toolbar">
       <div class="toolbar-card">
         <div class="counter-pill">
@@ -778,21 +600,14 @@
           />
         </div>
 
-        <span class="badge">
-          🔁 يتم تحديث البيانات مباشرة من الخادم
-        </span>
+        <span class="badge">🔁 يتم تحديث البيانات مباشرة من الخادم</span>
       </div>
     </section>
 
-    <!-- شريط الحالة (نجاح / خطأ) -->
     <div id="statusBar" class="status-bar"></div>
 
-    <!-- ✅ عرض كروت على الموبايل / الشاشات الصغيرة -->
-    <section id="cardsContainer" class="cards-grid">
-      <!-- يتم ملؤها بالـ JS -->
-    </section>
+    <section id="cardsContainer" class="cards-grid"></section>
 
-    <!-- ✅ جدول على اللابتوب / الشاشات الكبيرة -->
     <section class="table-wrapper">
       <div class="table-card">
         <table>
@@ -804,7 +619,7 @@
               <th class="col-license">الرخصة</th>
               <th class="col-issue">الإصدار</th>
               <th class="col-start">البداية</th>
-              <th class="col-end">نهاية الجمعة</th>
+              <th class="col-end">نهاية التفويض</th>
               <th class="col-days">أيام التفويض</th>
               <th class="col-delay">أيام التأخير</th>
               <th class="col-rent">اليومي</th>
@@ -812,19 +627,16 @@
               <th class="col-actions">إجراءات</th>
             </tr>
           </thead>
-          <tbody id="tableBody">
-            <!-- الصفوف من JS -->
-          </tbody>
+          <tbody id="tableBody"></tbody>
         </table>
       </div>
     </section>
 
-    <!-- حالة عدم وجود بيانات -->
     <div id="emptyState" class="empty-state" style="display:none;">
       <strong>لا توجد سيارات مؤجرة حاليًا.</strong>
       <span>يمكنك إصدار تفويض جديد من زر "إصدار تفويض جديد" بالأعلى.</span>
       <span class="small-note">
-        إذا كنت متأكدًا من وجود تفويضات، تأكد من أن حالة التفويض لم يتم إنهاؤها بالفعل (close_date = NULL فقط هي التي تظهر هنا).
+        إذا كنت متأكدًا من وجود تفويضات، تأكد أن close_date = NULL.
       </span>
     </div>
   </main>
@@ -836,6 +648,7 @@
         <h3>✅ مراجعة بيانات التفويض قبل الإقفال</h3>
         <button class="modal-close-btn" type="button" onclick="cancelCloseModal()">✕</button>
       </div>
+
       <div class="modal-body">
         <div class="modal-row">
           <div>
@@ -866,7 +679,18 @@
           </div>
         </div>
 
-        <div class="modal-row">
+        <!-- ✅ NEW: تعديل تاريخ نهاية التفويض -->
+        <div class="modal-section-title">تاريخ نهاية التفويض (يمكن تعديله قبل الإقفال)</div>
+        <input id="closeEndDateInput" type="date" class="modal-input" />
+        <div class="modal-hint">
+          لو عدّلت التاريخ هنا، هيتغير حساب عدد الأيام وقيمة الأيام المخططة تلقائيًا قبل الإقفال.
+        </div>
+
+        <div id="endDateChangedHint" class="mini-warn">
+          ⚠️ تم تعديل تاريخ نهاية التفويض — سيتم حفظه في التفويض عند الإقفال.
+        </div>
+
+        <div class="modal-row" style="margin-top:8px;">
           <div>
             <div class="modal-label">الإيجار اليومي:</div>
             <div class="modal-value" id="modalDailyRent">—</div>
@@ -894,16 +718,14 @@
         <textarea
           id="closeNoteInput"
           class="modal-textarea"
-          placeholder="مثال: إقفال تفويض أسبوعي للسيارة رقم ... عن الفترة من ... إلى ..."
+          placeholder="مثال: إقفال تفويض أسبوعي..."
         ></textarea>
         <div class="modal-hint">
-          هذا البيان يظهر في صفحة العمليات ودفتر الأستاذ فقط للشرح.
+          هذا البيان سيظهر لاحقًا في صفحة التفويضات المغلقة والعمليات.
         </div>
 
         <div class="modal-section-title">بعد الإقفال</div>
-        <div class="modal-hint">
-          اختر ما سيحدث بعد الإقفال: تجديد أسبوع جديد أو جعل السيارة متاحة.
-        </div>
+        <div class="modal-hint">اختر ما سيحدث بعد الإقفال.</div>
         <div class="modal-choice-row">
           <label class="modal-choice">
             <input type="radio" name="renewOption" value="renew" checked />
@@ -917,28 +739,23 @@
 
         <div class="modal-section-title">طريقة المعالجة المحاسبية</div>
         <div class="modal-hint">
-          يمكنك إقفال التفويض مع قيد محاسبي أو بدون قيد (تحديث حالة فقط).
+          لو اخترت “بدون قيد” سيتم تمييز التفويض بأنه مغلق بدون عملية محاسبية ليظهر في صفحة التفويضات المغلقة.
         </div>
         <div class="modal-choice-row">
           <label class="modal-choice">
             <input type="radio" name="accountingOption" value="with_journal" checked />
-            📒 إقفال التفويض مع قيد محاسبي (يظهر في صفحة العمليات)
+            📒 إقفال التفويض مع قيد محاسبي
           </label>
           <label class="modal-choice">
             <input type="radio" name="accountingOption" value="no_journal" />
-            🚫 إقفال التفويض بدون قيد محاسبي (تحديث التفويض وحالة السيارة فقط)
+            🚫 إقفال التفويض بدون قيد محاسبي
           </label>
         </div>
       </div>
 
       <div class="modal-footer">
         <button type="button" class="modal-btn cancel" onclick="cancelCloseModal()">إلغاء</button>
-        <button
-          type="button"
-          id="confirmCloseBtn"
-          class="modal-btn confirm"
-          onclick="confirmCloseAuthorization()"
-        >
+        <button type="button" id="confirmCloseBtn" class="modal-btn confirm" onclick="confirmCloseAuthorization()">
           ✅ تأكيد الإقفال
         </button>
       </div>
@@ -948,17 +765,21 @@
   <script>
     let allAuthorizations = [];
     let filteredAuthorizations = [];
-    let pendingCloseAuth = null;   // التفويض الجاري إقفاله في المودال
-    let pendingCloseDefaults = {   // قيم افتراضية للحساب
-      days: null,
-      plannedAmount: null
+    let pendingCloseAuth = null;
+
+    // نستخدمها داخل المودال لإعادة الحساب عند تغيير end_date
+    let pendingModalCalc = {
+      baseStartDate: null,     // Date (بدون وقت)
+      dailyRentNum: null,      // Number
+      originalEndDate: null,   // "YYYY-MM-DD"
+      computedDays: null,
+      computedPlannedAmount: null
     };
 
     document.addEventListener("DOMContentLoaded", () => {
       loadActiveAuthorizations();
     });
 
-    // دالة بسيطة لتحويل النص "YYYY-MM-DD HH:MM:SS" أو ISO إلى Date
     function parseDateTime(str) {
       if (!str) return null;
       try {
@@ -979,24 +800,32 @@
       return `${yyyy}-${mm}-${dd}`;
     }
 
-    // تحميل التفويضات النشطة فقط
+    function dateOnly(d) {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    function showStatus(message, isError = false) {
+      const bar = document.getElementById("statusBar");
+      if (!message) { bar.style.display = "none"; return; }
+      bar.innerHTML = message;
+      bar.className = "status-bar " + (isError ? "err" : "ok");
+      bar.style.display = "block";
+    }
+
     async function loadActiveAuthorizations() {
       showStatus("جارِ تحميل بيانات التفويضات النشطة...", false);
-      const container = document.getElementById("cardsContainer");
-      container.innerHTML = "";
+      document.getElementById("cardsContainer").innerHTML = "";
       document.getElementById("tableBody").innerHTML = "";
 
       try {
         const res = await fetch("/api/authorizations?status=active");
-        if (!res.ok) {
-          throw new Error("HTTP " + res.status);
-        }
+        if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
+
         allAuthorizations = Array.isArray(data) ? data : [];
         filteredAuthorizations = [...allAuthorizations];
 
         document.getElementById("activeCount").textContent = allAuthorizations.length;
-
         refreshViews();
 
         if (allAuthorizations.length === 0) {
@@ -1013,22 +842,8 @@
       }
     }
 
-    // ✅ عرض رسالة حالة (مع دعم HTML للينكات)
-    function showStatus(message, isError = false) {
-      const bar = document.getElementById("statusBar");
-      if (!message) {
-        bar.style.display = "none";
-        return;
-      }
-      bar.innerHTML = message;
-      bar.className = "status-bar " + (isError ? "err" : "ok");
-      bar.style.display = "block";
-    }
-
-    // تجهيز البيانات (تمييز المتأخرين + ترتيب)
     function enrichAndSort(list) {
       const now = new Date();
-
       const enriched = (list || []).map(a => {
         const issueDt = parseDateTime(a.issue_date);
         const startDt = parseDateTime(a.start_date);
@@ -1045,28 +860,14 @@
           if (overdueDays < 0) overdueDays = 0;
         }
 
-        return {
-          raw: a,
-          issueDt,
-          startDt,
-          plannedEndDt,
-          isOverdue,
-          overdueDays
-        };
+        return { raw: a, issueDt, startDt, plannedEndDt, isOverdue, overdueDays };
       });
 
-      // ✅ ترتيب: المتأخرين أولاً، الأكبر تأخيرًا بالأعلى، ثم الباقي حسب نهاية الجمعة
       enriched.sort((x, y) => {
         if (x.isOverdue && !y.isOverdue) return -1;
         if (!x.isOverdue && y.isOverdue) return 1;
-
-        if (x.isOverdue && y.isOverdue) {
-          return y.overdueDays - x.overdueDays;
-        }
-
-        if (x.plannedEndDt && y.plannedEndDt) {
-          return x.plannedEndDt - y.plannedEndDt;
-        }
+        if (x.isOverdue && y.isOverdue) return y.overdueDays - x.overdueDays;
+        if (x.plannedEndDt && y.plannedEndDt) return x.plannedEndDt - y.plannedEndDt;
         return 0;
       });
 
@@ -1079,11 +880,9 @@
       renderTable(enriched);
     }
 
-    // رسم الكروت (موبايل)
     function renderCards(enrichedList) {
       const container = document.getElementById("cardsContainer");
       container.innerHTML = "";
-
       if (!enrichedList || enrichedList.length === 0) return;
 
       enrichedList.forEach(item => {
@@ -1099,11 +898,10 @@
         const plannedEnd = (a.end_date || a.planned_end_date || "");
         const dailyRent = a.daily_rent != null ? `${a.daily_rent} ر.س/يوم` : "غير محدد";
         const days = a.rental_days != null ? `${a.rental_days} يوم` : "—";
+
         let plannedAmount = "—";
         if (a.planned_amount != null) {
-          const val = typeof a.planned_amount === "number"
-            ? a.planned_amount.toFixed(2)
-            : a.planned_amount;
+          const val = typeof a.planned_amount === "number" ? a.planned_amount.toFixed(2) : a.planned_amount;
           plannedAmount = `${val} ر.س`;
         }
 
@@ -1120,104 +918,56 @@
           </div>
 
           <div class="row">
-            <span>
-              <span class="label">السائق:</span>
-              <span class="value">${a.driver_name || "—"}</span>
-            </span>
-            <span>
-              <span class="label">رخصة:</span>
-              <span class="value">${a.driver_license_no || "—"}</span>
-            </span>
+            <span><span class="label">السائق:</span><span class="value">${a.driver_name || "—"}</span></span>
+            <span><span class="label">رخصة:</span><span class="value">${a.driver_license_no || "—"}</span></span>
           </div>
 
-          <div class="row">
-            <span>
-              <span class="label">تاريخ الإصدار:</span>
-              <span class="value">${issueDate}</span>
-            </span>
-          </div>
+          <div class="row"><span><span class="label">تاريخ الإصدار:</span><span class="value">${issueDate}</span></span></div>
+          <div class="row"><span><span class="label">بداية التفويض:</span><span class="value">${startDate || "—"}</span></span></div>
+          <div class="row"><span><span class="label">نهاية التفويض:</span><span class="value">${plannedEnd || "—"}</span></span></div>
 
           <div class="row">
-            <span>
-              <span class="label">بداية التفويض (start_date):</span>
-              <span class="value">${startDate || "—"}</span>
-            </span>
-          </div>
-
-          <div class="row">
-            <span>
-              <span class="label">نهاية الأسبوع (الجمعة):</span>
-              <span class="value">${plannedEnd || "—"}</span>
-            </span>
-          </div>
-
-          <div class="row">
-            <span>
-              <span class="label">الإيجار اليومي:</span>
-              <span class="value">${dailyRent}</span>
-            </span>
-            <span>
-              <span class="label">عدد الأيام المحاسبية:</span>
-              <span class="${durationClass}">${days}</span>
-            </span>
+            <span><span class="label">الإيجار اليومي:</span><span class="value">${dailyRent}</span></span>
+            <span><span class="label">عدد الأيام:</span><span class="${durationClass}">${days}</span></span>
           </div>
 
           ${
             isOverdue
               ? `
               <div class="row">
-                <span class="label">🔴 أيام التأخير بعد الجمعة:</span>
+                <span class="label">🔴 أيام التأخير بعد النهاية:</span>
                 <span class="value-overdue">${overdueDays} يوم</span>
               </div>
-              <div class="overdue-text">
-                هذا التفويض تجاوز مدة الأسبوع المحاسبية (من بداية التفويض حتى الجمعة) ولم يتم إقفاله بعد.
-              </div>
+              <div class="overdue-text">هذا التفويض تجاوز مدة الأسبوع ولم يتم إقفاله بعد.</div>
               `
               : ""
           }
 
           <div class="row" style="margin-top:4px;">
-            <span class="label">قيمة الإيجار للأيام المخططة تقريبًا:</span>
+            <span class="label">قيمة الأيام المخططة تقريبًا:</span>
             <span class="value-strong">${plannedAmount}</span>
           </div>
 
           <div class="divider"></div>
 
-          <div class="row">
-            <span class="label">ملاحظات:</span>
-          </div>
-          <div class="row">
-            <span class="value">${a.details || "لا توجد ملاحظات مسجلة."}</span>
-          </div>
+          <div class="row"><span class="label">ملاحظات:</span></div>
+          <div class="row"><span class="value">${a.details || "لا توجد ملاحظات مسجلة."}</span></div>
 
           <div class="divider"></div>
 
           <div class="actions-row">
-            <button class="btn-sm-primary" onclick="openReceipt(${a.id})">
-              🧾 سند تحصيل
-            </button>
-
-            <button class="btn-sm-danger" onclick="endAuthorization(${a.id}, this)">
-              ✅ إنهاء التفويض
-            </button>
+            <button class="btn-sm-primary" onclick="openReceipt(${a.id})">🧾 سند تحصيل</button>
+            <button class="btn-sm-danger" onclick="endAuthorization(${a.id}, this)">✅ إنهاء التفويض</button>
           </div>
-
-          <p class="small-note">
-            عند الضغط على "إنهاء التفويض" سيتم فتح نافذة لمراجعة القيمة والبيان قبل الإقفال،
-            ثم يقوم النظام من الباك إند بإنشاء <strong>قيد إقفال التفويض</strong> وربطه بشجرة الحسابات
-            وظهوره في صفحة العمليات، مع إمكانية إنشاء تفويض جديد للأسبوع التالي تلقائيًا أو تحويل السيارة لمتاحة حسب اختيارك.
-          </p>
         `;
 
         container.appendChild(card);
       });
     }
 
-    // رسم الجدول (لاب توب)
     function renderTable(enrichedList) {
       const tbody = document.getElementById("tableBody");
       tbody.innerHTML = "";
-
       if (!enrichedList || enrichedList.length === 0) return;
 
       enrichedList.forEach(item => {
@@ -1233,19 +983,16 @@
         const plannedEnd = (a.end_date || a.planned_end_date || "");
         const days = a.rental_days != null ? a.rental_days : "—";
         const dailyRent = a.daily_rent != null ? a.daily_rent : "—";
+
         let plannedAmount = "—";
         if (a.planned_amount != null) {
-          plannedAmount =
-            typeof a.planned_amount === "number"
-              ? a.planned_amount.toFixed(2)
-              : a.planned_amount;
+          plannedAmount = typeof a.planned_amount === "number" ? a.planned_amount.toFixed(2) : a.planned_amount;
         }
 
         tr.innerHTML = `
           <td class="col-id">${a.id}</td>
           <td class="col-car">
-            ${a.car_number || "—"}
-            <br/>
+            ${a.car_number || "—"}<br/>
             <span class="label">${(a.car_model || "")} ${(a.car_type || "")}</span>
           </td>
           <td class="col-driver">${a.driver_name || "—"}</td>
@@ -1255,12 +1002,8 @@
           <td class="col-end">${plannedEnd || "—"}</td>
           <td class="col-days ${isOverdue ? "td-overdue" : ""}">${days}</td>
           <td class="col-delay ${isOverdue ? "td-overdue" : ""}">${isOverdue ? overdueDays : "0"}</td>
-          <td class="col-rent">
-            ${dailyRent !== "—" ? dailyRent + " ر.س/يوم" : "غير محدد"}
-          </td>
-          <td class="col-week td-amount">
-            ${plannedAmount !== "—" ? plannedAmount + " ر.س" : "—"}
-          </td>
+          <td class="col-rent">${dailyRent !== "—" ? dailyRent + " ر.س/يوم" : "غير محدد"}</td>
+          <td class="col-week td-amount">${plannedAmount !== "—" ? plannedAmount + " ر.س" : "—"}</td>
           <td class="col-actions">
             <div class="td-actions">
               <button class="btn-sm-primary" onclick="openReceipt(${a.id})">🧾</button>
@@ -1273,7 +1016,6 @@
       });
     }
 
-    // فلترة حسب البحث (اسم السائق / رقم السيارة / رقم الرخصة)
     function applyFilter() {
       const term = (document.getElementById("searchInput").value || "").trim().toLowerCase();
       if (!term) {
@@ -1289,96 +1031,115 @@
       refreshViews();
     }
 
-    // فتح صفحة سند التحصيل مع تمرير رقم التفويض
     function openReceipt(authId) {
       if (!authId) return;
       window.location.href = `/receipt?authorization_id=${authId}`;
     }
 
-    // ✳️ فتح مودال مراجعة التفويض قبل الإقفال
-    function endAuthorization(authId, btnEl) {
+    function endAuthorization(authId) {
       const auth = allAuthorizations.find(a => String(a.id) === String(authId));
-      if (!auth) {
-        alert("لم يتم العثور على بيانات هذا التفويض.");
-        return;
-      }
+      if (!auth) { alert("لم يتم العثور على بيانات هذا التفويض."); return; }
+
       pendingCloseAuth = auth;
 
       const carInfo = `${auth.car_number || "بدون رقم"} — ${(auth.car_model || "")} ${(auth.car_type || "")}`.trim();
+
       const periodStart = formatDateShort(auth.start_date || auth.issue_date);
       const periodEnd = formatDateShort(auth.end_date || auth.planned_end_date);
 
-      // حساب عدد الأيام والمبلغ لو مش مرسلة جاهزة
-      let days = auth.rental_days;
-      let plannedAmount = auth.planned_amount;
-
+      // تحضير أساس الحساب
       const baseStart = parseDateTime(auth.start_date || auth.issue_date);
-      const endDt = parseDateTime(auth.end_date || auth.planned_end_date);
       const dailyRentNum = auth.daily_rent != null ? Number(auth.daily_rent) : null;
 
-      if ((days == null || plannedAmount == null) && baseStart && endDt && dailyRentNum != null && !Number.isNaN(dailyRentNum)) {
-        const d1 = new Date(baseStart.getFullYear(), baseStart.getMonth(), baseStart.getDate());
-        const d2 = new Date(endDt.getFullYear(), endDt.getMonth(), endDt.getDate());
-        let diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
-        if (diffDays < 0) diffDays = 0;
-        days = days != null ? days : diffDays;
-        plannedAmount = plannedAmount != null ? plannedAmount : diffDays * dailyRentNum;
-      }
+      pendingModalCalc.baseStartDate = baseStart ? dateOnly(baseStart) : null;
+      pendingModalCalc.dailyRentNum = (dailyRentNum != null && !Number.isNaN(dailyRentNum)) ? dailyRentNum : null;
+      pendingModalCalc.originalEndDate = (periodEnd && periodEnd !== "—") ? periodEnd : "";
 
-      pendingCloseDefaults.days = days;
-      pendingCloseDefaults.plannedAmount = plannedAmount;
-
-      // تعبئة عناصر المودال
+      // تعبئة بيانات ثابتة
       document.getElementById("modalAuthId").textContent = `#${auth.id}`;
       document.getElementById("modalCarInfo").textContent = carInfo || "—";
       document.getElementById("modalDriverName").textContent = auth.driver_name || "—";
       document.getElementById("modalDriverLicense").textContent = auth.driver_license_no || "—";
-      document.getElementById("modalPeriod").textContent =
-        (periodStart && periodEnd && periodStart !== "—" && periodEnd !== "—")
-          ? `من ${periodStart} إلى ${periodEnd} (${days != null ? days + " يوم" : "—"})`
-          : "—";
 
       document.getElementById("modalDailyRent").textContent =
-        dailyRentNum != null && !Number.isNaN(dailyRentNum)
-          ? `${dailyRentNum} ر.س/يوم`
-          : "غير محدد";
+        pendingModalCalc.dailyRentNum != null ? `${pendingModalCalc.dailyRentNum} ر.س/يوم` : "غير محدد";
 
-      document.getElementById("modalPlannedAmount").textContent =
-        plannedAmount != null && !Number.isNaN(Number(plannedAmount))
-          ? `${Number(plannedAmount).toFixed(2)} ر.س`
-          : "—";
+      // ✅ NEW: تاريخ نهاية التفويض داخل المودال
+      const endDateInput = document.getElementById("closeEndDateInput");
+      endDateInput.value = pendingModalCalc.originalEndDate || "";
+      document.getElementById("endDateChangedHint").style.display = "none";
 
+      // عند تغيير end_date: نعيد الحساب ونحدّث العرض
+      endDateInput.oninput = () => {
+        const changed = (endDateInput.value || "").trim() !== (pendingModalCalc.originalEndDate || "").trim();
+        document.getElementById("endDateChangedHint").style.display = changed ? "block" : "none";
+        recalcModalFigures();
+      };
+
+      // إعادة الحساب مرة أولى بناءً على التاريخ الافتراضي
+      recalcModalFigures();
+
+      // المبلغ الافتراضي للإقفال (من plannedAmount المحسوب)
       const closeAmountInput = document.getElementById("closeAmountInput");
       const closeNoteInput = document.getElementById("closeNoteInput");
 
       const defaultAmount =
         auth.closed_amount != null
           ? Number(auth.closed_amount)
-          : (plannedAmount != null ? Number(plannedAmount) : 0);
+          : (pendingModalCalc.computedPlannedAmount != null ? Number(pendingModalCalc.computedPlannedAmount) : 0);
 
-      closeAmountInput.value = defaultAmount && !Number.isNaN(defaultAmount)
-        ? defaultAmount.toFixed(2)
-        : "";
+      closeAmountInput.value = (defaultAmount && !Number.isNaN(defaultAmount)) ? defaultAmount.toFixed(2) : "";
 
       closeNoteInput.value =
         auth.closing_note ||
-        `إقفال تفويض رقم ${auth.id} للسيارة ${auth.car_number || ""} عن الفترة من ${periodStart} إلى ${periodEnd}`;
+        `إقفال تفويض رقم ${auth.id} للسيارة ${auth.car_number || ""} عن الفترة من ${periodStart} إلى ${endDateInput.value || periodEnd}`;
 
-      // إعادة اختيار التجديد الافتراضي = تجديد
-      const renewRadios = document.querySelectorAll('input[name="renewOption"]');
-      renewRadios.forEach(r => {
-        r.checked = (r.value === "renew");
-      });
+      // الافتراضات
+      document.querySelectorAll('input[name="renewOption"]').forEach(r => r.checked = (r.value === "renew"));
+      document.querySelectorAll('input[name="accountingOption"]').forEach(r => r.checked = (r.value === "with_journal"));
 
-      // إعادة اختيار المعالجة المحاسبية الافتراضية = مع قيد محاسبي
-      const accRadios = document.querySelectorAll('input[name="accountingOption"]');
-      accRadios.forEach(r => {
-        r.checked = (r.value === "with_journal");
-      });
-
-      // إظهار المودال
       document.getElementById("closeModalOverlay").style.display = "flex";
       closeAmountInput.focus();
+    }
+
+    function recalcModalFigures() {
+      if (!pendingCloseAuth) return;
+
+      const endDateStr = (document.getElementById("closeEndDateInput").value || "").trim();
+      const baseStartDate = pendingModalCalc.baseStartDate;
+      const dailyRentNum = pendingModalCalc.dailyRentNum;
+
+      let days = null;
+      let plannedAmount = null;
+
+      if (baseStartDate && endDateStr && dailyRentNum != null) {
+        // endDateStr = YYYY-MM-DD
+        const [y, m, d] = endDateStr.split("-").map(Number);
+        const endDate = new Date(y, (m - 1), d);
+        const diffDays = Math.round((dateOnly(endDate) - dateOnly(baseStartDate)) / (1000*60*60*24)) + 1;
+        days = diffDays < 0 ? 0 : diffDays;
+        plannedAmount = days * dailyRentNum;
+      } else {
+        // fallback للبيانات الجاهزة من السيرفر
+        days = pendingCloseAuth.rental_days != null ? pendingCloseAuth.rental_days : null;
+        plannedAmount = pendingCloseAuth.planned_amount != null ? Number(pendingCloseAuth.planned_amount) : null;
+      }
+
+      pendingModalCalc.computedDays = days;
+      pendingModalCalc.computedPlannedAmount = plannedAmount;
+
+      const periodStart = formatDateShort(pendingCloseAuth.start_date || pendingCloseAuth.issue_date);
+      const periodEnd = endDateStr || formatDateShort(pendingCloseAuth.end_date || pendingCloseAuth.planned_end_date);
+
+      document.getElementById("modalPeriod").textContent =
+        (periodStart && periodEnd && periodStart !== "—" && periodEnd !== "—")
+          ? `من ${periodStart} إلى ${periodEnd} (${days != null ? days + " يوم" : "—"})`
+          : "—";
+
+      document.getElementById("modalPlannedAmount").textContent =
+        (plannedAmount != null && !Number.isNaN(plannedAmount))
+          ? `${Number(plannedAmount).toFixed(2)} ر.س`
+          : "—";
     }
 
     function cancelCloseModal() {
@@ -1389,65 +1150,44 @@
       btn.textContent = "✅ تأكيد الإقفال";
     }
 
-    // تأكيد الإقفال فعليًا (استدعاء API)
     async function confirmCloseAuthorization() {
-      if (!pendingCloseAuth) {
-        alert("لا توجد عملية إقفال جارية.");
-        return;
-      }
+      if (!pendingCloseAuth) { alert("لا توجد عملية إقفال جارية."); return; }
 
       const btn = document.getElementById("confirmCloseBtn");
       const amountInput = document.getElementById("closeAmountInput");
       const noteInput = document.getElementById("closeNoteInput");
+      const endDateInput = document.getElementById("closeEndDateInput");
 
       const amountStr = (amountInput.value || "").trim();
-      if (!amountStr) {
-        alert("من فضلك أدخل قيمة التفويض عند الإقفال.");
-        amountInput.focus();
-        return;
-      }
+      if (!amountStr) { alert("من فضلك أدخل قيمة التفويض عند الإقفال."); amountInput.focus(); return; }
 
       const amountNum = Number(amountStr);
-      if (Number.isNaN(amountNum) || amountNum < 0) {
-        alert("قيمة التفويض عند الإقفال غير صحيحة.");
-        amountInput.focus();
-        return;
-      }
+      if (Number.isNaN(amountNum) || amountNum < 0) { alert("قيمة التفويض عند الإقفال غير صحيحة."); amountInput.focus(); return; }
 
       const noteStr = (noteInput.value || "").trim();
 
-      // قراءة اختيار التجديد
-      const renewRadios = document.querySelectorAll('input[name="renewOption"]');
-      let localRenew = true; // الافتراضي تجديد
-      renewRadios.forEach(r => {
-        if (r.checked && r.value === "no_renew") {
-          localRenew = false;
-        }
+      // renew
+      let localRenew = true;
+      document.querySelectorAll('input[name="renewOption"]').forEach(r => {
+        if (r.checked && r.value === "no_renew") localRenew = false;
       });
 
-      // قراءة اختيار المعالجة المحاسبية
-      const accRadios = document.querySelectorAll('input[name="accountingOption"]');
-      let withJournal = true; // الافتراضي مع قيد محاسبي
-      accRadios.forEach(r => {
-        if (r.checked && r.value === "no_journal") {
-          withJournal = false;
-        }
+      // accounting
+      let withJournal = true;
+      document.querySelectorAll('input[name="accountingOption"]').forEach(r => {
+        if (r.checked && r.value === "no_journal") withJournal = false;
       });
 
-      let confirmText;
-      if (withJournal) {
-        confirmText = localRenew
-          ? "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان مع إنشاء تفويض جديد للأسبوع التالي وتسجيل قيد محاسبي؟"
-          : "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان وتحويل السيارة إلى متاحة بدون تفويض جديد مع تسجيل قيد محاسبي؟";
-      } else {
-        confirmText = localRenew
-          ? "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان مع إنشاء تفويض جديد للأسبوع التالي بدون تسجيل أي قيد محاسبي؟"
-          : "هل تريد تأكيد إقفال التفويض بهذه القيمة والبيان وتحويل السيارة إلى متاحة بدون تفويض جديد وبدون تسجيل أي قيد محاسبي؟";
-      }
+      const overrideEndDate = (endDateInput.value || "").trim(); // YYYY-MM-DD
 
-      if (!window.confirm(confirmText)) {
-        return;
-      }
+      const confirmText =
+        `تأكيد إقفال التفويض؟\n` +
+        `- المبلغ: ${amountNum.toFixed(2)}\n` +
+        `- ${withJournal ? "مع قيد محاسبي" : "بدون قيد محاسبي (سيتم تمييز التفويض)"}\n` +
+        `- ${localRenew ? "مع تجديد أسبوع جديد" : "بدون تجديد"}\n` +
+        (overrideEndDate ? `- نهاية التفويض: ${overrideEndDate}\n` : "");
+
+      if (!window.confirm(confirmText)) return;
 
       try {
         btn.disabled = true;
@@ -1455,31 +1195,27 @@
 
         showStatus(
           withJournal
-            ? "جارِ إقفال التفويض وحساب الأسبوع المحاسبي وتسجيل القيد في صفحة العمليات..."
-            : "جارِ إقفال التفويض وتحديث حالة السيارة بدون تسجيل أي قيد محاسبي...",
+            ? "جارِ إقفال التفويض وتسجيل القيد (إن وُجد)..."
+            : "جارِ إقفال التفويض بدون تسجيل قيد (سيتم تمييزه)...",
           false
         );
 
-        // الباك إند هنا مسؤول عن:
-        // - تحديث التفويض (closed_amount, closing_note, close_date)
-        // - (اختياري) إنشاء قيد إقفال في اليومية العامة حسب شجرة الحسابات لو with_journal = true
-        // - ربط القيد بصفحة العمليات
-        // - إنشاء تفويض جديد للأسبوع التالي لنفس السيارة والسائق في حالة التجديد
+        const payload = {
+          closed_amount: amountNum,
+          closing_note: noteStr,
+          renew: localRenew,
+          with_journal: withJournal,
+          end_date_override: overrideEndDate || null,  // ✅ NEW
+        };
+
         const res = await fetch(`/api/authorizations/${pendingCloseAuth.id}/end`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            closed_amount: amountNum,
-            closing_note: noteStr,
-            renew: localRenew,
-            with_journal: withJournal
-          })
+          body: JSON.stringify(payload)
         });
 
         let data = {};
-        try {
-          data = await res.json();
-        } catch (_) {}
+        try { data = await res.json(); } catch (_) {}
 
         if (!res.ok) {
           const msg = data.error || `لم يتم إقفال التفويض (HTTP ${res.status})`;
@@ -1489,101 +1225,43 @@
           return;
         }
 
-        // القيمة النهائية لقرار التجديد من الباك إند (لو رجع)
         const serverRenew = typeof data.renew === "boolean" ? data.renew : localRenew;
-        const serverWithJournal =
-          typeof data.with_journal === "boolean" ? data.with_journal : withJournal;
+        const serverWithJournal = typeof data.with_journal === "boolean" ? data.with_journal : withJournal;
 
-        // إزالة التفويض المنتهي من القائمة الحالية
-        allAuthorizations = allAuthorizations.filter(
-          a => String(a.id) !== String(pendingCloseAuth.id)
-        );
+        allAuthorizations = allAuthorizations.filter(a => String(a.id) !== String(pendingCloseAuth.id));
 
-        // ✅ إضافة التفويض الجديد للأسبوع التالي (لو راجع من الباك إند وتم اختياره)
         const newAuth = data.new_authorization;
-        if (serverRenew && newAuth && !newAuth.close_date) {
-          allAuthorizations.push(newAuth);
-        }
+        if (serverRenew && newAuth && !newAuth.close_date) allAuthorizations.push(newAuth);
 
-        // إعادة تطبيق الفلتر وإعادة الرسم
         applyFilter();
         document.getElementById("activeCount").textContent = allAuthorizations.length;
-        document.getElementById("emptyState").style.display =
-          allAuthorizations.length === 0 ? "block" : "none";
+        document.getElementById("emptyState").style.display = allAuthorizations.length === 0 ? "block" : "none";
 
-        const totalAmount =
-          (data.closed_authorization && data.closed_authorization.closed_amount) ||
-          data.total_amount ||
-          amountNum;
-
-        const msgExtra =
-          totalAmount != null && !Number.isNaN(Number(totalAmount))
-            ? `، وقيمة التفويض المقفول: ${Number(totalAmount).toFixed(2)} ر.س`
-            : "";
-
-        // ✅ تحديد رقم التفويض المقفول لاستخدامه في رابط صفحة العمليات
-        const closedAuthId =
-          (data.closed_authorization && data.closed_authorization.id) ||
-          pendingCloseAuth.id;
+        const closedAuthId = (data.closed_authorization && data.closed_authorization.id) || pendingCloseAuth.id;
 
         let opsLinkHtml = "";
         if (serverWithJournal) {
-          const opsUrl = `/operations?type=auth_close&auth_id=${closedAuthId}`;
-          opsLinkHtml = `
-            <a href="${opsUrl}"
-               style="margin-right:8px;color:#1d4ed8;text-decoration:underline;font-weight:600;">
-              📄 عرض هذا القيد في صفحة العمليات
-            </a>
-          `;
+          opsLinkHtml = `<a href="/operations?type=auth_close&auth_id=${closedAuthId}"
+            style="margin-right:8px;color:#1d4ed8;text-decoration:underline;font-weight:600;">
+            📄 عرض القيد في العمليات
+          </a>`;
         }
 
-        // تجهيز لينك سند التحصيل التلقائي من suggested_receipt
-        let receiptLinkHtml = "";
-        const sr = data.suggested_receipt;
-        if (sr && sr.authorization_id) {
-          const params = new URLSearchParams();
-          params.set("authorization_id", sr.authorization_id);
-          if (sr.driver_id != null) params.set("driver_id", sr.driver_id);
-          if (sr.driver_name) params.set("driver_name", sr.driver_name);
-          if (sr.default_amount != null) params.set("amount", sr.default_amount);
-          if (sr.description) params.set("description", sr.description);
+        // ✅ لو اتقفل بدون قيد: نوضح ده
+        const closedWithout = !!data.closed_without_journal;
 
-          const receiptUrl = `/receipt?${params.toString()}`;
-          receiptLinkHtml = `
-            <a href="${receiptUrl}"
-               style="margin-right:8px;color:#15803d;text-decoration:underline;font-weight:600;">
-              🧾 إنشاء سند تحصيل تلقائي لهذا التفويض
-            </a>
-          `;
-        }
+        const msg = `
+          ✅ تم إقفال التفويض بنجاح.
+          ${closedWithout ? "<br><b style='color:#b45309'>⚠️ تم الإقفال بدون قيد محاسبي (سيظهر بعلامة في صفحة المغلق).</b>" : ""}
+          ${opsLinkHtml ? "<br>" + opsLinkHtml : ""}
+        `;
 
-        let baseText;
-        if (data.message) {
-          baseText = data.message;
-        } else if (serverWithJournal) {
-          baseText = serverRenew
-            ? "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي مع تسجيل قيد محاسبي للأسبوع المحاسبي"
-            : "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة مع تسجيل قيد محاسبي للأسبوع المحاسبي";
-        } else {
-          baseText = serverRenew
-            ? "✅ تم إقفال التفويض وإنشاء تفويض جديد للأسبوع التالي بدون تسجيل أي قيد محاسبي"
-            : "✅ تم إقفال التفويض وتحويل السيارة إلى متاحة بدون تسجيل أي قيد محاسبي";
-        }
-
-        const htmlMessage = `${baseText}${msgExtra}.<br>${opsLinkHtml}${
-          receiptLinkHtml ? "<br>" + receiptLinkHtml : ""
-        }`;
-
-        // إخفاء المودال بعد الحساب
         cancelCloseModal();
-
-        // ✅ عرض رسالة فيها لينك مباشر (لو في قيد) + سند التحصيل
-        showStatus(htmlMessage, false);
+        showStatus(msg, false);
 
       } catch (err) {
         console.error(err);
         showStatus("تعذر إقفال التفويض. تأكد من أن الخادم يعمل ثم أعد المحاولة.", true);
-        const btn = document.getElementById("confirmCloseBtn");
         btn.disabled = false;
         btn.textContent = "✅ تأكيد الإقفال";
       }
@@ -1591,21 +1269,10 @@
   </script>
 
   <script>
-    // 🔒 منع كليك يمين
-    document.addEventListener('contextmenu', function (e) {
-      e.preventDefault();
-    });
-
-    // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
+    document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     document.addEventListener('keydown', function (e) {
-      // F12
-      if (e.key === "F12") {
-        e.preventDefault();
-      }
-
-      // Ctrl + Shift + I أو Ctrl + Shift + J أو Ctrl + U
-      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
-          (e.ctrlKey && e.key === 'U')) {
+      if (e.key === "F12") e.preventDefault();
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || (e.ctrlKey && e.key === 'U')) {
         e.preventDefault();
       }
     });

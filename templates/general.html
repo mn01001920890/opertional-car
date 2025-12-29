@@ -399,19 +399,156 @@
       color:rgba(148,163,184,0.9);
     }
 
+    /* ===========================
+       🖨️ طباعة إيصال القيد
+       =========================== */
+
+    /* منطقة الطباعة فقط */
+    #printArea { display:none; }
+
     @media print {
-      body {
-        background:#ffffff;
+      /* A4 + هوامش مناسبة */
+      @page { size: A4; margin: 12mm; }
+
+      /* اطبع فقط printArea */
+      body { background:#fff !important; color:#000 !important; }
+      body * { visibility: hidden !important; }
+      #printArea, #printArea * { visibility: visible !important; }
+
+      #printArea{
+        display:block !important;
+        position: fixed;
+        inset: 0;
+        padding: 0;
+        direction: rtl;
+        font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+        color:#000;
       }
-      .top-bar {
-        display:none;
-      }
-      .page-wrapper {
-        padding-top:16px;
-      }
-      .btn, .btn-line {
-        display:none !important;
-      }
+
+      /* تحسين كسر الصفحات */
+      #printArea table { width:100%; border-collapse: collapse; table-layout: fixed; }
+      #printArea thead { display: table-header-group; } /* تكرار رأس الجدول */
+      #printArea tfoot { display: table-footer-group; }
+      #printArea tr { break-inside: avoid; page-break-inside: avoid; }
+      #printArea .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+
+      /* ألوان/خلفيات */
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      /* لا نطبع أزرار/الهيدر (أصلاً مخفيين بالـ visibility) */
+    }
+
+    /* شكل إيصال الطباعة */
+    .print-sheet{
+      background:#fff;
+      padding: 0;
+    }
+
+    .print-head{
+      padding: 10px 0 8px;
+      border-bottom: 2px solid #111;
+      margin-bottom: 10px;
+    }
+
+    .print-title{
+      display:flex;
+      align-items:flex-end;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .print-title h1{
+      margin:0;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .print-title .meta-pill{
+      font-size: 12px;
+      border: 1px solid #111;
+      border-radius: 999px;
+      padding: 4px 10px;
+      white-space: nowrap;
+    }
+
+    .print-meta{
+      margin-top: 8px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px 12px;
+      font-size: 12px;
+    }
+
+    .print-meta .item{
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+
+    .print-meta .k{ font-weight: 900; margin-left: 6px; }
+    .print-meta .v{ font-weight: 700; }
+
+    .print-table{
+      width:100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
+    .print-table th, .print-table td{
+      border: 1px solid #ddd;
+      padding: 6px 6px;
+      vertical-align: top;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .print-table thead th{
+      background: #f3f4f6;
+      font-weight: 900;
+    }
+
+    .print-num{ text-align:center; width: 42px; }
+    .print-money{ text-align:left; direction:ltr; font-variant-numeric: tabular-nums; }
+
+    .print-totals{
+      margin-top: 10px;
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      border-top: 2px solid #111;
+      padding-top: 8px;
+    }
+
+    .print-totals .box{
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 6px 10px;
+      min-width: 180px;
+    }
+
+    .print-sig{
+      margin-top: 16px;
+      display:flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sig-line{
+      width: 46%;
+      min-width: 220px;
+      border-top: 1px solid #999;
+      padding-top: 6px;
+      text-align:center;
+      font-size: 12px;
+    }
+
+    @media (max-width: 768px){
+      .print-meta{ grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -515,17 +652,15 @@
               </div>
             </div>
 
-                 <div class="actions">
-                  <button type="submit" class="btn btn-primary">
-                    💾🖨️ حفظ وطباعة القيد
-                  </button>
-                
-                  <button type="button" class="btn btn-ghost" id="btnResetForm">
-                    ♻️ مسح الحقول
-                  </button>
-                </div>
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">
+                💾🖨️ حفظ وطباعة القيد
+              </button>
 
-
+              <button type="button" class="btn btn-ghost" id="btnResetForm">
+                ♻️ مسح الحقول
+              </button>
+            </div>
 
             <div id="formMessage" class="message"></div>
           </form>
@@ -533,6 +668,9 @@
       </div>
     </div>
   </div>
+
+  <!-- ✅ منطقة طباعة الإيصال فقط -->
+  <div id="printArea" aria-hidden="true"></div>
 
   <script>
     // بيانات الحسابات
@@ -549,9 +687,9 @@
     const journalForm = document.getElementById("journalForm");
     const btnAddLine = document.getElementById("btnAddLine");
     const btnResetForm = document.getElementById("btnResetForm");
- 
 
-
+    // للطباعة/الريست بعد الطباعة
+    let pendingResetAfterPrint = false;
 
     // ضبط تاريخ اليوم مبدئيًا
     (function setToday() {
@@ -638,7 +776,7 @@
     function filterAccountOptions(selectElem, term) {
       const t = (term || "").trim().toLowerCase();
       Array.from(selectElem.options).forEach(opt => {
-        if (!opt.value) { // "اختر حساباً..."
+        if (!opt.value) {
           opt.hidden = false;
           return;
         }
@@ -667,12 +805,10 @@
 
       const sel = createAccountSelect();
 
-      // ربط البحث بالـ select
       searchInput.addEventListener("input", () => {
         filterAccountOptions(sel, searchInput.value);
       });
 
-      // لو اختار حساب من القائمة نحط اسمه في خانة البحث
       sel.addEventListener("change", () => {
         const opt = sel.options[sel.selectedIndex];
         if (opt && opt.value) {
@@ -747,8 +883,160 @@
       const m = String(today.getMonth() + 1).padStart(2, "0");
       const d = String(today.getDate()).padStart(2, "0");
       jeDateInput.value = `${y}-${m}-${d}`;
+      if (accounts.length > 0) { addLineRow(); addLineRow(); }
     });
-      
+
+    function escapeHtml(str){
+      const s = (str == null ? "" : String(str));
+      return s
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#39;");
+    }
+
+    function nowStamp(){
+      const d = new Date();
+      const pad = n => String(n).padStart(2,"0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function getSelectedAccountLabel(selectElem, fallbackAccountId){
+      if (selectElem && selectElem.selectedIndex >= 0) {
+        const opt = selectElem.options[selectElem.selectedIndex];
+        if (opt && opt.value) return opt.textContent || "";
+      }
+      const acc = accounts.find(a => String(a.id) === String(fallbackAccountId));
+      if (!acc) return "";
+      const code = acc.code ? String(acc.code).trim() : "";
+      const name = acc.name || "";
+      return code ? `${code} — ${name}` : name;
+    }
+
+    function buildPrintReceipt(entryId){
+      const rows = Array.from(linesBody.querySelectorAll("tr"));
+
+      const dateVal = (jeDateInput.value || "").trim();
+      const descVal = (jeDescInput.value || "").trim();
+
+      const lines = [];
+      let tDebit = 0, tCredit = 0;
+
+      rows.forEach(r => {
+        const sel = r.querySelector(".line-account");
+        const debitInput = r.querySelector(".line-debit");
+        const creditInput = r.querySelector(".line-credit");
+
+        const accountId = sel ? sel.value : "";
+        const debit = parseFloat(debitInput ? (debitInput.value || "0") : "0") || 0;
+        const credit = parseFloat(creditInput ? (creditInput.value || "0") : "0") || 0;
+
+        if (!accountId) return;
+        if (debit === 0 && credit === 0) return;
+
+        const label = getSelectedAccountLabel(sel, accountId);
+        tDebit += debit;
+        tCredit += credit;
+
+        lines.push({
+          account: label,
+          debit,
+          credit
+        });
+      });
+
+      const printArea = document.getElementById("printArea");
+
+      const entryText = entryId ? `#${entryId}` : "—";
+      const balanced = Math.abs(tDebit - tCredit) < 0.005;
+
+      const tableRows = lines.map((ln, idx) => `
+        <tr>
+          <td class="print-num">${idx + 1}</td>
+          <td>${escapeHtml(ln.account || "")}</td>
+          <td class="print-money">${ln.debit ? escapeHtml(ln.debit.toFixed(2)) : ""}</td>
+          <td class="print-money">${ln.credit ? escapeHtml(ln.credit.toFixed(2)) : ""}</td>
+        </tr>
+      `).join("");
+
+      printArea.innerHTML = `
+        <div class="print-sheet">
+          <div class="print-head avoid-break">
+            <div class="print-title">
+              <h1>قيد يومية يدوي</h1>
+              <div class="meta-pill">رقم القيد: ${escapeHtml(entryText)}</div>
+            </div>
+
+            <div class="print-meta">
+              <div class="item"><span class="k">التاريخ:</span><span class="v">${escapeHtml(dateVal || "—")}</span></div>
+              <div class="item"><span class="k">الوصف:</span><span class="v">${escapeHtml(descVal || "—")}</span></div>
+              <div class="item"><span class="k">تاريخ الطباعة:</span><span class="v">${escapeHtml(nowStamp())}</span></div>
+            </div>
+          </div>
+
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th class="print-num">م</th>
+                <th>الحساب</th>
+                <th style="width:130px;">مدين</th>
+                <th style="width:130px;">دائن</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${tableRows || `<tr><td colspan="4" style="text-align:center;">— لا توجد بنود —</td></tr>`}
+            </tbody>
+
+            <tfoot>
+              <tr>
+                <th colspan="2" style="text-align:right;">الإجمالي</th>
+                <th class="print-money">${escapeHtml(tDebit.toFixed(2))}</th>
+                <th class="print-money">${escapeHtml(tCredit.toFixed(2))}</th>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div class="print-totals avoid-break">
+            <div class="box"><strong>إجمالي المدين:</strong> <span class="print-money">${escapeHtml(tDebit.toFixed(2))}</span></div>
+            <div class="box"><strong>إجمالي الدائن:</strong> <span class="print-money">${escapeHtml(tCredit.toFixed(2))}</span></div>
+            <div class="box"><strong>الحالة:</strong> ${balanced ? "✅ متوازن" : "⚠️ غير متوازن"}</div>
+          </div>
+
+          <div class="print-sig avoid-break">
+            <div class="sig-line">المُعِد</div>
+            <div class="sig-line">المُراجِع</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function printJournalReceipt(entryId){
+      pendingResetAfterPrint = true;
+      buildPrintReceipt(entryId);
+      window.print();
+    }
+
+    window.addEventListener("afterprint", () => {
+      // نظف مساحة الطباعة
+      const printArea = document.getElementById("printArea");
+      printArea.innerHTML = "";
+
+      if (!pendingResetAfterPrint) return;
+      pendingResetAfterPrint = false;
+
+      // بعد الطباعة نفضي البنود
+      linesBody.innerHTML = "";
+      updateTotals();
+      jeDescInput.value = "";
+
+      // نضيف سطرين فاضيين جديدين للتسهيل
+      if (accounts.length > 0) {
+        addLineRow();
+        addLineRow();
+      }
+    });
 
     journalForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -776,7 +1064,7 @@
         const credit = parseFloat(creditInput.value || "0");
 
         if ((isNaN(debit) || debit === 0) && (isNaN(credit) || credit === 0)) {
-          continue; // سطر فاضي
+          continue;
         }
 
         if (!isNaN(debit)) totalDebit += debit;
@@ -819,12 +1107,10 @@
         try { data = await res.json(); } catch (_) {}
 
         if (!res.ok) {
-          // رسائل الخطأ هنا نص فقط (بدون HTML) للحماية
           showFormMessage(data.error || "حدث خطأ أثناء حفظ القيد.", "error", false);
           return;
         }
 
-        // نحاول نجيب رقم القيد عشان نربطه بالعمليات
         const entryId = data.id || (data.entry && data.entry.id);
 
         let msg = "✅ تم حفظ قيد اليومية بنجاح.";
@@ -843,20 +1129,8 @@
 
         showFormMessage(msg, "success", true);
 
-          // 🖨️ اطبع القيد بعد ما اتحفظ بنجاح
-          window.print();
-          
-          // بعد الطباعة نفضي البنود
-          linesBody.innerHTML = "";
-          updateTotals();
-          jeDescInput.value = "";
-          
-          // نضيف سطرين فاضيين جديدين للتسهيل
-          if (accounts.length > 0) {
-            addLineRow();
-            addLineRow();
-          }
-
+        // 🖨️ اطبع إيصال مرتب (مش الفورم)
+        printJournalReceipt(entryId);
 
       } catch (err) {
         showFormMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error", false);
@@ -871,12 +1145,10 @@
         const data = await res.json();
         let list = data || [];
 
-        // لو فيه is_group → نستخدم فقط الحسابات الفرعية (is_group = false)
         if (Array.isArray(list) && list.length > 0 && "is_group" in list[0]) {
           list = list.filter(acc => acc.is_group === false);
         }
 
-        // ترتيب الحسابات: بالكود لو موجود، وبعدها بالاسم
         list.sort((a, b) => {
           const ac = (a.code || "").toString();
           const bc = (b.code || "").toString();
@@ -905,30 +1177,23 @@
 
     init();
   </script>
-             <script>
-            // 🔒 منع كليك يمين
-            document.addEventListener('contextmenu', function (e) {
-              e.preventDefault();
-            });
-          
-            // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
-            document.addEventListener('keydown', function (e) {
-              // F12
-              if (e.key === "F12") {
-                e.preventDefault();
-              }
-          
-              // Ctrl + Shift + I أو Ctrl + Shift + J أو Ctrl + U
-              if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || 
-                  (e.ctrlKey && e.key === 'U')) {
-                e.preventDefault();
-              }
-            });
-          </script>
+
+  <script>
+    // 🔒 منع كليك يمين
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    });
+
+    // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
+    document.addEventListener('keydown', function (e) {
+      if (e.key === "F12") e.preventDefault();
+
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+          (e.ctrlKey && e.key === 'U')) {
+        e.preventDefault();
+      }
+    });
+  </script>
+
 </body>
 </html>
-
-
-
-
-

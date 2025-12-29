@@ -233,7 +233,7 @@
     .auth-table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1040px;
+      min-width: 1180px;
     }
 
     .auth-table thead { background: var(--main-blue); color: #fff; }
@@ -249,17 +249,29 @@
       vertical-align: top;
     }
 
-    /* عمود التفاصيل يكون قابل للّف */
+    /* عمود البيان/التفاصيل قابل للّف */
+    .auth-table th.statement-col,
+    .auth-table td.statement-cell,
     .auth-table th.details-col,
-    .auth-table td.details-cell {
+    .auth-table td.details-cell{
       white-space: normal;
       text-align: right;
-      min-width: 260px;
-      max-width: 360px;
       line-height: 1.6;
     }
 
-    .auth-table td.details-cell .details-text {
+    .auth-table th.statement-col,
+    .auth-table td.statement-cell{
+      min-width: 240px;
+      max-width: 320px;
+    }
+
+    .auth-table th.details-col,
+    .auth-table td.details-cell{
+      min-width: 260px;
+      max-width: 360px;
+    }
+
+    .clamp-3 {
       display: -webkit-box;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
@@ -275,6 +287,30 @@
       border-radius: 999px;
       font-size: 11px;
       display: inline-block;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 900;
+      margin-top: 6px;
+      white-space: nowrap;
+    }
+
+    .badge-ok {
+      background: rgba(25, 135, 84, 0.12);
+      color: #198754;
+      border: 1px solid rgba(25, 135, 84, 0.25);
+    }
+
+    .badge-nojournal {
+      background: rgba(255, 193, 7, 0.18);
+      color: #8a5a00;
+      border: 1px solid rgba(255, 193, 7, 0.35);
     }
 
     .link {
@@ -377,7 +413,7 @@
 
     <!-- 🔍 البحث -->
     <div class="search-box">
-      <span class="search-label">ابحث برقم التفويض أو رقم السيارة أو اسم السائق أو التفاصيل</span>
+      <span class="search-label">ابحث برقم التفويض أو رقم السيارة أو اسم السائق أو البيان أو التفاصيل</span>
       <input
         id="searchInput"
         class="search-input"
@@ -424,6 +460,7 @@
             <th data-col="days">عدد الأيام</th>
             <th data-col="daily_rent">الإيجار/يوم</th>
             <th data-col="closed_amount">قيمة الإقفال</th>
+            <th data-col="statement" class="statement-col">البيان</th>
             <th data-col="details" class="details-col">التفاصيل</th>
             <th data-col="status">الحالة</th>
           </tr>
@@ -442,37 +479,50 @@
     let closedAuthorizations = [];
     let lastRenderedList = [];
 
+    // ✅ ماب/Set لتحديد هل التفويض اتقفل بقيد ولا لأ + بيان القيد
+    const authHasCloseJournal = new Set();    // auth_id => true
+    const authCloseStatement  = new Map();    // auth_id => "description"
+
     // ✅ تعريف الأعمدة (للـ checkbox + التحكم)
     const COLS = [
-      { key: "auth_no",      label: "رقم التفويض",       essential: true },
-      { key: "driver",       label: "السائق",            essential: false },
-      { key: "car_number",   label: "رقم السيارة",       essential: false },
-      { key: "car_model",    label: "الموديل",           essential: false },
-      { key: "car_type",     label: "النوع",             essential: false },
-      { key: "issue_date",   label: "تاريخ الإصدار",     essential: false },
-      { key: "start_date",   label: "بداية التفويض",     essential: false },
-      { key: "planned_end",  label: "نهاية الجمعة",      essential: false },
-      { key: "close_date",   label: "تاريخ الإقفال",     essential: false },
-      { key: "days",         label: "عدد الأيام",        essential: false },
-      { key: "daily_rent",   label: "الإيجار/يوم",       essential: false },
-      { key: "closed_amount",label: "قيمة الإقفال",      essential: false },
-      { key: "details",      label: "التفاصيل",          essential: false },
-      { key: "status",       label: "الحالة",            essential: true },
+      { key: "auth_no",       label: "رقم التفويض",       essential: true },
+      { key: "driver",        label: "السائق",            essential: false },
+      { key: "car_number",    label: "رقم السيارة",       essential: false },
+      { key: "car_model",     label: "الموديل",           essential: false },
+      { key: "car_type",      label: "النوع",             essential: false },
+      { key: "issue_date",    label: "تاريخ الإصدار",     essential: false },
+      { key: "start_date",    label: "بداية التفويض",     essential: false },
+      { key: "planned_end",   label: "نهاية الجمعة",      essential: false },
+      { key: "close_date",    label: "تاريخ الإقفال",     essential: false },
+      { key: "days",          label: "عدد الأيام",        essential: false },
+      { key: "daily_rent",    label: "الإيجار/يوم",       essential: false },
+      { key: "closed_amount", label: "قيمة الإقفال",      essential: false },
+      { key: "statement",     label: "البيان",            essential: false },
+      { key: "details",       label: "التفاصيل",          essential: false },
+      { key: "status",        label: "الحالة",            essential: true },
     ];
 
     // ✅ افتراضي: كلها ظاهرة
     const DEFAULT_COL_STATE = COLS.reduce((acc, c) => (acc[c.key] = true, acc), {});
-    const LS_KEY = "closed_auth_cols_v1";
+    const LS_KEY = "closed_auth_cols_v2";
     let colState = loadColState();
+
+    function escapeHtml(str){
+      const s = (str == null ? "" : String(str));
+      return s
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
 
     function loadColState(){
       try {
         const raw = localStorage.getItem(LS_KEY);
         if (!raw) return { ...DEFAULT_COL_STATE };
         const parsed = JSON.parse(raw);
-        // ضمان وجود كل المفاتيح
         const state = { ...DEFAULT_COL_STATE, ...parsed };
-        // ضمان الأعمدة الأساسية
         COLS.forEach(c => { if (c.essential) state[c.key] = true; });
         return state;
       } catch {
@@ -506,10 +556,7 @@
         cb.addEventListener("change", () => {
           const key = cb.getAttribute("data-colkey");
           colState[key] = cb.checked;
-
-          // تأكيد الأعمدة الأساسية
           COLS.forEach(c => { if (c.essential) colState[c.key] = true; });
-
           saveColState();
           applyColumnVisibility();
         });
@@ -527,7 +574,6 @@
 
     function resetCols(){
       colState = { ...DEFAULT_COL_STATE };
-      // تأكيد الأعمدة الأساسية
       COLS.forEach(c => { if (c.essential) colState[c.key] = true; });
       saveColState();
       buildColumnsUI();
@@ -535,15 +581,7 @@
     }
 
     function applyColumnVisibility(){
-      // الهيدر
-      document.querySelectorAll("th[data-col]").forEach(el => {
-        const key = el.getAttribute("data-col");
-        el.style.display = colState[key] ? "" : "none";
-      });
-
-      // خلايا الجدول + عناصر الكروت
       document.querySelectorAll("[data-col]").forEach(el => {
-        // لتجنب تكرار th (اتعمل فوق) مش مشكلة، بس ok
         const key = el.getAttribute("data-col");
         el.style.display = colState[key] ? "" : "none";
       });
@@ -591,30 +629,72 @@
       return item.authorization_id ?? item.auth_id ?? item.id ?? item.authorization_no ?? item.number ?? null;
     }
 
+    async function loadJournalMap(){
+      authHasCloseJournal.clear();
+      authCloseStatement.clear();
+
+      try{
+        const res = await fetch("/api/journal_entries");
+        const entries = await res.json();
+        if (!Array.isArray(entries)) return;
+
+        // ناخد "أحدث" بيان لكل تفويض (بناءً على id)
+        const bestByAuth = new Map(); // authId => entryObj
+
+        entries.forEach(e => {
+          const authId = e && e.ref_authorization_id != null ? Number(e.ref_authorization_id) : null;
+          if (!authId) return;
+
+          // نميّز قيد الإقفال (auth_close) عن سند التحصيل (receipt)
+          const source = (e.source_type || "").toLowerCase();
+          if (source !== "auth_close") return;
+
+          const prev = bestByAuth.get(authId);
+          if (!prev || Number(e.id || 0) > Number(prev.id || 0)) {
+            bestByAuth.set(authId, e);
+          }
+        });
+
+        bestByAuth.forEach((e, authId) => {
+          authHasCloseJournal.add(Number(authId));
+          const stmt = safeText(e.description) || safeText(e.ref_text) || "";
+          if (stmt) authCloseStatement.set(Number(authId), stmt);
+        });
+
+      }catch(err){
+        console.warn("journal map fetch failed:", err);
+      }
+    }
+
     async function loadData(){
       const tableBody = document.getElementById("authTableBody");
       const cardsBox  = document.getElementById("authCards");
       const summary   = document.getElementById("summary");
 
-      tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+      tableBody.innerHTML = "<tr><td colspan='15' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
       cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
       summary.textContent = "";
 
       try{
+        // 1) التفويضات المقفلة
         const res = await fetch("/api/authorizations/closed");
         const data = await res.json();
 
         if (!Array.isArray(data)) {
-          tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>⚠️ لم يتم العثور على بيانات.</td></tr>";
+          tableBody.innerHTML = "<tr><td colspan='15' style='text-align:center'>⚠️ لم يتم العثور على بيانات.</td></tr>";
           cardsBox.innerHTML  = "<p style='text-align:center'>⚠️ لم يتم العثور على بيانات.</p>";
           return;
         }
 
         closedAuthorizations = data;
+
+        // 2) خريطة القيود (عشان نعرف: بدون قيد / ومع قيد + البيان)
+        await loadJournalMap();
+
         applyFilter();
       }catch(err){
         console.error(err);
-        tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='15' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>❌ حدث خطأ أثناء التحميل.</p>";
       }
     }
@@ -624,6 +704,7 @@
       const term  = (input.value || "").trim().toLowerCase();
 
       let filtered = closedAuthorizations;
+
       if (term){
         filtered = closedAuthorizations.filter(it => {
           const car   = safeText(it.car_number).toLowerCase();
@@ -631,8 +712,20 @@
           const lic   = safeText(it.driver_license_no).toLowerCase(); // للبحث فقط
           const det   = safeText(it.details).toLowerCase();
           const note  = safeText(it.closing_note).toLowerCase();
-          const id    = String(getAuthId(it) ?? "").toLowerCase();
-          return car.includes(term) || name.includes(term) || lic.includes(term) || det.includes(term) || note.includes(term) || id.includes(term);
+          const idRaw = String(getAuthId(it) ?? "").toLowerCase();
+
+          const authId = getAuthId(it);
+          const stmt = safeText(authCloseStatement.get(Number(authId)) || "").toLowerCase();
+
+          return (
+            car.includes(term) ||
+            name.includes(term) ||
+            lic.includes(term) ||
+            det.includes(term) ||
+            note.includes(term) ||
+            idRaw.includes(term) ||
+            stmt.includes(term)
+          );
         });
       }
 
@@ -649,10 +742,17 @@
       const totalClosed = closedAuthorizations.length;
       const countShown  = lastRenderedList.length;
 
-      summary.textContent = `إجمالي التفويضات المقفلة: ${totalClosed} — المعروضة الآن: ${countShown}`;
+      // حساب عدد "بدون قيد" داخل المعروض
+      const noJournalCount = lastRenderedList.reduce((acc, it) => {
+        const authId = Number(getAuthId(it));
+        if (!authId) return acc;
+        return acc + (authHasCloseJournal.has(authId) ? 0 : 1);
+      }, 0);
+
+      summary.textContent = `إجمالي التفويضات المقفلة: ${totalClosed} — المعروضة الآن: ${countShown} — بدون قيد: ${noJournalCount}`;
 
       if (!lastRenderedList || lastRenderedList.length === 0) {
-        tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>⚪ لا توجد تفويضات مطابقة لنتيجة البحث.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='15' style='text-align:center'>⚪ لا توجد تفويضات مطابقة لنتيجة البحث.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>⚪ لا توجد تفويضات مطابقة لنتيجة البحث.</p>";
         return;
       }
@@ -677,43 +777,59 @@
         const note = safeText(item.closing_note);
         const detailsFull = note ? `${det}\n—\nملاحظة الإقفال: ${note}` : det;
 
-        const driverSafe = safeText(item.driver_name).replace(/'/g, "\\'");
-        const carSafe    = safeText(item.car_number).replace(/'/g, "\\'");
+        const driverSafe = safeText(item.driver_name);
+        const carSafe    = safeText(item.car_number);
         const authId     = getAuthId(item);
         const authText   = authId != null ? `#${authId}` : "—";
 
+        const authIdNum = Number(authId);
+        const hasJournal = authIdNum ? authHasCloseJournal.has(authIdNum) : false;
+        const stmt = safeText(authCloseStatement.get(authIdNum) || "");
+        const stmtText = stmt || "—";
+
         return `
           <tr>
-            <td data-col="auth_no">${authText}</td>
+            <td data-col="auth_no">${escapeHtml(authText)}</td>
 
             <td data-col="driver">
               <span class="link" onclick="goDriver('${encodeURIComponent(driverSafe)}')">
-                ${safeText(item.driver_name) || "—"}
+                ${escapeHtml(safeText(item.driver_name) || "—")}
               </span>
             </td>
 
             <td data-col="car_number">
               <span class="link" onclick="goCar('${encodeURIComponent(carSafe)}')">
-                ${safeText(item.car_number) || "—"}
+                ${escapeHtml(safeText(item.car_number) || "—")}
               </span>
             </td>
 
-            <td data-col="car_model">${safeText(item.car_model) || "—"}</td>
-            <td data-col="car_type">${safeText(item.car_type)  || "—"}</td>
-            <td data-col="issue_date">${issueFmt}</td>
-            <td data-col="start_date">${startFmt}</td>
-            <td data-col="planned_end">${plannedFmt}</td>
-            <td data-col="close_date">${closeFmt}</td>
-            <td data-col="days">${daysText}</td>
-            <td data-col="daily_rent">${dailyRentTxt}</td>
+            <td data-col="car_model">${escapeHtml(safeText(item.car_model) || "—")}</td>
+            <td data-col="car_type">${escapeHtml(safeText(item.car_type)  || "—")}</td>
+            <td data-col="issue_date">${escapeHtml(issueFmt)}</td>
+            <td data-col="start_date">${escapeHtml(startFmt)}</td>
+            <td data-col="planned_end">${escapeHtml(plannedFmt)}</td>
+            <td data-col="close_date">${escapeHtml(closeFmt)}</td>
+            <td data-col="days">${escapeHtml(daysText)}</td>
+            <td data-col="daily_rent">${escapeHtml(dailyRentTxt)}</td>
 
-            <td data-col="closed_amount"><span class="money-text">${closedValTxt}</span></td>
+            <td data-col="closed_amount"><span class="money-text">${escapeHtml(closedValTxt)}</span></td>
 
-            <td data-col="details" class="details-cell" title="${detailsFull.replace(/"/g,'&quot;')}">
-              <div class="details-text">${detailsFull.replace(/\n/g, "<br>")}</div>
+            <td data-col="statement" class="statement-cell" title="${escapeHtml(stmtText)}">
+              <div class="clamp-3">${escapeHtml(stmtText)}</div>
             </td>
 
-            <td data-col="status"><span class="status-closed">مقفلة</span></td>
+            <td data-col="details" class="details-cell" title="${escapeHtml(detailsFull)}">
+              <div class="clamp-3">${escapeHtml(detailsFull).replace(/\n/g, "<br>")}</div>
+            </td>
+
+            <td data-col="status">
+              <span class="status-closed">مقفلة</span>
+              ${
+                hasJournal
+                  ? `<div class="badge badge-ok">✅ بقيد</div>`
+                  : `<div class="badge badge-nojournal">✅ مقفول بدون قيد</div>`
+              }
+            </td>
           </tr>
         `;
       }).join("");
@@ -737,63 +853,80 @@
         const det = safeText(item.details);
         const note = safeText(item.closing_note);
 
-        const driverSafe = safeText(item.driver_name).replace(/'/g, "\\'");
-        const carSafe    = safeText(item.car_number).replace(/'/g, "\\'");
+        const driverSafe = safeText(item.driver_name);
+        const carSafe    = safeText(item.car_number);
         const authId     = getAuthId(item);
         const authText   = authId != null ? `#${authId}` : "—";
+
+        const authIdNum = Number(authId);
+        const hasJournal = authIdNum ? authHasCloseJournal.has(authIdNum) : false;
+        const stmt = safeText(authCloseStatement.get(authIdNum) || "");
+        const stmtText = stmt || "—";
 
         return `
           <div class="card">
             <div class="row" data-col="auth_no">
               <span class="label">رقم التفويض:</span>
-              <span>${authText}</span>
+              <span>${escapeHtml(authText)}</span>
             </div>
 
             <div class="row" data-col="driver">
               <span class="label">السائق:</span>
               <span class="link" onclick="goDriver('${encodeURIComponent(driverSafe)}')">
-                ${safeText(item.driver_name) || "—"}
+                ${escapeHtml(safeText(item.driver_name) || "—")}
               </span>
             </div>
 
             <div class="row" data-col="car_number">
               <span class="label">رقم السيارة:</span>
               <span class="link" onclick="goCar('${encodeURIComponent(carSafe)}')">
-                ${safeText(item.car_number) || "—"}
+                ${escapeHtml(safeText(item.car_number) || "—")}
               </span>
             </div>
 
-            <div class="row" data-col="car_model"><span class="label">الموديل:</span> ${safeText(item.car_model) || "—"}</div>
-            <div class="row" data-col="car_type"><span class="label">النوع:</span> ${safeText(item.car_type)  || "—"}</div>
+            <div class="row" data-col="car_model"><span class="label">الموديل:</span> ${escapeHtml(safeText(item.car_model) || "—")}</div>
+            <div class="row" data-col="car_type"><span class="label">النوع:</span> ${escapeHtml(safeText(item.car_type)  || "—")}</div>
 
-            <div class="row" data-col="issue_date"><span class="label">تاريخ الإصدار:</span> ${issueFmt}</div>
-            <div class="row" data-col="start_date"><span class="label">بداية التفويض:</span> ${startFmt}</div>
-            <div class="row" data-col="planned_end"><span class="label">نهاية الجمعة (المحاسبية):</span> ${plannedFmt}</div>
-            <div class="row" data-col="close_date"><span class="label">تاريخ الإقفال:</span> ${closeFmt}</div>
+            <div class="row" data-col="issue_date"><span class="label">تاريخ الإصدار:</span> ${escapeHtml(issueFmt)}</div>
+            <div class="row" data-col="start_date"><span class="label">بداية التفويض:</span> ${escapeHtml(startFmt)}</div>
+            <div class="row" data-col="planned_end"><span class="label">نهاية الجمعة (المحاسبية):</span> ${escapeHtml(plannedFmt)}</div>
+            <div class="row" data-col="close_date"><span class="label">تاريخ الإقفال:</span> ${escapeHtml(closeFmt)}</div>
 
-            <div class="row" data-col="days"><span class="label">عدد الأيام:</span> ${daysText}</div>
-            <div class="row" data-col="daily_rent"><span class="label">الإيجار اليومي:</span> ${dailyRentTxt}</div>
+            <div class="row" data-col="days"><span class="label">عدد الأيام:</span> ${escapeHtml(daysText)}</div>
+            <div class="row" data-col="daily_rent"><span class="label">الإيجار اليومي:</span> ${escapeHtml(dailyRentTxt)}</div>
 
             <div class="pill" data-col="closed_amount">
               <span class="label">قيمة الإقفال:</span>
-              <span class="money-text">${closedValTxt}</span>
+              <span class="money-text">${escapeHtml(closedValTxt)}</span>
               ${item.closed_amount == null ? `<span class="muted">(غير مسجلة)</span>` : ``}
             </div>
 
-            <div class="details-box" data-col="details">
-              <div class="row"><span class="label">التفاصيل:</span> ${det || "—"}</div>
-              ${note ? `<div class="row"><span class="label">ملاحظة الإقفال:</span> ${note}</div>` : ``}
-            </div>
-
-            <div class="row" data-col="status" style="margin-top:10px;">
+            <!-- ✅ حالة القيد -->
+            <div class="row" data-col="status" style="margin-top:6px;">
               <span class="label">الحالة:</span>
               <span class="status-closed">مقفلة</span>
+              ${
+                hasJournal
+                  ? `<span class="badge badge-ok" style="margin-right:8px;">✅ بقيد</span>`
+                  : `<span class="badge badge-nojournal" style="margin-right:8px;">✅ مقفول بدون قيد</span>`
+              }
+            </div>
+
+            <div class="details-box">
+              <div class="row" data-col="statement">
+                <span class="label">البيان:</span> ${escapeHtml(stmtText)}
+              </div>
+
+              <div class="row" data-col="details" style="margin-top:8px;">
+                <span class="label">التفاصيل:</span> ${escapeHtml(det || "—")}
+              </div>
+
+              ${note ? `<div class="row" data-col="details"><span class="label">ملاحظة الإقفال:</span> ${escapeHtml(note)}</div>` : ``}
             </div>
           </div>
         `;
       }).join("");
 
-      // ✅ بعد كل Render: طبّق إظهار/إخفاء الأعمدة
       applyColumnVisibility();
     }
 

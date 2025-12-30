@@ -107,7 +107,7 @@
     .page-wrapper {
       display:flex;
       justify-content:center;
-      padding: 80px 16px 16px; /* مساحة للهيدر الثابت */
+      padding: 80px 16px 16px;
     }
 
     .container {
@@ -121,9 +121,7 @@
       box-shadow: 0 24px 70px rgba(0,0,0,0.45);
     }
 
-    .header {
-      margin-bottom: 14px;
-    }
+    .header { margin-bottom: 14px; }
 
     .title-group h1 {
       margin: 0;
@@ -137,6 +135,7 @@
       margin: 4px 0 0;
       font-size: 0.9rem;
       color: #e5e7eb;
+      line-height: 1.7;
     }
 
     .small-note-link {
@@ -151,9 +150,7 @@
       cursor:pointer;
     }
 
-    .inline-link:hover {
-      color:#f9fafb;
-    }
+    .inline-link:hover { color:#f9fafb; }
 
     .card {
       background: var(--card);
@@ -189,9 +186,7 @@
       white-space:nowrap;
     }
 
-    .card-body {
-      font-size: 0.9rem;
-    }
+    .card-body { font-size: 0.9rem; }
 
     label {
       display: block;
@@ -200,9 +195,7 @@
       color: #e5e7eb;
     }
 
-    .field {
-      margin-bottom: 8px;
-    }
+    .field { margin-bottom: 8px; }
 
     input[type="text"],
     input[type="date"],
@@ -227,15 +220,13 @@
       box-shadow: 0 0 0 1px rgba(37,99,235,0.45);
     }
 
-    .hint {
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
+    .hint { font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
 
     .hint-strong {
       font-size: 0.78rem;
       color: #facc15;
       margin-top: 4px;
+      line-height: 1.6;
     }
 
     .actions {
@@ -265,20 +256,14 @@
       box-shadow: 0 8px 20px rgba(37,99,235,0.4);
     }
 
-    .btn-primary:hover {
-      filter: brightness(1.08);
-      transform: translateY(-1px);
-    }
+    .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
 
     .btn-ghost {
       background: transparent;
       color: #e5e7eb;
       border: 1px solid rgba(148,163,184,0.7);
     }
-
-    .btn-ghost:hover {
-      background: rgba(15,23,42,0.9);
-    }
+    .btn-ghost:hover { background: rgba(15,23,42,0.9); }
 
     .btn-line {
       padding: 4px 9px;
@@ -292,9 +277,7 @@
       white-space:nowrap;
     }
 
-    .btn-line:hover {
-      background: rgba(37,99,235,0.4);
-    }
+    .btn-line:hover { background: rgba(37,99,235,0.4); }
 
     .btn-remove {
       border-color: rgba(248,113,113,0.9);
@@ -307,6 +290,7 @@
       padding: 6px 9px;
       border-radius: 9px;
       display: none;
+      line-height: 1.6;
     }
 
     .message.error {
@@ -321,21 +305,16 @@
       color: #bbf7d0;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 
     th, td {
       padding: 6px 6px;
       border-bottom: 1px solid rgba(55,65,81,0.7);
       text-align: right;
+      vertical-align: top;
     }
 
-    thead {
-      background: #020617;
-    }
+    thead { background: #020617; position: sticky; top: 0; z-index: 2; }
 
     th {
       font-weight: 600;
@@ -344,30 +323,20 @@
       white-space: nowrap;
     }
 
-    tbody tr:nth-child(odd) {
-      background: rgba(15,23,42,0.8);
-    }
-
-    tbody tr:nth-child(even) {
-      background: rgba(15,23,42,0.6);
-    }
-
-    tbody tr:hover {
-      background: rgba(37,99,235,0.25);
-    }
+    tbody tr:nth-child(odd) { background: rgba(15,23,42,0.8); }
+    tbody tr:nth-child(even) { background: rgba(15,23,42,0.6); }
+    tbody tr:hover { background: rgba(37,99,235,0.25); }
 
     .lines-table-wrapper {
       border-radius: 10px;
       border: 1px solid var(--border);
       overflow: auto;
-      max-height: 260px;
+      max-height: 320px;
       background: rgba(15,23,42,0.85);
       margin-top: 4px;
     }
 
-    .small-input {
-      max-width: 120px;
-    }
+    .small-input { max-width: 140px; }
 
     .footer-totals {
       margin-top: 6px;
@@ -379,15 +348,14 @@
       flex-wrap: wrap;
     }
 
-    .footer-totals span strong {
-      color: #e5e7eb;
-    }
+    .footer-totals span strong { color: #e5e7eb; }
 
     /* 🔍 خلية الحساب + البحث */
     .account-cell {
       display:flex;
       flex-direction:column;
       gap:4px;
+      min-width: 220px;
     }
 
     .account-search {
@@ -395,15 +363,12 @@
       padding:5px 8px;
     }
 
-    .account-search::placeholder {
-      color:rgba(148,163,184,0.9);
-    }
+    .account-search::placeholder { color:rgba(148,163,184,0.9); }
 
     /* ===========================
-       🖨️ طباعة إيصال القيد (محدثة)
+       🖨️ طباعة إيصال القيد (مُثبتة)
        =========================== */
 
-    /* منطقة الطباعة فقط */
     #printArea { display:none; }
 
     @media print {
@@ -417,7 +382,7 @@
 
       #printArea{
         display:block !important;
-        position: static !important;   /* ✅ مهم: بدل fixed */
+        position: static !important;
         padding: 0 !important;
         direction: rtl;
         font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -434,7 +399,6 @@
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 
-    /* ✅ صفحات */
     .print-page{
       page-break-after: always;
       break-after: page;
@@ -444,10 +408,7 @@
       break-after: auto;
     }
 
-    .print-sheet{
-      background:#fff;
-      padding: 0;
-    }
+    .print-sheet{ background:#fff; padding: 0; }
 
     .print-head{
       padding: 10px 0 8px;
@@ -469,7 +430,7 @@
       font-weight: 900;
     }
 
-    .print-title .meta-pill{
+    .meta-pill{
       font-size: 12px;
       border: 1px solid #111;
       border-radius: 999px;
@@ -489,28 +450,27 @@
       border: 1px solid #ddd;
       border-radius: 8px;
       padding: 6px 8px;
+      min-height: 34px;
     }
 
     .print-meta .k{ font-weight: 900; margin-left: 6px; }
     .print-meta .v{ font-weight: 700; }
 
-    .print-head-mini{
-      padding: 8px 0 6px;
-      border-bottom: 1px solid #111;
-      margin-bottom: 8px;
+    .print-mini{
+      margin: 8px 0 10px;
       display:flex;
       align-items:center;
       justify-content: space-between;
       gap: 10px;
       font-size: 12px;
     }
-    .print-head-mini .t{ font-weight: 900; }
-    .print-head-mini .p{ border:1px solid #111; border-radius:999px; padding:3px 8px; }
+    .print-mini .t{ font-weight: 900; }
+    .print-mini .p{ border:1px solid #111; border-radius:999px; padding:3px 8px; }
 
     .print-table{
       width:100%;
       border-collapse: collapse;
-      margin-top: 10px;
+      margin-top: 8px;
       font-size: 12px;
     }
 
@@ -567,6 +527,8 @@
 
     @media (max-width: 768px){
       .print-meta{ grid-template-columns: 1fr; }
+      .small-input{ max-width: 100%; }
+      .account-cell{ min-width: 180px; }
     }
   </style>
 </head>
@@ -603,8 +565,9 @@
           <h1>📓 قيد يومية يدوي</h1>
           <p>
             استخدم هذه الشاشة لتسجيل قيود يومية يدوية (مدين/دائن).
-            تأكد أن إجمالي المدين = إجمالي الدائن قبل الحفظ، وسيتم ربط القيد تلقائيًا
-            بصفحة <strong>العمليات</strong> ودفتر الأستاذ حسب شجرة الحسابات.
+            تأكد أن إجمالي المدين = إجمالي الدائن قبل الحفظ.
+            <br/>
+            ✅ تم إضافة تحقق إضافي من السيرفر: القيد غير المتوازن لن يتم حفظه.
           </p>
         </div>
         <p class="small-note-link">
@@ -613,7 +576,6 @@
         </p>
       </div>
 
-      <!-- ✅ كرت واحد للفورم فقط -->
       <div class="card">
         <div class="card-header">
           <h2>➕ قيد يومية جديد</h2>
@@ -635,7 +597,8 @@
             <div class="field">
               <label>بنود القيد (مدين / دائن)</label>
               <div class="hint">
-                اختر فقط حسابات تفصيلية (وليس حسابات تجميعية)، ويجب أن يكون مجموع المدين = مجموع الدائن قبل حفظ القيد.
+                اختر حسابات تفصيلية فقط (غير تجميعية).
+                في كل سطر: اكتب مدين <strong>أو</strong> دائن (مش الاتنين).
               </div>
 
               <div class="lines-table-wrapper">
@@ -682,10 +645,8 @@
   <div id="printArea" aria-hidden="true"></div>
 
   <script>
-    // بيانات الحسابات
     let accounts = [];
 
-    // عناصر الفورم
     const jeDateInput = document.getElementById("jeDate");
     const jeDescInput = document.getElementById("jeDesc");
     const linesBody = document.getElementById("linesBody");
@@ -697,10 +658,8 @@
     const btnAddLine = document.getElementById("btnAddLine");
     const btnResetForm = document.getElementById("btnResetForm");
 
-    // للطباعة/الريست بعد الطباعة
     let pendingResetAfterPrint = false;
 
-    // ضبط تاريخ اليوم مبدئيًا
     (function setToday() {
       const today = new Date();
       const y = today.getFullYear();
@@ -709,23 +668,20 @@
       jeDateInput.value = `${y}-${m}-${d}`;
     })();
 
-    function showFormMessage(text, type = "success", allowHtml = false) {
-      if (allowHtml) formMessage.innerHTML = text;
-      else formMessage.textContent = text;
-
+    function showFormMessage(text, type = "success") {
+      formMessage.textContent = text;
       formMessage.className = "message " + type;
       formMessage.style.display = "block";
     }
 
     function clearFormMessage() {
       formMessage.textContent = "";
-      formMessage.innerHTML = "";
       formMessage.style.display = "none";
     }
 
     function formatNumber(val) {
       const num = Number(val || 0);
-      return num.toFixed(2);
+      return Number.isFinite(num) ? num.toFixed(2) : "0.00";
     }
 
     function updateTotals() {
@@ -822,6 +778,7 @@
       const debitInput = document.createElement("input");
       debitInput.type = "number";
       debitInput.step = "0.01";
+      debitInput.inputMode = "decimal";
       debitInput.className = "small-input line-debit";
       debitInput.addEventListener("input", () => {
         if (debitInput.value && parseFloat(debitInput.value) !== 0) creditInput.value = "";
@@ -831,6 +788,7 @@
       const creditInput = document.createElement("input");
       creditInput.type = "number";
       creditInput.step = "0.01";
+      creditInput.inputMode = "decimal";
       creditInput.className = "small-input line-credit";
       creditInput.addEventListener("input", () => {
         if (creditInput.value && parseFloat(creditInput.value) !== 0) debitInput.value = "";
@@ -910,10 +868,8 @@
       return code ? `${code} — ${name}` : name;
     }
 
-    /* ✅ بناء إيصال طباعة مقسم صفحات */
     function buildPrintReceipt(entryId){
       const rows = Array.from(linesBody.querySelectorAll("tr"));
-
       const dateVal = (jeDateInput.value || "").trim();
       const descVal = (jeDescInput.value || "").trim();
 
@@ -953,7 +909,7 @@
 
       const totalPages = chunks.length;
 
-      const makeTable = (chunk, startIndex) => {
+      const makeTable = (chunk, startIndex, isLast) => {
         const tableRows = chunk.map((ln, idx) => `
           <tr>
             <td class="print-num">${startIndex + idx + 1}</td>
@@ -962,6 +918,16 @@
             <td class="print-money">${ln.credit ? escapeHtml(ln.credit.toFixed(2)) : ""}</td>
           </tr>
         `).join("");
+
+        const tfoot = isLast ? `
+          <tfoot>
+            <tr>
+              <th colspan="2" style="text-align:right;">الإجمالي</th>
+              <th class="print-money">${escapeHtml(tDebit.toFixed(2))}</th>
+              <th class="print-money">${escapeHtml(tCredit.toFixed(2))}</th>
+            </tr>
+          </tfoot>
+        ` : "";
 
         return `
           <table class="print-table">
@@ -976,12 +942,14 @@
             <tbody>
               ${tableRows || `<tr><td colspan="4" style="text-align:center;">— لا توجد بنود —</td></tr>`}
             </tbody>
+            ${tfoot}
           </table>
         `;
       };
 
       const pagesHtml = chunks.map((chunk, pageIdx) => {
         const startIndex = pageIdx * LINES_PER_PAGE;
+        const isLast = (pageIdx === totalPages - 1);
 
         const headHtml = (pageIdx === 0)
           ? `
@@ -996,53 +964,38 @@
                 <div class="item"><span class="k">الوصف:</span><span class="v">${escapeHtml(descVal || "—")}</span></div>
                 <div class="item"><span class="k">تاريخ الطباعة:</span><span class="v">${escapeHtml(nowStamp())}</span></div>
               </div>
+
+              <div class="print-mini">
+                <div class="t">—</div>
+                <div class="p">صفحة ${pageIdx + 1} / ${totalPages}</div>
+              </div>
             </div>
           `
           : `
-            <div class="print-head-mini avoid-break">
+            <div class="print-mini avoid-break">
               <div class="t">قيد يومية يدوي — ${escapeHtml(entryText)}</div>
               <div class="p">صفحة ${pageIdx + 1} / ${totalPages}</div>
             </div>
           `;
 
-        const pageTag = `
-          <div class="print-head-mini avoid-break" style="border-bottom:none;margin:0 0 6px;">
-            <div class="t"></div>
-            <div class="p">صفحة ${pageIdx + 1} / ${totalPages}</div>
+        const tableHtml = makeTable(chunk, startIndex, isLast);
+
+        const footerHtml = isLast ? `
+          <div class="print-totals avoid-break">
+            <div class="box"><strong>إجمالي المدين:</strong> <span class="print-money">${escapeHtml(tDebit.toFixed(2))}</span></div>
+            <div class="box"><strong>إجمالي الدائن:</strong> <span class="print-money">${escapeHtml(tCredit.toFixed(2))}</span></div>
+            <div class="box"><strong>الحالة:</strong> ${balanced ? "✅ متوازن" : "⚠️ غير متوازن"}</div>
           </div>
-        `;
 
-        const tableHtml = makeTable(chunk, startIndex);
-
-        const footerHtml = (pageIdx === totalPages - 1)
-          ? `
-            <table class="print-table" style="margin-top:10px;">
-              <tfoot>
-                <tr>
-                  <th colspan="2" style="text-align:right;">الإجمالي</th>
-                  <th class="print-money">${escapeHtml(tDebit.toFixed(2))}</th>
-                  <th class="print-money">${escapeHtml(tCredit.toFixed(2))}</th>
-                </tr>
-              </tfoot>
-            </table>
-
-            <div class="print-totals avoid-break">
-              <div class="box"><strong>إجمالي المدين:</strong> <span class="print-money">${escapeHtml(tDebit.toFixed(2))}</span></div>
-              <div class="box"><strong>إجمالي الدائن:</strong> <span class="print-money">${escapeHtml(tCredit.toFixed(2))}</span></div>
-              <div class="box"><strong>الحالة:</strong> ${balanced ? "✅ متوازن" : "⚠️ غير متوازن"}</div>
-            </div>
-
-            <div class="print-sig avoid-break">
-              <div class="sig-line">المُعِد</div>
-              <div class="sig-line">المُراجِع</div>
-            </div>
-          `
-          : "";
+          <div class="print-sig avoid-break">
+            <div class="sig-line">المُعِد</div>
+            <div class="sig-line">المُراجِع</div>
+          </div>
+        ` : "";
 
         return `
           <section class="print-page">
             ${headHtml}
-            ${pageTag}
             ${tableHtml}
             ${footerHtml}
           </section>
@@ -1056,7 +1009,6 @@
       pendingResetAfterPrint = true;
       buildPrintReceipt(entryId);
 
-      // ✅ اضمن إن الـ DOM اتعمله Render قبل الطباعة
       requestAnimationFrame(() => {
         setTimeout(() => window.print(), 60);
       });
@@ -1101,15 +1053,23 @@
         const debit = parseFloat(debitInput.value || "0");
         const credit = parseFloat(creditInput.value || "0");
 
-        if ((isNaN(debit) || debit === 0) && (isNaN(credit) || credit === 0)) continue;
+        const d = isNaN(debit) ? 0 : debit;
+        const c = isNaN(credit) ? 0 : credit;
 
-        if (!isNaN(debit)) totalDebit += debit;
-        if (!isNaN(credit)) totalCredit += credit;
+        if (d === 0 && c === 0) continue;
+
+        if (d !== 0 && c !== 0) {
+          showFormMessage("كل سطر لازم يكون (مدين أو دائن) فقط — مش الاتنين.", "error");
+          return;
+        }
+
+        totalDebit += d;
+        totalCredit += c;
 
         linesPayload.push({
           account_id: Number(account_id),
-          debit: isNaN(debit) ? 0 : debit,
-          credit: isNaN(credit) ? 0 : credit
+          debit: d,
+          credit: c
         });
       }
 
@@ -1143,31 +1103,14 @@
           return;
         }
 
-        // ✅ صحّحنا قراءة id من ردّ السيرفر الحالي عندك:
-        // السيرفر بيرجع: { journal_entry: { id: ... } }
         const entryId =
           (data && data.journal_entry && data.journal_entry.id) ||
           data.id ||
           (data.entry && data.entry.id) ||
           null;
 
-        let msg = "✅ تم حفظ قيد اليومية بنجاح.";
-        if (entryId) {
-          const opsUrl = `/operations?type=journal&journal_id=${entryId}`;
-          msg += `
-            <br />
-            <a href="/journal-list" style="color:#bfdbfe;text-decoration:underline;margin-left:8px;">
-              📜 عرض في صفحة القيود اليدوية
-            </a>
-            <a href="${opsUrl}" style="color:#bfdbfe;text-decoration:underline;margin-right:8px;">
-              🧾 عرض هذا القيد في صفحة العمليات
-            </a>
-          `;
-        }
+        showFormMessage(entryId ? `✅ تم حفظ القيد بنجاح — رقم القيد: #${entryId}` : "✅ تم حفظ القيد بنجاح.", "success");
 
-        showFormMessage(msg, "success", true);
-
-        // 🖨️ اطبع إيصال مرتب
         printJournalReceipt(entryId);
 
       } catch (err) {

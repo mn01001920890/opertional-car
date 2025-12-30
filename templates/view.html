@@ -100,7 +100,7 @@
     }
 
     .toolbar {
-      max-width: 900px;
+      max-width: 980px;
       margin: 0 auto 14px;
       display: flex;
       gap: 10px;
@@ -260,7 +260,7 @@
     .auth-table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1180px;
+      min-width: 1080px;
     }
 
     .auth-table thead { background: var(--main-blue); color: #fff; }
@@ -276,25 +276,13 @@
       vertical-align: top;
     }
 
-    .auth-table th.statement-col,
-    .auth-table td.statement-cell,
     .auth-table th.details-col,
     .auth-table td.details-cell{
       white-space: normal;
       text-align: right;
       line-height: 1.6;
-    }
-
-    .auth-table th.statement-col,
-    .auth-table td.statement-cell{
-      min-width: 240px;
-      max-width: 320px;
-    }
-
-    .auth-table th.details-col,
-    .auth-table td.details-cell{
-      min-width: 260px;
-      max-width: 360px;
+      min-width: 320px;
+      max-width: 420px;
     }
 
     .clamp-3 {
@@ -445,18 +433,19 @@
       <div class="search-box">
         <span class="search-label">
           بحث سريع (سيرفر): رقم التفويض / السيارة / السائق / التفاصيل / ملاحظة الإقفال
-          <br><span class="muted">ملاحظة: “بيان القيد” يُجلب من map بعد التحميل (مش جزء من بحث السيرفر).</span>
         </span>
         <input
           id="searchInput"
           class="search-input"
           type="text"
           placeholder="مثال: 12 أو 123ABC أو اسم السائق"
+          autocomplete="off"
         />
       </div>
 
       <button class="btn" id="searchBtn" type="button" onclick="runSearch(true)">🔎 بحث</button>
       <button class="btn" id="clearBtn"  type="button" onclick="clearSearch()">🧹 مسح</button>
+      <button class="btn" id="refreshBtn" type="button" onclick="refreshNow()">🔁 تحديث</button>
     </div>
 
     <section class="columns-panel">
@@ -473,7 +462,7 @@
       <div id="columnsBody" class="columns-body">
         <div class="columns-grid" id="columnsGrid"></div>
         <div class="hint">
-          ملاحظة: الإخفاء لا يمنع تحميل البيانات. البحث هنا على السيرفر (أسرع للأرشيف الكبير).
+          ملاحظة: الإخفاء لا يمنع تحميل البيانات. البحث على السيرفر (أسرع للأرشيف الكبير).
         </div>
       </div>
     </section>
@@ -494,7 +483,6 @@
             <th data-col="days">عدد الأيام</th>
             <th data-col="daily_rent">الإيجار/يوم</th>
             <th data-col="closed_amount">قيمة الإقفال</th>
-            <th data-col="statement" class="statement-col">البيان</th>
             <th data-col="details" class="details-col">التفاصيل</th>
             <th data-col="status">الحالة</th>
           </tr>
@@ -512,9 +500,10 @@
 
   <script>
     // =========================
-    // ✅ Compatible with NEW app.py
+    // ✅ NO "statement" column
+    // ✅ NO map fetching
+    //
     // /api/authorizations/closed -> {items,total,journal_yes,journal_no}
-    // /api/journal_entries/auth_close_map?auth_ids=... -> {map:{id:{has,statement,journal_entry_id}}}
     // =========================
 
     let loaded = [];
@@ -526,12 +515,7 @@
     let serverJournalYes = null;
     let serverJournalNo = null;
 
-    // map data
-    const authHasCloseJournal = new Set();
-    const authCloseStatement  = new Map();
-    const authCloseJournalId  = new Map();
-
-    // columns
+    // columns (removed statement)
     const COLS = [
       { key: "auth_no",       label: "رقم التفويض",       essential: true },
       { key: "driver",        label: "السائق",            essential: false },
@@ -545,14 +529,17 @@
       { key: "days",          label: "عدد الأيام",        essential: false },
       { key: "daily_rent",    label: "الإيجار/يوم",       essential: false },
       { key: "closed_amount", label: "قيمة الإقفال",      essential: false },
-      { key: "statement",     label: "البيان",            essential: false },
       { key: "details",       label: "التفاصيل",          essential: false },
       { key: "status",        label: "الحالة",            essential: true },
     ];
 
     const DEFAULT_COL_STATE = COLS.reduce((acc, c) => (acc[c.key] = true, acc), {});
-    const LS_KEY = "closed_auth_cols_v4";
+    const LS_KEY = "closed_auth_cols_v5_no_statement";
     let colState = loadColState();
+
+    // debounce search (optional improvement)
+    let searchTimer = null;
+    const SEARCH_DEBOUNCE_MS = 450;
 
     function escapeHtml(str){
       const s = (str == null ? "" : String(str));
@@ -673,14 +660,15 @@
 
     function formatMoney(val){
       if (val == null || !isFinite(Number(val))) return "—";
-      return `${Number(val).toFixed(2)} ريال`;
+      const n = Number(val);
+      return `${n.toFixed(2)} ريال`;
     }
 
     function buildUrlForClosed({ q, limit, offset }){
       const params = new URLSearchParams();
       params.set("limit", String(limit));
       params.set("offset", String(offset));
-      params.set("light", "0"); // نحتاج details + closing_note
+      params.set("light", "0");
 
       if (q && q.trim()){
         params.set("q", q.trim());
@@ -692,15 +680,11 @@
       const btnSearch = document.getElementById("searchBtn");
       const btnClear  = document.getElementById("clearBtn");
       const btnMore   = document.getElementById("loadMoreBtn");
+      const btnRef    = document.getElementById("refreshBtn");
       btnSearch.disabled = isBusy;
       btnClear.disabled  = isBusy;
       btnMore.disabled   = isBusy;
-    }
-
-    function openJournal(entryId){
-      if (!entryId) return;
-      // يفتح JSON القيد مباشرة (مؤكد موجود في app.py)
-      window.open(`/api/journal_entries/${entryId}`, "_blank");
+      btnRef.disabled    = isBusy;
     }
 
     function render(){
@@ -714,27 +698,17 @@
       const yesText   = (serverJournalYes == null) ? "—" : String(serverJournalYes);
       const noText    = (serverJournalNo == null) ? "—" : String(serverJournalNo);
 
-      // fallback count from loaded (تقريبي فقط لو server مش مرجع counters)
-      const loadedNoJournal = loaded.reduce((acc, it) => {
-        const authId = Number(getAuthId(it));
-        if (!authId) return acc;
-        return acc + (authHasCloseJournal.has(authId) ? 0 : 1);
-      }, 0);
-
       summary.innerHTML = `
         <div>
           تم تحميل: <b>${shown}</b> من <b>${totalText}</b>
           — بقيد (إجمالي): <b>${yesText}</b>
           — بدون قيد (إجمالي): <b>${noText}</b>
         </div>
-        <div class="muted">
-          (في المعروض حالياً بدون قيد تقريباً: <b>${loadedNoJournal}</b>)
-          — استخدم البحث بدل تحميل الأرشيف كله.
-        </div>
+        <div class="muted">نصيحة: استخدم البحث بدل تحميل الأرشيف كله.</div>
       `;
 
       if (!loaded.length){
-        tableBody.innerHTML = "<tr><td colspan='15' style='text-align:center'>⚪ لا توجد بيانات حتى الآن.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>⚪ لا توجد بيانات حتى الآن.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>⚪ لا توجد بيانات حتى الآن.</p>";
         applyColumnVisibility();
         updateLoadMoreButton();
@@ -765,15 +739,9 @@
         const authId     = getAuthId(item);
         const authText   = authId != null ? `#${authId}` : "—";
 
-        const authIdNum = Number(authId);
-        const hasJournal = authIdNum ? authHasCloseJournal.has(authIdNum) : false;
-        const stmt = safeText(authCloseStatement.get(authIdNum) || "");
-        const stmtText = stmt || "—";
-        const jeId = authCloseJournalId.get(authIdNum) || null;
-
-        const jeLink = (hasJournal && jeId)
-          ? `<div class="muted"><span class="link" onclick="openJournal(${Number(jeId)})">🧾 عرض القيد #${Number(jeId)}</span></div>`
-          : ``;
+        // ✅ journal_status is returned by app.py: "yes" | "no"
+        const js = safeText(item.journal_status).toLowerCase();
+        const hasJournal = (js === "yes");
 
         return `
           <tr>
@@ -802,11 +770,6 @@
 
             <td data-col="closed_amount"><span class="money-text">${escapeHtml(closedValTxt)}</span></td>
 
-            <td data-col="statement" class="statement-cell" title="${escapeHtml(stmtText)}">
-              <div class="clamp-3">${escapeHtml(stmtText)}</div>
-              ${jeLink}
-            </td>
-
             <td data-col="details" class="details-cell" title="${escapeHtml(detailsFull)}">
               <div class="clamp-3">${escapeHtml(detailsFull).replace(/\n/g, "<br>")}</div>
             </td>
@@ -816,7 +779,7 @@
               ${
                 hasJournal
                   ? `<div class="badge badge-ok">✅ بقيد</div>`
-                  : `<div class="badge badge-nojournal">✅ مقفول بدون قيد</div>`
+                  : `<div class="badge badge-nojournal">⚠️ مقفول بدون قيد</div>`
               }
             </td>
           </tr>
@@ -846,17 +809,8 @@
         const authId     = getAuthId(item);
         const authText   = authId != null ? `#${authId}` : "—";
 
-        const authIdNum = Number(authId);
-        const hasJournal = authIdNum ? authHasCloseJournal.has(authIdNum) : false;
-        const stmt = safeText(authCloseStatement.get(authIdNum) || "");
-        const stmtText = stmt || "—";
-        const jeId = authCloseJournalId.get(authIdNum) || null;
-
-        const jeLink = (hasJournal && jeId)
-          ? `<div class="row"><span class="label">القيد:</span>
-               <span class="link" onclick="openJournal(${Number(jeId)})">🧾 عرض القيد #${Number(jeId)}</span>
-             </div>`
-          : ``;
+        const js = safeText(item.journal_status).toLowerCase();
+        const hasJournal = (js === "yes");
 
         return `
           <div class="card">
@@ -902,18 +856,12 @@
               ${
                 hasJournal
                   ? `<span class="badge badge-ok" style="margin-right:8px;">✅ بقيد</span>`
-                  : `<span class="badge badge-nojournal" style="margin-right:8px;">✅ مقفول بدون قيد</span>`
+                  : `<span class="badge badge-nojournal" style="margin-right:8px;">⚠️ مقفول بدون قيد</span>`
               }
             </div>
 
-            ${jeLink}
-
             <div class="details-box">
-              <div class="row" data-col="statement">
-                <span class="label">البيان:</span> ${escapeHtml(stmtText)}
-              </div>
-
-              <div class="row" data-col="details" style="margin-top:8px;">
+              <div class="row" data-col="details" style="margin-top:6px;">
                 <span class="label">التفاصيل:</span> ${escapeHtml(det || "—")}
               </div>
 
@@ -941,43 +889,6 @@
     function goDriver(nameEnc) { location.href = `/drivers?focus=${nameEnc}`; }
     function goCar(plateEnc) { location.href = `/cars?focus=${plateEnc}`; }
 
-    // ====== Journal map (fast) ======
-    async function loadJournalMapForAuthIds(authIds){
-      if (!authIds || !authIds.length) return;
-
-      const chunkSize = 200;
-      for (let i = 0; i < authIds.length; i += chunkSize){
-        const chunk = authIds.slice(i, i + chunkSize);
-        const qs = new URLSearchParams();
-        qs.set("auth_ids", chunk.join(","));
-        const url = `/api/journal_entries/auth_close_map?${qs.toString()}`;
-
-        try{
-          const res = await fetch(url);
-          const data = await res.json();
-          const mp = data && data.map ? data.map : null;
-          if (!mp) continue;
-
-          Object.keys(mp).forEach(k => {
-            const authId = Number(k);
-            if (!authId) return;
-
-            const row = mp[k] || {};
-            if (row.has){
-              authHasCloseJournal.add(authId);
-              if (row.statement) authCloseStatement.set(authId, String(row.statement));
-              if (row.journal_entry_id) authCloseJournalId.set(authId, Number(row.journal_entry_id));
-            } else {
-              // leave as "no journal"
-            }
-          });
-        }catch(err){
-          console.warn("auth_close_map failed:", err);
-        }
-      }
-    }
-
-    // ====== Data loading ======
     async function fetchPage({ reset }){
       const tableBody = document.getElementById("authTableBody");
       const cardsBox  = document.getElementById("authCards");
@@ -990,11 +901,7 @@
         serverJournalYes = null;
         serverJournalNo = null;
 
-        authHasCloseJournal.clear();
-        authCloseStatement.clear();
-        authCloseJournalId.clear();
-
-        tableBody.innerHTML = "<tr><td colspan='15' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
         updateLoadMoreButton();
       }
@@ -1021,30 +928,25 @@
         offset += items.length;
         loaded = loaded.concat(items);
 
-        const ids = items.map(getAuthId).filter(Boolean).map(n => Number(n)).filter(Boolean);
-        await loadJournalMapForAuthIds(ids);
-
         render();
 
       }catch(err){
         console.error(err);
-        tableBody.innerHTML = "<tr><td colspan='15' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
+        tableBody.innerHTML = "<tr><td colspan='14' style='text-align:center'>❌ حدث خطأ أثناء التحميل.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>❌ حدث خطأ أثناء التحميل.</p>";
       }finally{
         setBusy(false);
       }
     }
 
-    function loadMore(){
-      fetchPage({ reset: false });
-    }
-
-    function runSearch(reset){
-      fetchPage({ reset: !!reset });
-    }
-
+    function loadMore(){ fetchPage({ reset: false }); }
+    function runSearch(reset){ fetchPage({ reset: !!reset }); }
     function clearSearch(){
       document.getElementById("searchInput").value = "";
+      fetchPage({ reset: true });
+    }
+    function refreshNow(){
+      // يعيد نفس البحث الحالي من الصفر
       fetchPage({ reset: true });
     }
 
@@ -1056,6 +958,12 @@
           runSearch(true);
         }
       }
+    });
+
+    // Debounce typing: (اختياري) لو مش حابه احذفيه
+    document.getElementById("searchInput").addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => runSearch(true), SEARCH_DEBOUNCE_MS);
     });
 
     // init

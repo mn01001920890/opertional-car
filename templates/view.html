@@ -690,7 +690,7 @@
       const params = new URLSearchParams();
       params.set("limit", String(limit));
       params.set("offset", String(offset));
-      params.set("light", "0"); // نحتاج details + closing_note
+      params.set("light", "0");
 
       if (q && q.trim()){
         params.set("q", q.trim());
@@ -779,8 +779,13 @@
         const stmtText = stmt || "—";
         const jeId = authCloseJournalId.get(authIdNum) || null;
 
+        // ✅ هنا التعديل: جملة عرض القيد تبقى Link حقيقي
         const jeLink = (hasJournal && jeId)
-          ? `<div class="muted"><span class="link" onclick="openJournal(${Number(jeId)})">🧾 عرض القيد #${Number(jeId)}</span></div>`
+          ? `<div class="muted">
+               <a class="link" href="/api/journal_entries/${Number(jeId)}" target="_blank" rel="noopener">
+                 🧾 عرض القيد #${Number(jeId)}
+               </a>
+             </div>`
           : ``;
 
         return `
@@ -811,9 +816,7 @@
             <td data-col="closed_amount"><span class="money-text">${escapeHtml(closedValTxt)}</span></td>
 
             <td data-col="statement" class="statement-cell" title="${escapeHtml(stmtText)}">
-              <!-- ✅ البيان نص عادي غير قابل للنقر -->
               <div class="clamp-3 statement-text">${escapeHtml(stmtText)}</div>
-              <!-- ✅ اللينك الوحيد: عرض القيد -->
               ${jeLink}
             </td>
 
@@ -862,9 +865,12 @@
         const stmtText = stmt || "—";
         const jeId = authCloseJournalId.get(authIdNum) || null;
 
+        // ✅ هنا التعديل: Link حقيقي داخل الكارت
         const jeLink = (hasJournal && jeId)
           ? `<div class="row"><span class="label">القيد:</span>
-               <span class="link" onclick="openJournal(${Number(jeId)})">🧾 عرض القيد #${Number(jeId)}</span>
+               <a class="link" href="/api/journal_entries/${Number(jeId)}" target="_blank" rel="noopener">
+                 🧾 عرض القيد #${Number(jeId)}
+               </a>
              </div>`
           : ``;
 
@@ -921,7 +927,6 @@
             <div class="details-box">
               <div class="row" data-col="statement">
                 <span class="label">البيان:</span>
-                <!-- ✅ البيان نص عادي غير قابل للنقر -->
                 <span class="statement-text">${escapeHtml(stmtText)}</span>
               </div>
 
@@ -953,7 +958,6 @@
     function goDriver(nameEnc) { location.href = `/drivers?focus=${nameEnc}`; }
     function goCar(plateEnc) { location.href = `/cars?focus=${plateEnc}`; }
 
-    // ====== Journal map (fast) ======
     async function loadJournalMapForAuthIds(authIds){
       if (!authIds || !authIds.length) return;
 
@@ -987,7 +991,6 @@
       }
     }
 
-    // ====== Data loading ======
     async function fetchPage({ reset }){
       const tableBody = document.getElementById("authTableBody");
       const cardsBox  = document.getElementById("authCards");
@@ -1045,20 +1048,13 @@
       }
     }
 
-    function loadMore(){
-      fetchPage({ reset: false });
-    }
-
-    function runSearch(reset){
-      fetchPage({ reset: !!reset });
-    }
-
+    function loadMore(){ fetchPage({ reset: false }); }
+    function runSearch(reset){ fetchPage({ reset: !!reset }); }
     function clearSearch(){
       document.getElementById("searchInput").value = "";
       fetchPage({ reset: true });
     }
 
-    // Enter to search
     document.addEventListener("keydown", (e) => {
       if (e.key === "Enter"){
         const el = document.activeElement;
@@ -1068,7 +1064,6 @@
       }
     });
 
-    // init
     buildColumnsUI();
     applyColumnVisibility();
     fetchPage({ reset: true });

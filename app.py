@@ -1211,29 +1211,65 @@ def journal_entries_api():
         try:
             je_date = datetime.fromisoformat(date_str)
         except Exception:
-            return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601"}), 400
+            return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم YYYY-MM-DD"}), 400
 
+    # ✅ تنظيف + تحقق قبل الحفظ
+    cleaned = []
+    total_debit = Decimal("0")
+    total_credit = Decimal("0")
+
+    for i, ln in enumerate(lines_data, start=1):
+        acc_id = ln.get("account_id")
+        if not acc_id:
+            continue
+
+        acc = Account.query.get(acc_id)
+        if not acc:
+            return jsonify({"error": f"السطر رقم {i}: الحساب غير موجود"}), 400
+
+        # امنع الحسابات التجميعية
+        if getattr(acc, "is_group", False):
+            return jsonify({"error": f"السطر رقم {i}: لا يمكن استخدام حساب تجميعي (اختر حساب تفصيلي)"}), 400
+
+        debit_dec = safe_decimal(ln.get("debit"), default=Decimal("0")) or Decimal("0")
+        credit_dec = safe_decimal(ln.get("credit"), default=Decimal("0")) or Decimal("0")
+
+        if debit_dec < 0 or credit_dec < 0:
+            return jsonify({"error": f"السطر رقم {i}: لا يمكن إدخال قيم سالبة"}), 400
+
+        if debit_dec != 0 and credit_dec != 0:
+            return jsonify({"error": f"السطر رقم {i}: يجب إدخال (مدين أو دائن) فقط وليس الاثنين"}), 400
+
+        if debit_dec == 0 and credit_dec == 0:
+            continue
+
+        total_debit += debit_dec
+        total_credit += credit_dec
+        cleaned.append((acc.id, debit_dec, credit_dec))
+
+    if not cleaned:
+        return jsonify({"error": "كل البنود فارغة — أدخل على الأقل سطر واحد فيه مدين أو دائن"}), 400
+
+    # ✅ لازم القيد يكون متوازن
+    if (total_debit - total_credit).copy_abs() > Decimal("0.005"):
+        return jsonify({
+            "error": "القيد غير متوازن: إجمالي المدين لا يساوي إجمالي الدائن",
+            "total_debit": str(total_debit),
+            "total_credit": str(total_credit),
+        }), 400
+
+    # ✅ الحفظ بعد التحقق
     je = JournalEntry(date=je_date, description=desc_txt)
     db.session.add(je)
     db.session.flush()
 
     try:
-        for ln in lines_data:
-            acc_id = ln.get("account_id")
-            if not acc_id:
-                continue
-            acc = Account.query.get(acc_id)
-            if not acc:
-                continue
-
-            debit_dec = safe_decimal(ln.get("debit"), default=Decimal("0")) or Decimal("0")
-            credit_dec = safe_decimal(ln.get("credit"), default=Decimal("0")) or Decimal("0")
-
+        for (acc_id, d, c) in cleaned:
             line = JournalLine(
                 journal_entry_id=je.id,
-                account_id=acc.id,
-                debit=debit_dec,
-                credit=credit_dec,
+                account_id=acc_id,
+                debit=d,
+                credit=c,
             )
             db.session.add(line)
 
@@ -1428,3 +1464,4 @@ with app.app_context():
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+

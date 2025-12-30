@@ -356,6 +356,23 @@
       user-select: text;
     }
 
+    /* ✅ رقم القيد: نص ثابت غير قابل للنقر */
+    .journal-ref{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      margin-top:6px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: rgba(13,110,253,0.10);
+      border: 1px solid rgba(13,110,253,0.22);
+      color: #0d6efd;
+      font-weight: 900;
+      font-size: 11px;
+      cursor: default;
+      user-select: text;
+    }
+
     .money-text {
       color: #198754;
       font-weight: 900;
@@ -707,11 +724,6 @@
       btnMore.disabled   = isBusy;
     }
 
-    function openJournal(entryId){
-      if (!entryId) return;
-      window.open(`/api/journal_entries/${entryId}`, "_blank");
-    }
-
     function render(){
       const tableBody = document.getElementById("authTableBody");
       const cardsBox  = document.getElementById("authCards");
@@ -779,13 +791,9 @@
         const stmtText = stmt || "—";
         const jeId = authCloseJournalId.get(authIdNum) || null;
 
-        // ✅ هنا التعديل: جملة عرض القيد تبقى Link حقيقي
-        const jeLink = (hasJournal && jeId)
-          ? `<div class="muted">
-               <a class="link" href="/api/journal_entries/${Number(jeId)}" target="_blank" rel="noopener">
-                 🧾 عرض القيد #${Number(jeId)}
-               </a>
-             </div>`
+        // ✅ تحديث: إلغاء اللينك نهائيًا + إظهار رقم القيد فقط كنص ثابت
+        const journalRef = (hasJournal && jeId)
+          ? `<div class="journal-ref">🧾 رقم القيد: #${Number(jeId)}</div>`
           : ``;
 
         return `
@@ -817,7 +825,7 @@
 
             <td data-col="statement" class="statement-cell" title="${escapeHtml(stmtText)}">
               <div class="clamp-3 statement-text">${escapeHtml(stmtText)}</div>
-              ${jeLink}
+              ${journalRef}
             </td>
 
             <td data-col="details" class="details-cell" title="${escapeHtml(detailsFull)}">
@@ -865,12 +873,10 @@
         const stmtText = stmt || "—";
         const jeId = authCloseJournalId.get(authIdNum) || null;
 
-        // ✅ هنا التعديل: Link حقيقي داخل الكارت
-        const jeLink = (hasJournal && jeId)
-          ? `<div class="row"><span class="label">القيد:</span>
-               <a class="link" href="/api/journal_entries/${Number(jeId)}" target="_blank" rel="noopener">
-                 🧾 عرض القيد #${Number(jeId)}
-               </a>
+        // ✅ تحديث: إظهار رقم القيد فقط داخل الكارت (بدون لينك)
+        const journalRef = (hasJournal && jeId)
+          ? `<div class="row"><span class="label">رقم القيد:</span>
+               <span class="journal-ref" style="margin-top:0;">#${Number(jeId)}</span>
              </div>`
           : ``;
 
@@ -922,7 +928,7 @@
               }
             </div>
 
-            ${jeLink}
+            ${journalRef}
 
             <div class="details-box">
               <div class="row" data-col="statement">

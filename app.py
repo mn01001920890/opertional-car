@@ -5,6 +5,7 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import selectinload
+from sqlalchemy import or_, and_, func, exists, desc
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 import os
@@ -125,8 +126,6 @@ class Authorization(db.Model):
     closing_note = db.Column(db.Text)
 
     __table_args__ = (
-        # ملاحظة: لو الجدول موجود بالفعل، create_all مش هيضيف index تلقائي
-        # لكن وجودها هنا مفيد لأي DB جديدة/مستقبلًا.
         db.Index("ix_auth_close_date", "close_date"),
         db.Index("ix_auth_car_number", "car_number"),
         db.Index("ix_auth_driver_license_no", "driver_license_no"),
@@ -306,7 +305,6 @@ class JournalEntry(db.Model):
     authorization = db.relationship("Authorization", backref="journal_entries", lazy="selectin")
     receipt = db.relationship("CashReceipt", backref="journal_entries", lazy="selectin")
 
-    # بدل backref الافتراضي (لتقليل N+1)
     lines = db.relationship(
         "JournalLine",
         back_populates="journal_entry",
@@ -463,7 +461,7 @@ def create_journal_for_closed_authorization(auth, total_amount):
     من حـ/ حساب السائق (مدين)
     إلى حـ/ إيراد إيجار سيارات (دائن)
 
-    ✅ يرجّع رقم القيد (journal_entry_id) عشان الطباعة والربط السريع
+    ✅ يرجّع رقم القيد (journal_entry_id)
     """
     try:
         if not total_amount or total_amount <= 0:
@@ -784,25 +782,71 @@ def get_authorizations():
     return jsonify([a.to_dict(light=light) for a in auths])
 
 
+# ✅ UPDATED: closed authorizations (fast + summary + close_date order)
 @app.route("/api/authorizations/closed", methods=["GET"])
 def get_closed_authorizations():
     """
-    نفس القديم (يرجع LIST)، مع دعم سرعة اختيارية:
-    - ?limit=200&offset=0
-    - ?light=1
+    Closed Authorizations (FAST):
+    - Order: close_date DESC (newest first)
+    - Pagination: limit/offset
+    - light=1 (optional)
+    - q=... (server search)
+    Returns:
+      { items: [...], total: N, journal_yes: N, journal_no: N }
     """
-    query = Authorization.query.filter(Authorization.close_date.is_not(None)).order_by(Authorization.id.desc())
-
+    q_raw = (request.args.get("q") or "").strip()
     light = parse_bool(request.args.get("light"), default=False)
-    limit = parse_int(request.args.get("limit"), default=None, min_val=1, max_val=5000)
+
+    limit = parse_int(request.args.get("limit"), default=200, min_val=1, max_val=5000)
     offset = parse_int(request.args.get("offset"), default=0, min_val=0)
 
-    if limit is not None:
-        auths = query.offset(offset).limit(limit).all()
-    else:
-        auths = query.all()
+    query = Authorization.query.filter(Authorization.close_date.is_not(None))
 
-    return jsonify([a.to_dict(light=light) for a in auths])
+    if q_raw:
+        like = f"%{q_raw}%"
+        filters = [
+            Authorization.driver_name.ilike(like),
+            Authorization.car_number.ilike(like),
+            Authorization.driver_license_no.ilike(like),
+            Authorization.status.ilike(like),
+            Authorization.details.ilike(like),
+            Authorization.closing_note.ilike(like),
+        ]
+        if q_raw.isdigit():
+            try:
+                q_id = int(q_raw)
+                filters.append(Authorization.id == q_id)
+            except Exception:
+                pass
+
+        query = query.filter(or_(*filters))
+
+    total = query.with_entities(func.count(Authorization.id)).scalar() or 0
+
+    journal_exists = exists().where(
+        and_(
+            JournalEntry.ref_authorization_id == Authorization.id,
+            JournalEntry.ref_receipt_id.is_(None),   # قيد إقفال تفويض فقط
+        )
+    )
+
+    journal_yes = query.filter(journal_exists).with_entities(func.count(Authorization.id)).scalar() or 0
+    journal_no = max(total - journal_yes, 0)
+
+    order_expr = desc(Authorization.close_date)
+    if hasattr(order_expr, "nullslast"):
+        order_expr = order_expr.nullslast()
+
+    query = query.order_by(order_expr, Authorization.id.desc())
+
+    auths = query.offset(offset).limit(limit).all()
+
+    return jsonify({
+        "items": [a.to_dict(light=light) for a in auths],
+        "total": int(total),
+        "journal_yes": int(journal_yes),
+        "journal_no": int(journal_no),
+    })
 
 
 @app.route("/api/authorizations/active", methods=["GET"])
@@ -965,7 +1009,7 @@ def end_authorization(auth_id):
             "total_amount": final_amount,
             "renew": renew,
             "with_journal": with_journal,
-            "journal_entry_id": journal_entry_id,   # ✅ مهم للطباعة/العمليات
+            "journal_entry_id": journal_entry_id,
             "suggested_receipt": suggested_receipt,
         }), 200
 
@@ -1155,7 +1199,7 @@ def journal_entries_api():
         return jsonify([e.to_dict(with_lines=True) for e in entries])
 
     data = request.get_json() or {}
-    desc = (data.get("description") or "").strip()
+    desc_txt = (data.get("description") or "").strip()
     date_str = (data.get("date") or "").strip()
     lines_data = data.get("lines") or []
 
@@ -1169,7 +1213,7 @@ def journal_entries_api():
         except Exception:
             return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601"}), 400
 
-    je = JournalEntry(date=je_date, description=desc)
+    je = JournalEntry(date=je_date, description=desc_txt)
     db.session.add(je)
     db.session.flush()
 
@@ -1199,7 +1243,6 @@ def journal_entries_api():
         traceback.print_exc()
         return jsonify({"error": f"DB error: {str(e)}"}), 500
 
-    # ✅ مهم: نخلي رقم القيد موجود بشكل مباشر top-level كمان
     return jsonify({
         "message": "✅ تم إنشاء قيد اليومية بنجاح",
         "id": je.id,
@@ -1233,6 +1276,62 @@ def manual_journal_entries_api():
     return jsonify([e.to_dict(with_lines=True) for e in entries])
 
 
+# ✅ NEW: map auth_id -> (has journal? + statement + journal_entry_id)
+@app.route("/api/journal_entries/auth_close_map", methods=["GET"])
+def auth_close_journal_map():
+    """
+    Fast map for closed-auth journal entries:
+    GET /api/journal_entries/auth_close_map?auth_ids=1,2,3
+
+    Returns:
+      { "map": { "1": {"has": true, "statement": "...", "journal_entry_id": 55}, ... } }
+    """
+    raw = (request.args.get("auth_ids") or "").strip()
+    if not raw:
+        return jsonify({"map": {}})
+
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    ids = []
+    for p in parts[:500]:
+        if p.isdigit():
+            ids.append(int(p))
+
+    if not ids:
+        return jsonify({"map": {}})
+
+    q = (
+        JournalEntry.query
+        .filter(JournalEntry.ref_authorization_id.in_(ids))
+        .filter(JournalEntry.ref_receipt_id.is_(None))  # قيد إقفال فقط
+        .order_by(
+            JournalEntry.ref_authorization_id.asc(),
+            JournalEntry.date.desc(),
+            JournalEntry.id.desc(),
+        )
+        .distinct(JournalEntry.ref_authorization_id)  # Postgres DISTINCT ON
+    )
+
+    rows = q.all()
+
+    mp = {}
+    for je in rows:
+        aid = je.ref_authorization_id
+        if not aid:
+            continue
+        mp[str(aid)] = {
+            "has": True,
+            "statement": je.description or f"قيد إقفال تفويض رقم {aid}",
+            "journal_entry_id": je.id,
+        }
+
+    for aid in ids:
+        k = str(aid)
+        if k not in mp:
+            mp[k] = {"has": False, "statement": "", "journal_entry_id": None}
+
+    return jsonify({"map": mp})
+
+
 # ----- Cash Receipts APIs -----
 @app.route("/api/receipts", methods=["GET", "POST"])
 def receipts_api():
@@ -1245,7 +1344,7 @@ def receipts_api():
     driver_name = (data.get("driver_name") or "").strip()
     driver_id = data.get("driver_id")
     auth_id = data.get("authorization_id")
-    desc = (data.get("description") or "").strip()
+    desc_txt = (data.get("description") or "").strip()
     amount_val = data.get("amount")
     date_str = (data.get("date") or "").strip()
 
@@ -1283,7 +1382,7 @@ def receipts_api():
         driver_id=driver_obj.id if driver_obj else None,
         driver_name=driver_name or (driver_obj.name if driver_obj else None),
         amount=amount_dec,
-        description=desc or (f"سداد عن تفويض رقم {auth_obj.id}" if auth_obj else "سند تحصيل نقدي"),
+        description=desc_txt or (f"سداد عن تفويض رقم {auth_obj.id}" if auth_obj else "سند تحصيل نقدي"),
         ref_authorization_id=auth_obj.id if auth_obj else None,
     )
 
@@ -1295,7 +1394,6 @@ def receipts_api():
 
         db.session.commit()
 
-        # ✅ نخلي رقم السند موجود top-level كمان + رقم القيد
         return jsonify({
             "message": "✅ تم إنشاء سند التحصيل النقدي وتسجيل القيد المحاسبي",
             "id": receipt.id,

@@ -443,7 +443,10 @@
 
     <div class="toolbar">
       <div class="search-box">
-        <span class="search-label">بحث سريع (سيرفر): رقم التفويض / السيارة / السائق / التفاصيل / ملاحظة / بيان القيد</span>
+        <span class="search-label">
+          بحث سريع (سيرفر): رقم التفويض / السيارة / السائق / التفاصيل / ملاحظة الإقفال
+          <br><span class="muted">ملاحظة: “بيان القيد” يُجلب من map بعد التحميل (مش جزء من بحث السيرفر).</span>
+        </span>
         <input
           id="searchInput"
           class="search-input"
@@ -470,7 +473,7 @@
       <div id="columnsBody" class="columns-body">
         <div class="columns-grid" id="columnsGrid"></div>
         <div class="hint">
-          ملاحظة: الإخفاء لا يمنع البحث داخل البيانات. البحث هنا يتم على السيرفر (أسرع للأرشيف الكبير).
+          ملاحظة: الإخفاء لا يمنع تحميل البيانات. البحث هنا على السيرفر (أسرع للأرشيف الكبير).
         </div>
       </div>
     </section>
@@ -509,22 +512,24 @@
 
   <script>
     // =========================
-    // ✅ Performance Strategy
-    // =========================
-    // 1) لا نحمل كل الأرشيف مرة واحدة: pagination (limit/offset)
-    // 2) البحث يتم على السيرفر (q)
-    // 3) بدل ما نجيب journal_entries كلها: بنجيب map للـ auth_ids المعروضة فقط
-    //    (Endpoint: /api/journal_entries/auth_close_map?auth_ids=1,2,3)
+    // ✅ Compatible with NEW app.py
+    // /api/authorizations/closed -> {items,total,journal_yes,journal_no}
+    // /api/journal_entries/auth_close_map?auth_ids=... -> {map:{id:{has,statement,journal_entry_id}}}
     // =========================
 
-    let loaded = [];             // items loaded (accumulated)
-    let totalClosed = null;      // total count if server provides (later)
+    let loaded = [];
     let offset = 0;
     const LIMIT = 200;
 
-    // map: auth_id => { has: bool, statement: string }
+    // server counters
+    let serverTotal = null;
+    let serverJournalYes = null;
+    let serverJournalNo = null;
+
+    // map data
     const authHasCloseJournal = new Set();
     const authCloseStatement  = new Map();
+    const authCloseJournalId  = new Map();
 
     // columns
     const COLS = [
@@ -546,7 +551,7 @@
     ];
 
     const DEFAULT_COL_STATE = COLS.reduce((acc, c) => (acc[c.key] = true, acc), {});
-    const LS_KEY = "closed_auth_cols_v3";
+    const LS_KEY = "closed_auth_cols_v4";
     let colState = loadColState();
 
     function escapeHtml(str){
@@ -675,15 +680,11 @@
       const params = new URLSearchParams();
       params.set("limit", String(limit));
       params.set("offset", String(offset));
+      params.set("light", "0"); // نحتاج details + closing_note
 
-      // نجيب details & note عشان العرض + البحث المحلي داخل الصفحة
-      params.set("light", "0");
-
-      // بحث عام سيرفر (هنضيفه في API في app.py لو مش موجود)
       if (q && q.trim()){
         params.set("q", q.trim());
       }
-
       return `/api/authorizations/closed?${params.toString()}`;
     }
 
@@ -696,6 +697,12 @@
       btnMore.disabled   = isBusy;
     }
 
+    function openJournal(entryId){
+      if (!entryId) return;
+      // يفتح JSON القيد مباشرة (مؤكد موجود في app.py)
+      window.open(`/api/journal_entries/${entryId}`, "_blank");
+    }
+
     function render(){
       const tableBody = document.getElementById("authTableBody");
       const cardsBox  = document.getElementById("authCards");
@@ -703,22 +710,34 @@
 
       const shown = loaded.length;
 
-      const noJournalCount = loaded.reduce((acc, it) => {
+      const totalText = (serverTotal == null) ? "غير معروف" : String(serverTotal);
+      const yesText   = (serverJournalYes == null) ? "—" : String(serverJournalYes);
+      const noText    = (serverJournalNo == null) ? "—" : String(serverJournalNo);
+
+      // fallback count from loaded (تقريبي فقط لو server مش مرجع counters)
+      const loadedNoJournal = loaded.reduce((acc, it) => {
         const authId = Number(getAuthId(it));
         if (!authId) return acc;
         return acc + (authHasCloseJournal.has(authId) ? 0 : 1);
       }, 0);
 
-      const totalText = (totalClosed == null) ? "غير معروف" : String(totalClosed);
       summary.innerHTML = `
-        <div>تم تحميل: <b>${shown}</b> من <b>${totalText}</b> — بدون قيد: <b>${noJournalCount}</b></div>
-        <div class="muted">نصيحة: استخدم البحث ثم اضغط “بحث” بدل ما تحمل الأرشيف كله.</div>
+        <div>
+          تم تحميل: <b>${shown}</b> من <b>${totalText}</b>
+          — بقيد (إجمالي): <b>${yesText}</b>
+          — بدون قيد (إجمالي): <b>${noText}</b>
+        </div>
+        <div class="muted">
+          (في المعروض حالياً بدون قيد تقريباً: <b>${loadedNoJournal}</b>)
+          — استخدم البحث بدل تحميل الأرشيف كله.
+        </div>
       `;
 
       if (!loaded.length){
         tableBody.innerHTML = "<tr><td colspan='15' style='text-align:center'>⚪ لا توجد بيانات حتى الآن.</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>⚪ لا توجد بيانات حتى الآن.</p>";
         applyColumnVisibility();
+        updateLoadMoreButton();
         return;
       }
 
@@ -750,6 +769,11 @@
         const hasJournal = authIdNum ? authHasCloseJournal.has(authIdNum) : false;
         const stmt = safeText(authCloseStatement.get(authIdNum) || "");
         const stmtText = stmt || "—";
+        const jeId = authCloseJournalId.get(authIdNum) || null;
+
+        const jeLink = (hasJournal && jeId)
+          ? `<div class="muted"><span class="link" onclick="openJournal(${Number(jeId)})">🧾 عرض القيد #${Number(jeId)}</span></div>`
+          : ``;
 
         return `
           <tr>
@@ -780,6 +804,7 @@
 
             <td data-col="statement" class="statement-cell" title="${escapeHtml(stmtText)}">
               <div class="clamp-3">${escapeHtml(stmtText)}</div>
+              ${jeLink}
             </td>
 
             <td data-col="details" class="details-cell" title="${escapeHtml(detailsFull)}">
@@ -825,6 +850,13 @@
         const hasJournal = authIdNum ? authHasCloseJournal.has(authIdNum) : false;
         const stmt = safeText(authCloseStatement.get(authIdNum) || "");
         const stmtText = stmt || "—";
+        const jeId = authCloseJournalId.get(authIdNum) || null;
+
+        const jeLink = (hasJournal && jeId)
+          ? `<div class="row"><span class="label">القيد:</span>
+               <span class="link" onclick="openJournal(${Number(jeId)})">🧾 عرض القيد #${Number(jeId)}</span>
+             </div>`
+          : ``;
 
         return `
           <div class="card">
@@ -874,6 +906,8 @@
               }
             </div>
 
+            ${jeLink}
+
             <div class="details-box">
               <div class="row" data-col="statement">
                 <span class="label">البيان:</span> ${escapeHtml(stmtText)}
@@ -890,10 +924,12 @@
       }).join("");
 
       applyColumnVisibility();
+      updateLoadMoreButton();
+    }
 
-      // load more button state
+    function updateLoadMoreButton(){
       const btnMore = document.getElementById("loadMoreBtn");
-      if (totalClosed != null && loaded.length >= totalClosed){
+      if (serverTotal != null && loaded.length >= serverTotal){
         btnMore.disabled = true;
         btnMore.textContent = "✅ تم تحميل كل الأرشيف";
       } else {
@@ -907,11 +943,8 @@
 
     // ====== Journal map (fast) ======
     async function loadJournalMapForAuthIds(authIds){
-      // endpoint جديد لازم نضيفه في app.py
-      // يرجع: { "map": { "12": {"has":true,"statement":"..."} } }
       if (!authIds || !authIds.length) return;
 
-      // قلل عدد IDs في الطلب الواحد (أمان)
       const chunkSize = 200;
       for (let i = 0; i < authIds.length; i += chunkSize){
         const chunk = authIds.slice(i, i + chunkSize);
@@ -928,11 +961,14 @@
           Object.keys(mp).forEach(k => {
             const authId = Number(k);
             if (!authId) return;
-            if (mp[k] && mp[k].has){
+
+            const row = mp[k] || {};
+            if (row.has){
               authHasCloseJournal.add(authId);
-              if (mp[k].statement) authCloseStatement.set(authId, String(mp[k].statement));
+              if (row.statement) authCloseStatement.set(authId, String(row.statement));
+              if (row.journal_entry_id) authCloseJournalId.set(authId, Number(row.journal_entry_id));
             } else {
-              // لو رجع false نسيبه بدون set
+              // leave as "no journal"
             }
           });
         }catch(err){
@@ -949,11 +985,18 @@
       if (reset){
         loaded = [];
         offset = 0;
-        totalClosed = null;
+
+        serverTotal = null;
+        serverJournalYes = null;
+        serverJournalNo = null;
+
         authHasCloseJournal.clear();
         authCloseStatement.clear();
+        authCloseJournalId.clear();
+
         tableBody.innerHTML = "<tr><td colspan='15' style='text-align:center'>⏳ جاري التحميل...</td></tr>";
         cardsBox.innerHTML  = "<p style='text-align:center'>⏳ جاري التحميل...</p>";
+        updateLoadMoreButton();
       }
 
       const q = safeText(document.getElementById("searchInput").value);
@@ -964,23 +1007,20 @@
         const res = await fetch(url);
         const data = await res.json();
 
-        // دعم شكلين: array مباشرة، أو {items, total}
         let items = [];
         if (Array.isArray(data)) {
           items = data;
         } else if (data && Array.isArray(data.items)) {
           items = data.items;
-          if (typeof data.total === "number") totalClosed = data.total;
+
+          if (typeof data.total === "number") serverTotal = data.total;
+          if (typeof data.journal_yes === "number") serverJournalYes = data.journal_yes;
+          if (typeof data.journal_no === "number") serverJournalNo = data.journal_no;
         }
 
-        // لو السيرفر ما رجعش total: نخليه null
-        // offset update
         offset += items.length;
-
-        // accumulate
         loaded = loaded.concat(items);
 
-        // journal map للأجزاء الجديدة فقط
         const ids = items.map(getAuthId).filter(Boolean).map(n => Number(n)).filter(Boolean);
         await loadJournalMapForAuthIds(ids);
 
@@ -1024,6 +1064,5 @@
     fetchPage({ reset: true });
   </script>
 
-  <!-- ❌ نصيحة: إزالة منع أدوات المطورين (بتبطّأ الصفحة ومش حماية حقيقية) -->
 </body>
 </html>

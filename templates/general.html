@@ -400,45 +400,50 @@
     }
 
     /* ===========================
-       🖨️ طباعة إيصال القيد
+       🖨️ طباعة إيصال القيد (محدثة)
        =========================== */
 
     /* منطقة الطباعة فقط */
     #printArea { display:none; }
 
     @media print {
-      /* A4 + هوامش مناسبة */
       @page { size: A4; margin: 12mm; }
 
-      /* اطبع فقط printArea */
+      html, body { height: auto !important; }
       body { background:#fff !important; color:#000 !important; }
+
       body * { visibility: hidden !important; }
       #printArea, #printArea * { visibility: visible !important; }
 
       #printArea{
         display:block !important;
-        position: fixed;
-        inset: 0;
-        padding: 0;
+        position: static !important;   /* ✅ مهم: بدل fixed */
+        padding: 0 !important;
         direction: rtl;
         font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
         color:#000;
       }
 
-      /* تحسين كسر الصفحات */
       #printArea table { width:100%; border-collapse: collapse; table-layout: fixed; }
-      #printArea thead { display: table-header-group; } /* تكرار رأس الجدول */
+      #printArea thead { display: table-header-group; }
       #printArea tfoot { display: table-footer-group; }
+
       #printArea tr { break-inside: avoid; page-break-inside: avoid; }
       #printArea .avoid-break { break-inside: avoid; page-break-inside: avoid; }
 
-      /* ألوان/خلفيات */
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-      /* لا نطبع أزرار/الهيدر (أصلاً مخفيين بالـ visibility) */
     }
 
-    /* شكل إيصال الطباعة */
+    /* ✅ صفحات */
+    .print-page{
+      page-break-after: always;
+      break-after: page;
+    }
+    .print-page:last-child{
+      page-break-after: auto;
+      break-after: auto;
+    }
+
     .print-sheet{
       background:#fff;
       padding: 0;
@@ -488,6 +493,19 @@
 
     .print-meta .k{ font-weight: 900; margin-left: 6px; }
     .print-meta .v{ font-weight: 700; }
+
+    .print-head-mini{
+      padding: 8px 0 6px;
+      border-bottom: 1px solid #111;
+      margin-bottom: 8px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+    }
+    .print-head-mini .t{ font-weight: 900; }
+    .print-head-mini .p{ border:1px solid #111; border-radius:999px; padding:3px 8px; }
 
     .print-table{
       width:100%;
@@ -630,9 +648,7 @@
                       <th style="width: 20%;">إجراء</th>
                     </tr>
                   </thead>
-                  <tbody id="linesBody">
-                    <!-- صفوف البنود تتضاف هنا ديناميكياً -->
-                  </tbody>
+                  <tbody id="linesBody"></tbody>
                 </table>
               </div>
 
@@ -646,20 +662,13 @@
               </div>
 
               <div style="margin-top:6px;">
-                <button type="button" class="btn-line" id="btnAddLine">
-                  ➕ إضافة سطر
-                </button>
+                <button type="button" class="btn-line" id="btnAddLine">➕ إضافة سطر</button>
               </div>
             </div>
 
             <div class="actions">
-              <button type="submit" class="btn btn-primary">
-                💾🖨️ حفظ وطباعة القيد
-              </button>
-
-              <button type="button" class="btn btn-ghost" id="btnResetForm">
-                ♻️ مسح الحقول
-              </button>
+              <button type="submit" class="btn btn-primary">💾🖨️ حفظ وطباعة القيد</button>
+              <button type="button" class="btn btn-ghost" id="btnResetForm">♻️ مسح الحقول</button>
             </div>
 
             <div id="formMessage" class="message"></div>
@@ -701,11 +710,9 @@
     })();
 
     function showFormMessage(text, type = "success", allowHtml = false) {
-      if (allowHtml) {
-        formMessage.innerHTML = text;
-      } else {
-        formMessage.textContent = text;
-      }
+      if (allowHtml) formMessage.innerHTML = text;
+      else formMessage.textContent = text;
+
       formMessage.className = "message " + type;
       formMessage.style.display = "block";
     }
@@ -751,10 +758,10 @@
       }
     }
 
-    // إنشاء قائمة الحسابات
     function createAccountSelect() {
       const select = document.createElement("select");
       select.className = "line-account";
+
       const defaultOpt = document.createElement("option");
       defaultOpt.value = "";
       defaultOpt.textContent = "اختر حساباً...";
@@ -772,17 +779,12 @@
       return select;
     }
 
-    // فلترة حسابات حسب نص البحث
     function filterAccountOptions(selectElem, term) {
       const t = (term || "").trim().toLowerCase();
       Array.from(selectElem.options).forEach(opt => {
-        if (!opt.value) {
-          opt.hidden = false;
-          return;
-        }
+        if (!opt.value) { opt.hidden = false; return; }
         const name = (opt.textContent || "").toLowerCase();
-        const match = !t || name.includes(t);
-        opt.hidden = !match;
+        opt.hidden = !!t && !name.includes(t);
       });
     }
 
@@ -794,7 +796,6 @@
       const tdCredit = document.createElement("td");
       const tdAction = document.createElement("td");
 
-      // 🔍 خلية الحساب فيها input بحث + select
       const accountWrapper = document.createElement("div");
       accountWrapper.className = "account-cell";
 
@@ -805,10 +806,7 @@
 
       const sel = createAccountSelect();
 
-      searchInput.addEventListener("input", () => {
-        filterAccountOptions(sel, searchInput.value);
-      });
-
+      searchInput.addEventListener("input", () => filterAccountOptions(sel, searchInput.value));
       sel.addEventListener("change", () => {
         const opt = sel.options[sel.selectedIndex];
         if (opt && opt.value) {
@@ -826,9 +824,7 @@
       debitInput.step = "0.01";
       debitInput.className = "small-input line-debit";
       debitInput.addEventListener("input", () => {
-        if (debitInput.value && parseFloat(debitInput.value) !== 0) {
-          creditInput.value = "";
-        }
+        if (debitInput.value && parseFloat(debitInput.value) !== 0) creditInput.value = "";
         updateTotals();
       });
 
@@ -837,9 +833,7 @@
       creditInput.step = "0.01";
       creditInput.className = "small-input line-credit";
       creditInput.addEventListener("input", () => {
-        if (creditInput.value && parseFloat(creditInput.value) !== 0) {
-          debitInput.value = "";
-        }
+        if (creditInput.value && parseFloat(creditInput.value) !== 0) debitInput.value = "";
         updateTotals();
       });
 
@@ -878,11 +872,13 @@
       linesBody.innerHTML = "";
       updateTotals();
       clearFormMessage();
+
       const today = new Date();
       const y = today.getFullYear();
       const m = String(today.getMonth() + 1).padStart(2, "0");
       const d = String(today.getDate()).padStart(2, "0");
       jeDateInput.value = `${y}-${m}-${d}`;
+
       if (accounts.length > 0) { addLineRow(); addLineRow(); }
     });
 
@@ -914,6 +910,7 @@
       return code ? `${code} — ${name}` : name;
     }
 
+    /* ✅ بناء إيصال طباعة مقسم صفحات */
     function buildPrintReceipt(entryId){
       const rows = Array.from(linesBody.querySelectorAll("tr"));
 
@@ -939,42 +936,34 @@
         tDebit += debit;
         tCredit += credit;
 
-        lines.push({
-          account: label,
-          debit,
-          credit
-        });
+        lines.push({ account: label, debit, credit });
       });
 
       const printArea = document.getElementById("printArea");
-
       const entryText = entryId ? `#${entryId}` : "—";
       const balanced = Math.abs(tDebit - tCredit) < 0.005;
 
-      const tableRows = lines.map((ln, idx) => `
-        <tr>
-          <td class="print-num">${idx + 1}</td>
-          <td>${escapeHtml(ln.account || "")}</td>
-          <td class="print-money">${ln.debit ? escapeHtml(ln.debit.toFixed(2)) : ""}</td>
-          <td class="print-money">${ln.credit ? escapeHtml(ln.credit.toFixed(2)) : ""}</td>
-        </tr>
-      `).join("");
+      const LINES_PER_PAGE = 26;
 
-      printArea.innerHTML = `
-        <div class="print-sheet">
-          <div class="print-head avoid-break">
-            <div class="print-title">
-              <h1>قيد يومية يدوي</h1>
-              <div class="meta-pill">رقم القيد: ${escapeHtml(entryText)}</div>
-            </div>
+      const chunks = [];
+      for (let i = 0; i < lines.length; i += LINES_PER_PAGE){
+        chunks.push(lines.slice(i, i + LINES_PER_PAGE));
+      }
+      if (chunks.length === 0) chunks.push([]);
 
-            <div class="print-meta">
-              <div class="item"><span class="k">التاريخ:</span><span class="v">${escapeHtml(dateVal || "—")}</span></div>
-              <div class="item"><span class="k">الوصف:</span><span class="v">${escapeHtml(descVal || "—")}</span></div>
-              <div class="item"><span class="k">تاريخ الطباعة:</span><span class="v">${escapeHtml(nowStamp())}</span></div>
-            </div>
-          </div>
+      const totalPages = chunks.length;
 
+      const makeTable = (chunk, startIndex) => {
+        const tableRows = chunk.map((ln, idx) => `
+          <tr>
+            <td class="print-num">${startIndex + idx + 1}</td>
+            <td>${escapeHtml(ln.account || "")}</td>
+            <td class="print-money">${ln.debit ? escapeHtml(ln.debit.toFixed(2)) : ""}</td>
+            <td class="print-money">${ln.credit ? escapeHtml(ln.credit.toFixed(2)) : ""}</td>
+          </tr>
+        `).join("");
+
+        return `
           <table class="print-table">
             <thead>
               <tr>
@@ -984,58 +973,107 @@
                 <th style="width:130px;">دائن</th>
               </tr>
             </thead>
-
             <tbody>
               ${tableRows || `<tr><td colspan="4" style="text-align:center;">— لا توجد بنود —</td></tr>`}
             </tbody>
-
-            <tfoot>
-              <tr>
-                <th colspan="2" style="text-align:right;">الإجمالي</th>
-                <th class="print-money">${escapeHtml(tDebit.toFixed(2))}</th>
-                <th class="print-money">${escapeHtml(tCredit.toFixed(2))}</th>
-              </tr>
-            </tfoot>
           </table>
+        `;
+      };
 
-          <div class="print-totals avoid-break">
-            <div class="box"><strong>إجمالي المدين:</strong> <span class="print-money">${escapeHtml(tDebit.toFixed(2))}</span></div>
-            <div class="box"><strong>إجمالي الدائن:</strong> <span class="print-money">${escapeHtml(tCredit.toFixed(2))}</span></div>
-            <div class="box"><strong>الحالة:</strong> ${balanced ? "✅ متوازن" : "⚠️ غير متوازن"}</div>
-          </div>
+      const pagesHtml = chunks.map((chunk, pageIdx) => {
+        const startIndex = pageIdx * LINES_PER_PAGE;
 
-          <div class="print-sig avoid-break">
-            <div class="sig-line">المُعِد</div>
-            <div class="sig-line">المُراجِع</div>
+        const headHtml = (pageIdx === 0)
+          ? `
+            <div class="print-head avoid-break">
+              <div class="print-title">
+                <h1>قيد يومية يدوي</h1>
+                <div class="meta-pill">رقم القيد: ${escapeHtml(entryText)}</div>
+              </div>
+
+              <div class="print-meta">
+                <div class="item"><span class="k">التاريخ:</span><span class="v">${escapeHtml(dateVal || "—")}</span></div>
+                <div class="item"><span class="k">الوصف:</span><span class="v">${escapeHtml(descVal || "—")}</span></div>
+                <div class="item"><span class="k">تاريخ الطباعة:</span><span class="v">${escapeHtml(nowStamp())}</span></div>
+              </div>
+            </div>
+          `
+          : `
+            <div class="print-head-mini avoid-break">
+              <div class="t">قيد يومية يدوي — ${escapeHtml(entryText)}</div>
+              <div class="p">صفحة ${pageIdx + 1} / ${totalPages}</div>
+            </div>
+          `;
+
+        const pageTag = `
+          <div class="print-head-mini avoid-break" style="border-bottom:none;margin:0 0 6px;">
+            <div class="t"></div>
+            <div class="p">صفحة ${pageIdx + 1} / ${totalPages}</div>
           </div>
-        </div>
-      `;
+        `;
+
+        const tableHtml = makeTable(chunk, startIndex);
+
+        const footerHtml = (pageIdx === totalPages - 1)
+          ? `
+            <table class="print-table" style="margin-top:10px;">
+              <tfoot>
+                <tr>
+                  <th colspan="2" style="text-align:right;">الإجمالي</th>
+                  <th class="print-money">${escapeHtml(tDebit.toFixed(2))}</th>
+                  <th class="print-money">${escapeHtml(tCredit.toFixed(2))}</th>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div class="print-totals avoid-break">
+              <div class="box"><strong>إجمالي المدين:</strong> <span class="print-money">${escapeHtml(tDebit.toFixed(2))}</span></div>
+              <div class="box"><strong>إجمالي الدائن:</strong> <span class="print-money">${escapeHtml(tCredit.toFixed(2))}</span></div>
+              <div class="box"><strong>الحالة:</strong> ${balanced ? "✅ متوازن" : "⚠️ غير متوازن"}</div>
+            </div>
+
+            <div class="print-sig avoid-break">
+              <div class="sig-line">المُعِد</div>
+              <div class="sig-line">المُراجِع</div>
+            </div>
+          `
+          : "";
+
+        return `
+          <section class="print-page">
+            ${headHtml}
+            ${pageTag}
+            ${tableHtml}
+            ${footerHtml}
+          </section>
+        `;
+      }).join("");
+
+      printArea.innerHTML = `<div class="print-sheet">${pagesHtml}</div>`;
     }
 
     function printJournalReceipt(entryId){
       pendingResetAfterPrint = true;
       buildPrintReceipt(entryId);
-      window.print();
+
+      // ✅ اضمن إن الـ DOM اتعمله Render قبل الطباعة
+      requestAnimationFrame(() => {
+        setTimeout(() => window.print(), 60);
+      });
     }
 
     window.addEventListener("afterprint", () => {
-      // نظف مساحة الطباعة
       const printArea = document.getElementById("printArea");
       printArea.innerHTML = "";
 
       if (!pendingResetAfterPrint) return;
       pendingResetAfterPrint = false;
 
-      // بعد الطباعة نفضي البنود
       linesBody.innerHTML = "";
       updateTotals();
       jeDescInput.value = "";
 
-      // نضيف سطرين فاضيين جديدين للتسهيل
-      if (accounts.length > 0) {
-        addLineRow();
-        addLineRow();
-      }
+      if (accounts.length > 0) { addLineRow(); addLineRow(); }
     });
 
     journalForm.addEventListener("submit", async (e) => {
@@ -1063,9 +1101,7 @@
         const debit = parseFloat(debitInput.value || "0");
         const credit = parseFloat(creditInput.value || "0");
 
-        if ((isNaN(debit) || debit === 0) && (isNaN(credit) || credit === 0)) {
-          continue;
-        }
+        if ((isNaN(debit) || debit === 0) && (isNaN(credit) || credit === 0)) continue;
 
         if (!isNaN(debit)) totalDebit += debit;
         if (!isNaN(credit)) totalCredit += credit;
@@ -1090,11 +1126,7 @@
       const dateVal = jeDateInput.value.trim();
       const descVal = jeDescInput.value.trim();
 
-      const payload = {
-        date: dateVal || null,
-        description: descVal,
-        lines: linesPayload
-      };
+      const payload = { date: dateVal || null, description: descVal, lines: linesPayload };
 
       try {
         const res = await fetch("/api/journal_entries", {
@@ -1107,11 +1139,17 @@
         try { data = await res.json(); } catch (_) {}
 
         if (!res.ok) {
-          showFormMessage(data.error || "حدث خطأ أثناء حفظ القيد.", "error", false);
+          showFormMessage(data.error || "حدث خطأ أثناء حفظ القيد.", "error");
           return;
         }
 
-        const entryId = data.id || (data.entry && data.entry.id);
+        // ✅ صحّحنا قراءة id من ردّ السيرفر الحالي عندك:
+        // السيرفر بيرجع: { journal_entry: { id: ... } }
+        const entryId =
+          (data && data.journal_entry && data.journal_entry.id) ||
+          data.id ||
+          (data.entry && data.entry.id) ||
+          null;
 
         let msg = "✅ تم حفظ قيد اليومية بنجاح.";
         if (entryId) {
@@ -1129,15 +1167,14 @@
 
         showFormMessage(msg, "success", true);
 
-        // 🖨️ اطبع إيصال مرتب (مش الفورم)
+        // 🖨️ اطبع إيصال مرتب
         printJournalReceipt(entryId);
 
       } catch (err) {
-        showFormMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error", false);
+        showFormMessage("⚠️ تعذر الاتصال بالسيرفر، حاول مرة أخرى.", "error");
       }
     });
 
-    // تحميل الحسابات
     async function loadAccounts() {
       try {
         const res = await fetch("/api/accounts");
@@ -1152,9 +1189,7 @@
         list.sort((a, b) => {
           const ac = (a.code || "").toString();
           const bc = (b.code || "").toString();
-          if (ac && bc && ac !== bc) {
-            return ac.localeCompare(bc, "ar");
-          }
+          if (ac && bc && ac !== bc) return ac.localeCompare(bc, "ar");
           const an = (a.name || "").toString();
           const bn = (b.name || "").toString();
           return an.localeCompare(bn, "ar");

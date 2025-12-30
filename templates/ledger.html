@@ -287,7 +287,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.82rem;
-      table-layout: fixed; /* علشان الأعمدة ثابتة والوصف يلف لتحت */
+      table-layout: fixed;
     }
 
     th, td {
@@ -298,9 +298,7 @@
       vertical-align: top;
     }
 
-    thead {
-      background: #020617;
-    }
+    thead { background: #020617; }
 
     th {
       font-weight: 600;
@@ -308,14 +306,15 @@
       font-size: 0.78rem;
     }
 
-    /* توزيع عرض الأعمدة */
+    /* ✅ توزيع عرض الأعمدة بعد إضافة المرجع */
     th.col-date,    td.col-date    { width: 14%; }
-    th.col-desc,    td.col-desc    { width: 40%; }
-    th.col-debit,   td.col-debit   { width: 15%; }
-    th.col-credit,  td.col-credit  { width: 15%; }
-    th.col-balance, td.col-balance { width: 16%; }
+    th.col-ref,     td.col-ref     { width: 16%; }
+    th.col-desc,    td.col-desc    { width: 32%; }
+    th.col-debit,   td.col-debit   { width: 13%; }
+    th.col-credit,  td.col-credit  { width: 13%; }
+    th.col-balance, td.col-balance { width: 12%; }
 
-    /* الوصف يلف لتحت بدل ما يوسع الجدول */
+    /* الوصف يلف لتحت */
     th.col-desc,
     td.col-desc {
       white-space: normal !important;
@@ -323,17 +322,9 @@
       overflow-wrap: anywhere;
     }
 
-    tbody tr:nth-child(odd) {
-      background: rgba(15,23,42,0.85);
-    }
-
-    tbody tr:nth-child(even) {
-      background: rgba(15,23,42,0.65);
-    }
-
-    tbody tr:hover {
-      background: rgba(37,99,235,0.25);
-    }
+    tbody tr:nth-child(odd) { background: rgba(15,23,42,0.85); }
+    tbody tr:nth-child(even){ background: rgba(15,23,42,0.65); }
+    tbody tr:hover { background: rgba(37,99,235,0.25); }
 
     .ledger-wrapper {
       border-radius: 10px;
@@ -364,9 +355,7 @@
       color: var(--muted);
     }
 
-    .totals-footer span strong {
-      color: #e5e7eb;
-    }
+    .totals-footer span strong { color: #e5e7eb; }
 
     .filter-row-2 {
       display: grid;
@@ -375,14 +364,9 @@
       margin-bottom: 4px;
     }
 
-    .small-label {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
+    .small-label { font-size: 0.8rem; color: var(--muted); }
 
-    .print-header {
-      display:none;
-    }
+    .print-header { display:none; }
 
     .query-summary {
       margin-bottom: 8px;
@@ -396,15 +380,46 @@
       gap:8px 18px;
     }
 
-    .query-summary-item strong {
-      color:#e5e7eb;
+    .query-summary-item strong { color:#e5e7eb; }
+
+    /* ✅ شكل المرجع */
+    .ref-link{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      color:#bfdbfe;
+      text-decoration: underline;
+      cursor:pointer;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .ref-link:hover{ color:#ffffff; }
+
+    .ref-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(191,219,254,0.55);
+      background: rgba(37,99,235,0.12);
+      color:#dbeafe;
+      font-size: 0.75rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .ref-sub{
+      margin-top: 4px;
+      font-size: 0.74rem;
+      color: rgba(229,231,235,0.85);
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.35;
     }
 
     @media print {
-      @page {
-        size: A4 portrait;
-        margin: 10mm 8mm;
-      }
+      @page { size: A4 portrait; margin: 10mm 8mm; }
 
       body {
         background: var(--print-bg);
@@ -419,15 +434,8 @@
         max-width: 100%;
         padding: 10mm 12mm;
       }
-      /* نخلي العنوان والهيدر ظاهرين، لكن نخفي أزرار التنقل */
-      .top-buttons {
-        display:none !important;
-      }
-      /* نخفي الأزرار فقط، ونبقي بيانات الاستعلام */
-      .btn,
-      .message {
-        display:none !important;
-      }
+      .top-buttons { display:none !important; }
+      .btn, .message { display:none !important; }
       .card {
         box-shadow: none;
         border-radius: 0;
@@ -458,6 +466,9 @@
         background:#f9fafb;
         color:#111827;
       }
+      .ref-link{ color:#111827 !important; text-decoration: underline; }
+      .ref-badge{ border-color:#111827 !important; background:#fff !important; color:#111827 !important; }
+      .ref-sub{ color:#374151 !important; }
     }
   </style>
 </head>
@@ -473,26 +484,14 @@
         </p>
       </div>
       <div class="top-buttons">
-        <a href="/dashboard" class="btn-back">
-          <span>🏠</span>
-          <span>الرئيسية</span>
-        </a>
-        <a href="/operations" class="btn-back">
-          <span>🧾</span>
-          <span>صفحة العمليات</span>
-        </a>
-        <a href="/accounts" class="btn-back">
-          <span>📒</span>
-          <span>دليل الحسابات</span>
-        </a>
-        <a href="/general" class="btn-back">
-          <span>📓</span>
-          <span>اليومية العامة</span>
-        </a>
+        <a href="/dashboard" class="btn-back"><span>🏠</span><span>الرئيسية</span></a>
+        <a href="/operations" class="btn-back"><span>🧾</span><span>صفحة العمليات</span></a>
+        <a href="/accounts" class="btn-back"><span>📒</span><span>دليل الحسابات</span></a>
+        <a href="/general" class="btn-back"><span>📓</span><span>اليومية العامة</span></a>
       </div>
     </div>
 
-    <!-- Print header (يظهر فقط في الطباعة أعلى الصفحة) -->
+    <!-- Print header -->
     <div class="print-header">
       <h2 style="margin:0 0 4px;">كشف حساب</h2>
       <div id="printAccountName" style="font-size:0.9rem; margin-bottom:2px;"></div>
@@ -501,7 +500,7 @@
     </div>
 
     <div class="layout">
-      <!-- الكارت الأول: كل بيانات الاستعلام والبحث والطباعة والتصدير -->
+      <!-- Filters card -->
       <div class="card">
         <div class="card-header">
           <h2>⚙️ إعداد وفلترة كشف الحساب</h2>
@@ -509,7 +508,6 @@
         </div>
         <div class="card-body">
 
-          <!-- اختيار الحساب + بحث عن حساب -->
           <div class="field">
             <label for="accountSelect">الحساب</label>
             <select id="accountSelect">
@@ -529,7 +527,6 @@
             </div>
           </div>
 
-          <!-- فلترة على مستوى الحركة -->
           <div class="field">
             <label>فلترة على مستوى الحركة</label>
             <div class="filter-row-2">
@@ -544,14 +541,13 @@
             </div>
             <div class="field">
               <label for="textFilter">بحث نصّي داخل الحركة</label>
-              <input id="textFilter" type="text" placeholder="بحث في الوصف / ملاحظات / رقم الرخصة إن وُجد..." />
+              <input id="textFilter" type="text" placeholder="بحث في الوصف / المرجع / رقم القيد..." />
             </div>
             <div class="hint">
               الفلترة دي بتشتغل على البيانات المعروضة فقط (client-side)، بدون استعلام إضافي من السيرفر.
             </div>
           </div>
 
-          <!-- معلومات الحساب المختار -->
           <div class="info-box" id="accountInfoBox">
             <div class="info-row">
               <span class="info-label">الحساب المحدد:</span>
@@ -567,47 +563,28 @@
             </div>
           </div>
 
-          <!-- أزرار الاستعلام / الطباعة / التصدير -->
           <div class="actions">
-            <button type="button" class="btn btn-primary" id="btnLoadLedger">
-              📥 تحميل / تحديث كشف الحساب
-            </button>
-            <button type="button" class="btn btn-print" id="btnPrint">
-              🖨️ طباعة / حفظ PDF
-            </button>
-            <button type="button" class="btn btn-ghost" id="btnExportExcel">
-              ⬇️ تصدير Excel (CSV)
-            </button>
-            <button type="button" class="btn btn-ghost" id="btnResetFilters">
-              ♻️ مسح الفلاتر
-            </button>
+            <button type="button" class="btn btn-primary" id="btnLoadLedger">📥 تحميل / تحديث كشف الحساب</button>
+            <button type="button" class="btn btn-print" id="btnPrint">🖨️ طباعة / حفظ PDF</button>
+            <button type="button" class="btn btn-ghost" id="btnExportExcel">⬇️ تصدير Excel (CSV)</button>
+            <button type="button" class="btn btn-ghost" id="btnResetFilters">♻️ مسح الفلاتر</button>
           </div>
 
           <div id="formMessage" class="message"></div>
         </div>
       </div>
 
-      <!-- الكارت الثاني: ملخّص الاستعلام + كشف الحساب (النتائج) -->
+      <!-- Ledger card -->
       <div class="card">
         <div class="card-header">
           <h2>📊 كشف الحركة للحساب (نتائج الاستعلام)</h2>
           <span class="badge-count" id="ledgerCount">—</span>
         </div>
         <div class="card-body">
-          <!-- ملخص بيانات الاستعلام يطبع مع الكشف -->
           <div class="query-summary">
-            <div class="query-summary-item">
-              <strong>الحساب:</strong>
-              <span id="qsAccountName">—</span>
-            </div>
-            <div class="query-summary-item">
-              <strong>الفترة:</strong>
-              <span id="qsDateRange">بدون تحديد</span>
-            </div>
-            <div class="query-summary-item">
-              <strong>فلتر نصّي:</strong>
-              <span id="qsTextFilter">بدون</span>
-            </div>
+            <div class="query-summary-item"><strong>الحساب:</strong> <span id="qsAccountName">—</span></div>
+            <div class="query-summary-item"><strong>الفترة:</strong> <span id="qsDateRange">بدون تحديد</span></div>
+            <div class="query-summary-item"><strong>فلتر نصّي:</strong> <span id="qsTextFilter">بدون</span></div>
           </div>
 
           <div class="ledger-wrapper">
@@ -615,6 +592,7 @@
               <thead>
                 <tr>
                   <th class="col-date">التاريخ</th>
+                  <th class="col-ref">رقم العملية / المرجع</th>
                   <th class="col-desc">الوصف / البيان</th>
                   <th class="col-debit">مدين</th>
                   <th class="col-credit">دائن</th>
@@ -623,13 +601,12 @@
               </thead>
               <tbody id="ledgerBody">
                 <tr>
-                  <td colspan="5" class="empty-state">
-                    لم يتم اختيار أي حساب بعد.
-                  </td>
+                  <td colspan="6" class="empty-state">لم يتم اختيار أي حساب بعد.</td>
                 </tr>
               </tbody>
             </table>
           </div>
+
           <div class="totals-footer">
             <span>إجمالي المدين: <strong id="totalDebit">0.00</strong></span>
             <span>إجمالي الدائن: <strong id="totalCredit">0.00</strong></span>
@@ -646,8 +623,8 @@
     const urlParams = new URLSearchParams(window.location.search);
 
     let allAccounts = [];
-    let currentLedgerRaw = [];      // كل الصفوف الراجعة من ال API
-    let currentLedgerFiltered = []; // بعد الفلاتر
+    let currentLedgerRaw = [];
+    let currentLedgerFiltered = [];
     let currentAccount = null;
 
     const accountSelect = document.getElementById("accountSelect");
@@ -698,6 +675,16 @@
       return num.toFixed(2);
     }
 
+    function escapeHtml(str){
+      const s = (str == null ? "" : String(str));
+      return s
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#39;");
+    }
+
     function typeLabel(type) {
       switch (type) {
         case "asset": return "أصل (Asset)";
@@ -713,6 +700,83 @@
       return "badge-type " + type;
     }
 
+    function buildOperationsUrl(row){
+      // ✅ يبني رابط مناسب حسب مصدر الحركة
+      const st = row && row.source_type ? String(row.source_type) : "";
+      const receiptId = row && row.ref_receipt_id ? Number(row.ref_receipt_id) : 0;
+      const authId = row && row.ref_authorization_id ? Number(row.ref_authorization_id) : 0;
+      const entryId = row && row.entry_id ? Number(row.entry_id) : 0;
+
+      const params = new URLSearchParams();
+
+      // تلميح لتحديد الصف في صفحة العمليات (لو أنت هتضيف highlight هناك)
+      // مثال: operations تقرأ highlight وتعمل scroll / highlight
+      if (receiptId) {
+        params.set("type", "receipt");
+        params.set("receipt_id", String(receiptId));
+        if (authId) params.set("authorization_id", String(authId));
+        params.set("highlight", `receipt:${receiptId}`);
+      } else if (authId) {
+        params.set("type", "authorization");
+        params.set("authorization_id", String(authId));
+        params.set("highlight", `authorization:${authId}`);
+      } else if (entryId) {
+        params.set("type", "journal");
+        params.set("journal_id", String(entryId));
+        params.set("highlight", `journal:${entryId}`);
+      } else {
+        // fallback
+        if (st) params.set("type", st);
+      }
+
+      const qs = params.toString();
+      return qs ? (`/operations?${qs}`) : "/operations";
+    }
+
+    function buildRefDisplay(row){
+      // ✅ نص مختصر + نص تفصيلي
+      const receiptId = row && row.ref_receipt_id ? Number(row.ref_receipt_id) : 0;
+      const authId = row && row.ref_authorization_id ? Number(row.ref_authorization_id) : 0;
+      const entryId = row && row.entry_id ? Number(row.entry_id) : 0;
+
+      let badge = "—";
+      let sub = "";
+
+      if (receiptId) {
+        badge = `سند #${receiptId}`;
+        sub = row.ref_text || (authId ? `سند تحصيل مرتبط بتفويض #${authId}` : "سند تحصيل");
+      } else if (authId) {
+        badge = `تفويض #${authId}`;
+        sub = row.ref_text || "تفويض";
+      } else if (entryId) {
+        badge = `قيد #${entryId}`;
+        sub = row.ref_text || "قيد يومية (يدوي/آلي)";
+      } else {
+        badge = row.ref_text ? "مرجع" : "—";
+        sub = row.ref_text || "";
+      }
+
+      return { badge, sub };
+    }
+
+    function buildRefCellHtml(row){
+      const url = buildOperationsUrl(row);
+      const disp = buildRefDisplay(row);
+      const safeBadge = escapeHtml(disp.badge);
+      const safeSub = escapeHtml(disp.sub || "");
+
+      if (disp.badge === "—" && !disp.sub) {
+        return `<span style="color:rgba(229,231,235,0.7)">—</span>`;
+      }
+
+      return `
+        <a class="ref-link" href="${escapeHtml(url)}" title="فتح العملية في صفحة العمليات">
+          <span class="ref-badge">🔗 ${safeBadge}</span>
+        </a>
+        ${safeSub ? `<div class="ref-sub">${safeSub}</div>` : ``}
+      `;
+    }
+
     async function loadAccounts() {
       try {
         const res = await fetch("/api/accounts");
@@ -720,18 +784,14 @@
         const data = await res.json();
         let list = Array.isArray(data) ? data : [];
 
-        // لو فيه is_group → نستخدم فقط الحسابات الفرعية (is_group = false)
         if (Array.isArray(list) && list.length > 0 && "is_group" in list[0]) {
           list = list.filter(acc => acc.is_group === false);
         }
 
-        // ترتيب الحسابات بالكود لو موجود، ثم الاسم
         list.sort((a, b) => {
           const ac = (a.code || "").toString();
           const bc = (b.code || "").toString();
-          if (ac && bc && ac !== bc) {
-            return ac.localeCompare(bc, "ar");
-          }
+          if (ac && bc && ac !== bc) return ac.localeCompare(bc, "ar");
           const an = (a.name || "").toString();
           const bn = (b.name || "").toString();
           return an.localeCompare(bn, "ar");
@@ -766,11 +826,7 @@
       });
 
       const exists = list.some(acc => String(acc.id) === String(currentValue));
-      if (exists) {
-        accountSelect.value = currentValue;
-      } else {
-        accountSelect.value = "";
-      }
+      accountSelect.value = exists ? currentValue : "";
     }
 
     accountSearch.addEventListener("input", () => {
@@ -805,7 +861,6 @@
 
         qsAccountName.textContent = "—";
         printAccountName.textContent = "";
-
         return;
       }
 
@@ -832,14 +887,13 @@
       const fromVal = fromDateVal || fromDateInput.value.trim();
       const toVal = toDateVal || toDateInput.value.trim();
 
-      let text = "";
       if (!fromVal && !toVal) {
         qsDateRange.textContent = "بدون تحديد";
         printDateRange.textContent = "";
         return;
       }
 
-      text = "من " + (fromVal || "—");
+      let text = "من " + (fromVal || "—");
       if (toVal) text += " إلى " + toVal;
 
       qsDateRange.textContent = text;
@@ -886,7 +940,13 @@
         if (toDateObj && rowDate && rowDate > toDateObj) return false;
 
         if (textFilterVal) {
-          const haystack = (row.description || "").toLowerCase();
+          const desc = (row.description || "").toLowerCase();
+          const refText = (row.ref_text || "").toLowerCase();
+          const entryId = (row.entry_id != null ? String(row.entry_id) : "").toLowerCase();
+          const receiptId = (row.ref_receipt_id != null ? String(row.ref_receipt_id) : "").toLowerCase();
+          const authId = (row.ref_authorization_id != null ? String(row.ref_authorization_id) : "").toLowerCase();
+
+          const haystack = `${desc} ${refText} ${entryId} ${receiptId} ${authId}`;
           if (!haystack.includes(textFilterVal)) return false;
         }
 
@@ -899,17 +959,11 @@
     }
 
     function renderLedger() {
-      const rows = currentLedgerFiltered && currentLedgerFiltered.length
-        ? currentLedgerFiltered
-        : [];
+      const rows = currentLedgerFiltered && currentLedgerFiltered.length ? currentLedgerFiltered : [];
 
       if (!currentAccount) {
         ledgerBody.innerHTML = `
-          <tr>
-            <td colspan="5" class="empty-state">
-              لم يتم اختيار أي حساب بعد.
-            </td>
-          </tr>
+          <tr><td colspan="6" class="empty-state">لم يتم اختيار أي حساب بعد.</td></tr>
         `;
         ledgerCount.textContent = "—";
         totalDebitEl.textContent = "0.00";
@@ -920,11 +974,7 @@
 
       if (rows.length === 0) {
         ledgerBody.innerHTML = `
-          <tr>
-            <td colspan="5" class="empty-state">
-              لا توجد حركات لهذا الحساب طبقًا للفلاتر الحالية.
-            </td>
-          </tr>
+          <tr><td colspan="6" class="empty-state">لا توجد حركات لهذا الحساب طبقًا للفلاتر الحالية.</td></tr>
         `;
         ledgerCount.textContent = "0 حركة";
         totalDebitEl.textContent = "0.00";
@@ -941,8 +991,9 @@
       rows.forEach(row => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td class="col-date">${row.date || ""}</td>
-          <td class="col-desc">${row.description || ""}</td>
+          <td class="col-date">${escapeHtml(row.date || "")}</td>
+          <td class="col-ref">${buildRefCellHtml(row)}</td>
+          <td class="col-desc">${escapeHtml(row.description || "")}</td>
           <td class="col-debit">${formatNumber(row.debit)}</td>
           <td class="col-credit">${formatNumber(row.credit)}</td>
           <td class="col-balance">${formatNumber(row.balance)}</td>
@@ -964,9 +1015,7 @@
       clearMessage();
       const accId = Number(accountSelect.value || 0);
       if (!accId) {
-        if (!autoFromURL) {
-          showMessage("من فضلك اختر حسابًا أولاً.", "error");
-        }
+        if (!autoFromURL) showMessage("من فضلك اختر حسابًا أولاً.", "error");
         return;
       }
 
@@ -974,13 +1023,7 @@
       updateAccountInfoBox();
 
       try {
-        ledgerBody.innerHTML = `
-          <tr>
-            <td colspan="5" class="empty-state">
-              جاري تحميل كشف الحساب...
-            </td>
-          </tr>
-        `;
+        ledgerBody.innerHTML = `<tr><td colspan="6" class="empty-state">جاري تحميل كشف الحساب...</td></tr>`;
         ledgerCount.textContent = "—";
         totalDebitEl.textContent = "0.00";
         totalCreditEl.textContent = "0.00";
@@ -991,17 +1034,10 @@
 
         if (!res.ok) {
           showMessage(data.error || "حدث خطأ أثناء تحميل كشف الحساب.", "error");
-          ledgerBody.innerHTML = `
-            <tr>
-              <td colspan="5" class="empty-state">
-                ⚠️ تعذر تحميل كشف الحساب.
-              </td>
-            </tr>
-          `;
+          ledgerBody.innerHTML = `<tr><td colspan="6" class="empty-state">⚠️ تعذر تحميل كشف الحساب.</td></tr>`;
           return;
         }
 
-        // لو الـ backend رجع account مع lines نحدّث بيانات الحساب من هناك
         if (data.account) {
           const fromAll = allAccounts.find(a => a.id === data.account.id);
           currentAccount = fromAll || data.account;
@@ -1022,25 +1058,23 @@
       }
     }
 
-    // 🔽 تصدير كشف الحساب المعروض إلى ملف CSV (Excel)
+    // ✅ تصدير CSV (Excel)
     function exportLedgerToCSV() {
-      if (!currentAccount) {
-        alert("اختر حسابًا أولاً قبل التصدير.");
-        return;
-      }
-      if (!currentLedgerFiltered || !currentLedgerFiltered.length) {
-        alert("لا توجد حركات مطبقة حاليًا للتصدير.");
-        return;
-      }
+      if (!currentAccount) { alert("اختر حسابًا أولاً قبل التصدير."); return; }
+      if (!currentLedgerFiltered || !currentLedgerFiltered.length) { alert("لا توجد حركات مطبقة حاليًا للتصدير."); return; }
 
       const rows = [];
-      // ترويسة الأعمدة
-      rows.push(["Date", "Description", "Debit", "Credit", "Balance"]);
+      rows.push(["Date", "Reference", "Description", "Debit", "Credit", "Balance"]);
 
       currentLedgerFiltered.forEach(row => {
         const desc = (row.description || "").replace(/\s+/g, " ").trim();
+        const ref = (row.ref_text || "").replace(/\s+/g, " ").trim() ||
+                    (row.ref_receipt_id ? `Receipt #${row.ref_receipt_id}` :
+                     row.ref_authorization_id ? `Authorization #${row.ref_authorization_id}` :
+                     row.entry_id ? `Journal #${row.entry_id}` : "");
         rows.push([
           row.date || "",
+          ref,
           desc,
           row.debit != null ? row.debit : 0,
           row.credit != null ? row.credit : 0,
@@ -1052,17 +1086,16 @@
         r.map(field => {
           let v = String(field ?? "");
           v = v.replace(/"/g, '""');
-          if (/[",\n]/.test(v)) {
-            v = `"${v}"`;
-          }
+          if (/[",\n]/.test(v)) v = `"${v}"`;
           return v;
         }).join(",")
       ).join("\r\n");
 
-      const csvContent = "\uFEFF" + csvLines; // BOM عشان العربي يظهر صح في Excel
+      const csvContent = "\uFEFF" + csvLines;
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
+
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, "0");
@@ -1079,9 +1112,7 @@
     btnLoadLedger.addEventListener("click", () => loadLedgerForSelectedAccount(false));
 
     [fromDateInput, toDateInput, textFilterInput].forEach(input => {
-      input.addEventListener("input", () => {
-        applyFilters();
-      });
+      input.addEventListener("input", () => applyFilters());
     });
 
     btnResetFilters.addEventListener("click", () => {
@@ -1093,17 +1124,12 @@
     });
 
     btnPrint.addEventListener("click", () => {
-      if (!currentAccount) {
-        alert("اختر حسابًا أولاً قبل الطباعة.");
-        return;
-      }
-      // المستخدم يقدر يختار "حفظ كـ PDF" من نافذة الطباعة
+      if (!currentAccount) { alert("اختر حسابًا أولاً قبل الطباعة."); return; }
       window.print();
     });
 
     btnExportExcel.addEventListener("click", exportLedgerToCSV);
 
-    // ✅ تهيئة الفلاتر بناءً على باراميترات URL القادمة من صفحة العمليات
     function applyInitialURLFilters() {
       const accIdParam = urlParams.get("account_id") || urlParams.get("acc_id");
       if (accIdParam) {
@@ -1121,9 +1147,7 @@
       updatePrintAndSummaryDateRange(fromParam || "", toParam || "");
       updateTextFilterSummary();
 
-      if (accIdParam) {
-        loadLedgerForSelectedAccount(true);
-      }
+      if (accIdParam) loadLedgerForSelectedAccount(true);
     }
 
     async function init() {
@@ -1135,27 +1159,19 @@
     init();
   </script>
 
-             <script>
-            // 🔒 منع كليك يمين
-            document.addEventListener('contextmenu', function (e) {
-              e.preventDefault();
-            });
-          
-            // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
-            document.addEventListener('keydown', function (e) {
-              // F12
-              if (e.key === "F12") {
-                e.preventDefault();
-              }
-          
-              // Ctrl + Shift + I أو Ctrl + Shift + J أو Ctrl + U
-              if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || 
-                  (e.ctrlKey && e.key === 'U')) {
-                e.preventDefault();
-              }
-            });
-          </script>
+  <script>
+    // 🔒 منع كليك يمين
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    });
+
+    // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
+    document.addEventListener('keydown', function (e) {
+      if (e.key === "F12") e.preventDefault();
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || (e.ctrlKey && e.key === 'U')) {
+        e.preventDefault();
+      }
+    });
+  </script>
 </body>
 </html>
-
-

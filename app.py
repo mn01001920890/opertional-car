@@ -1,17 +1,42 @@
 # ======================================================
 # 🚗 Flask Authorization System — Weekly Authorizations + Accounting + Cash Receipts
+# + 🔐 Secure Login (Users + Sessions) + Admin Bootstrap
 # ======================================================
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import (
+    Flask, render_template, request, jsonify, send_from_directory,
+    session, redirect
+)
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_, and_, func, exists, desc
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import traceback
+import secrets
 
 app = Flask(__name__)
+
+# ---------------- Security / Sessions ----------------
+def _is_vercel() -> bool:
+    return bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"))
+
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    # في local ممكن ندي مفتاح مؤقت
+    if _is_vercel():
+        raise ValueError("❌ لازم تضيف SECRET_KEY في Vercel Environment Variables")
+    SECRET_KEY = "dev-" + secrets.token_hex(16)
+
+app.config["SECRET_KEY"] = SECRET_KEY
+
+# كوكيز آمنة
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# على Vercel لازم تكون Secure
+app.config["SESSION_COOKIE_SECURE"] = True if _is_vercel() else False
 
 # ---------------- Favicon ----------------
 @app.route("/favicon.ico")
@@ -132,7 +157,97 @@ def parse_end_date_override(date_str: str):
         return None
 
 
+# ---------------- Auth Helpers ----------------
+def is_logged_in() -> bool:
+    return bool(session.get("user_id"))
+
+
+def is_admin() -> bool:
+    return bool(session.get("is_admin"))
+
+
+def require_login_api():
+    return jsonify({"error": "Unauthorized"}), 401
+
+
+@app.before_request
+def protect_app():
+    """
+    - يحمي كل صفحات النظام والـ APIs
+    - يستثني: الصفحة الرئيسية / login APIs / health / favicon / static
+    """
+    path = request.path or ""
+
+    # Allow static & favicon
+    if path.startswith("/static/") or path == "/favicon.ico":
+        return None
+
+    # Public endpoints
+    public_paths = {
+        "/",  # صفحة الدخول
+        "/api/health",
+        "/api/login",
+        "/api/logout",
+        "/api/bootstrap_admin",
+        "/api/debug/dburl",
+    }
+
+    if path in public_paths:
+        return None
+
+    # لو API
+    if path.startswith("/api/"):
+        if not is_logged_in():
+            return require_login_api()
+        return None
+
+    # لو صفحات
+    if not is_logged_in():
+        return redirect("/")
+
+    return None
+
+
+@app.after_request
+def add_security_headers(resp):
+    # Headers أمنية أساسية
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "same-origin"
+    # لو حبيت CSP لاحقًا نضيفه بحذر عشان ما يكسرش الـ inline scripts
+    return resp
+
+
 # ---------------- Models ----------------
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+
+    is_admin = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.Index("ix_users_username", "username"),
+        db.Index("ix_users_is_admin", "is_admin"),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "is_admin": bool(self.is_admin),
+            "is_active": bool(self.is_active),
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else "",
+            "last_login_at": self.last_login_at.strftime("%Y-%m-%d %H:%M:%S") if self.last_login_at else None,
+        }
+
+
 class Authorization(db.Model):
     __tablename__ = "authorizations"
 
@@ -167,9 +282,6 @@ class Authorization(db.Model):
     )
 
     def to_dict(self, light: bool = False):
-        """
-        light=True  => يقلل حجم الداتا للعرض السريع في جداول كبيرة
-        """
         rental_days = None
         planned_amount = None
 
@@ -490,13 +602,6 @@ def ensure_core_accounts():
 
 
 def create_journal_for_closed_authorization(auth, total_amount):
-    """
-    ينشئ قيد يومية عند إقفال التفويض:
-    من حـ/ حساب السائق (مدين)
-    إلى حـ/ إيراد إيجار سيارات (دائن)
-
-    ✅ يرجّع رقم القيد (journal_entry_id)
-    """
     try:
         if not total_amount or total_amount <= 0:
             return None
@@ -547,13 +652,6 @@ def create_journal_for_closed_authorization(auth, total_amount):
 
 
 def create_journal_for_cash_receipt(receipt: CashReceipt):
-    """
-    ينشئ قيد يومية لسند تحصيل نقدي:
-    من حـ/ الصندوق (مدين)
-    إلى حـ/ حساب السائق (دائن)
-
-    ✅ يرجّع رقم القيد (journal_entry_id)
-    """
     try:
         if not receipt or not receipt.amount or receipt.amount <= 0:
             return None
@@ -607,6 +705,9 @@ def create_journal_for_cash_receipt(receipt: CashReceipt):
 # ---------------- Routes (Pages) ----------------
 @app.route("/")
 def index_page():
+    # لو مسجل دخول بالفعل ودّيه للوحة
+    if is_logged_in():
+        return redirect("/dashboard")
     return render_template("index.html")
 
 
@@ -689,6 +790,162 @@ def api_health():
 @app.route("/api/debug/dburl")
 def api_debug_dburl():
     return jsonify({"DATABASE_URL_present": bool(os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL"))})
+
+
+# ---------------- Auth APIs ----------------
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    try:
+        data = request.get_json(silent=True) or {}
+        username = (data.get("username") or "").strip()
+        password = (data.get("password") or "").strip()
+
+        if not username or not password:
+            return jsonify({"ok": False, "error": "ادخل اسم المستخدم وكلمة المرور"}), 400
+
+        u = User.query.filter(func.lower(User.username) == username.lower()).first()
+        if (not u) or (not u.is_active):
+            return jsonify({"ok": False, "error": "اسم المستخدم أو كلمة المرور غير صحيحة"}), 401
+
+        if not check_password_hash(u.password_hash, password):
+            return jsonify({"ok": False, "error": "اسم المستخدم أو كلمة المرور غير صحيحة"}), 401
+
+        session["user_id"] = u.id
+        session["username"] = u.username
+        session["is_admin"] = bool(u.is_admin)
+
+        u.last_login_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({"ok": True, "user": u.to_dict()}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": f"Server error: {str(e)}"}), 500
+
+
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
+    session.clear()
+    return jsonify({"ok": True}), 200
+
+
+@app.route("/api/me", methods=["GET"])
+def api_me():
+    if not is_logged_in():
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
+    u = User.query.get(session.get("user_id"))
+    if not u:
+        session.clear()
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
+    return jsonify({"ok": True, "user": u.to_dict()}), 200
+
+
+@app.route("/api/bootstrap_admin", methods=["POST"])
+def api_bootstrap_admin():
+    """
+    إنشاء أول Admin مرة واحدة فقط.
+    شرط:
+      - Header: X-BOOTSTRAP-TOKEN == BOOTSTRAP_TOKEN (من env)
+      - ولازم ما يكونش فيه أي مستخدمين أو مافيش admin
+    """
+    try:
+        token_env = os.environ.get("BOOTSTRAP_TOKEN") or ""
+        token_hdr = request.headers.get("X-BOOTSTRAP-TOKEN") or ""
+
+        if not token_env or token_hdr != token_env:
+            return jsonify({"ok": False, "error": "Forbidden"}), 403
+
+        total_users = User.query.with_entities(func.count(User.id)).scalar() or 0
+        total_admins = User.query.filter(User.is_admin.is_(True)).with_entities(func.count(User.id)).scalar() or 0
+
+        if total_users > 0 and total_admins > 0:
+            return jsonify({"ok": False, "error": "تم تفعيل النظام مسبقًا"}), 400
+
+        data = request.get_json(silent=True) or {}
+        username = (data.get("username") or "").strip()
+        password = (data.get("password") or "").strip()
+
+        if not username or not password:
+            return jsonify({"ok": False, "error": "username/password مطلوبين"}), 400
+
+        if len(password) < 8:
+            return jsonify({"ok": False, "error": "كلمة المرور ضعيفة (على الأقل 8 أحرف)"}), 400
+
+        exists_u = User.query.filter(func.lower(User.username) == username.lower()).first()
+        if exists_u:
+            # لو موجود نخليه admin لو مافيش admins
+            exists_u.is_admin = True
+            exists_u.is_active = True
+            if not exists_u.password_hash:
+                exists_u.password_hash = generate_password_hash(password)
+            db.session.commit()
+            return jsonify({"ok": True, "message": "تم تفعيل Admin (مستخدم موجود)", "user": exists_u.to_dict()}), 200
+
+        u = User(
+            username=username,
+            password_hash=generate_password_hash(password),
+            is_admin=True,
+            is_active=True,
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(u)
+        db.session.commit()
+
+        return jsonify({"ok": True, "message": "تم إنشاء Admin بنجاح", "user": u.to_dict()}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": f"Server error: {str(e)}"}), 500
+
+
+@app.route("/api/users", methods=["GET", "POST"])
+def users_api():
+    """
+    Admin only:
+      GET  -> list users
+      POST -> create user
+    """
+    if not is_logged_in():
+        return jsonify({"error": "Unauthorized"}), 401
+    if not is_admin():
+        return jsonify({"error": "Forbidden"}), 403
+
+    if request.method == "GET":
+        users = User.query.order_by(User.id.desc()).all()
+        return jsonify([u.to_dict() for u in users])
+
+    # POST
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    admin_flag = bool(data.get("is_admin")) if data.get("is_admin") is not None else False
+
+    if not username or not password:
+        return jsonify({"error": "username/password مطلوبين"}), 400
+    if len(password) < 8:
+        return jsonify({"error": "كلمة المرور ضعيفة (على الأقل 8 أحرف)"}), 400
+
+    exists_u = User.query.filter(func.lower(User.username) == username.lower()).first()
+    if exists_u:
+        return jsonify({"error": "اسم المستخدم موجود بالفعل"}), 400
+
+    u = User(
+        username=username,
+        password_hash=generate_password_hash(password),
+        is_admin=admin_flag,
+        is_active=True,
+        created_at=datetime.utcnow(),
+    )
+    try:
+        db.session.add(u)
+        db.session.commit()
+        return jsonify({"message": "✅ تم إنشاء المستخدم", "user": u.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"DB error: {str(e)}"}), 500
 
 
 # ---------------- APIs ----------------
@@ -777,14 +1034,6 @@ def add_authorization():
 
 @app.route("/api/authorizations", methods=["GET"])
 def get_authorizations():
-    """
-    - ?status=active  → close_date IS NULL
-    - ?status=closed  → close_date IS NOT NULL
-    - ?car_number=123 → contains
-    - ?license_no=ABC → contains
-    - ?limit=200&offset=0 → (اختياري للسرعة) يرجّع جزء فقط
-    - ?light=1 → (اختياري) يقلل الداتا للعرض السريع
-    """
     query = Authorization.query
 
     status_param = (request.args.get("status") or "").strip().lower()
@@ -816,7 +1065,6 @@ def get_authorizations():
     return jsonify([a.to_dict(light=light) for a in auths])
 
 
-# ✅ UPDATED: closed authorizations (fast + summary + close_date order)
 @app.route("/api/authorizations/closed", methods=["GET"])
 def get_closed_authorizations():
     q_raw = (request.args.get("q") or "").strip()
@@ -886,19 +1134,6 @@ def get_active_authorizations():
 
 @app.route("/api/authorizations/<int:auth_id>/end", methods=["PATCH"])
 def end_authorization(auth_id):
-    """
-    إنهاء تفويض:
-    - يقفل التفويض الحالي
-    - (اختياري) ينشئ قيد إقفال تفويض لو with_journal = true
-    - renew = true  ⇒ إنشاء تفويض جديد للأسبوع التالي + السيارة تظل "مؤجرة"
-    - renew = false ⇒ لا تفويض جديد + السيارة "متاحة"
-    - يرجع suggested_receipt لفتح سند تحصيل تلقائي.
-    - ✅ يرجع journal_entry_id لو اتعمل قيد (مهم للطباعة/العمليات)
-
-    ✅ تحديث مهم لتوافق صفحة rented.html:
-    - دعم end_date_override (YYYY-MM-DD) لكن فقط عند renew=False
-    - حفظ end_date المعدل داخل التفويض قبل الإقفال
-    """
     auth = Authorization.query.get(auth_id)
     if not auth:
         return jsonify({"error": "التفويض غير موجود"}), 404
@@ -941,7 +1176,6 @@ def end_authorization(auth_id):
         closing_note = (data.get("closing_note") or "").strip() or None
         closed_amount_input = data.get("closed_amount")
 
-        # ✅ end_date_override: يُستخدم فقط عند عدم التجديد
         end_date_override_str = (data.get("end_date_override") or "").strip()
         end_date_override_dt = None
         if (not renew) and end_date_override_str:
@@ -953,20 +1187,17 @@ def end_authorization(auth_id):
         auth.close_date = close_dt
         auth.status = "منتهية"
 
-        # لو end_date مش موجودة → احسبها افتراضيًا
         if not auth.end_date:
             base_for_end = auth.start_date or auth.issue_date
             if base_for_end:
                 auth.end_date = get_friday_end(base_for_end)
 
-        # ✅ لو فيه override (بدون تجديد) خزّنه
         if end_date_override_dt:
             base_start_chk = auth.start_date or auth.issue_date
             if base_start_chk and end_date_override_dt.date() < base_start_chk.date():
                 return jsonify({"error": "تاريخ النهاية لا يمكن أن يكون قبل تاريخ بداية التفويض."}), 400
             auth.end_date = end_date_override_dt
 
-        # احسب الأيام والمبلغ بناء على end_date (المعدلة أو الأصلية)
         rental_days = None
         auto_amount = None
         base_start = auth.start_date or auth.issue_date
@@ -1492,7 +1723,7 @@ def receipt_get_one(receipt_id):
 # ---------------- Auto create tables + ensure core accounts ----------------
 with app.app_context():
     try:
-        db.create_all()
+        db.create_all()          # ✅ هيضيف جدول users بدون ما يلمس البيانات
         ensure_core_accounts()
     except Exception as e:
         print("❌ DB init error:", e)

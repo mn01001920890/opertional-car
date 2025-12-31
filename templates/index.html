@@ -3,153 +3,210 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>operation // Login</title>
- 
 
   <style>
     body {
       direction: rtl;
       font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0d6efd, #6c63ff);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 20px;
     }
 
     .login-container {
-      max-width: 360px;
-      margin: 80px auto 20px;
-      padding: 20px;
-      background: rgba(255,255,255,0.95);
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+      max-width: 380px;
+      margin: 0 auto;
+      padding: 22px 18px;
+      background: rgba(255,255,255,0.96);
+      border-radius: 14px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.25);
       text-align: center;
     }
 
     h2 {
-      margin-bottom: 16px;
+      margin: 6px 0 14px;
       color: #111827;
+      font-size: 20px;
     }
 
     .welcome-text {
-      font-size: 16px;
+      font-size: 15px;
       color: #333;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+    }
+
+    .sub-text {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 12px;
     }
 
     input[type="text"],
     input[type="password"] {
       width: 100%;
-      padding: 10px 12px;
+      padding: 11px 12px;
       margin-bottom: 10px;
-      border-radius: 8px;
+      border-radius: 10px;
       border: 1px solid #d1d5db;
       font-size: 14px;
       outline: none;
       box-sizing: border-box;
+      background: #fff;
     }
 
     input:focus {
       border-color: #0d6efd;
-      box-shadow: 0 0 0 1px rgba(13,110,253,0.25);
+      box-shadow: 0 0 0 3px rgba(13,110,253,0.18);
     }
 
     button[type="submit"] {
       width: 100%;
-      padding: 10px 12px;
+      padding: 11px 12px;
       border-radius: 999px;
       border: none;
       background: linear-gradient(135deg,#0d6efd,#6c63ff);
       color: #fff;
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       margin-top: 4px;
+      transition: transform .08s ease, filter .15s ease;
     }
 
     button[type="submit"]:hover {
       filter: brightness(1.05);
+    }
+    button[type="submit"]:active {
+      transform: translateY(1px);
+    }
+    button[type="submit"]:disabled {
+      opacity: 0.75;
+      cursor: not-allowed;
+      filter: grayscale(0.2);
     }
 
     .error-message {
       margin-top: 10px;
       font-size: 14px;
       color: #b91c1c;
+      min-height: 18px;
+    }
+
+    .ok-message {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #166534;
+      min-height: 18px;
     }
 
     .footer {
       text-align: center;
-      margin-top: 20px;
-      font-size: 14px;
-      color: #fff;
+      margin-top: 16px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .hint {
+      text-align: right;
+      font-size: 12px;
+      color: #6b7280;
+      margin: 6px 2px 12px;
     }
   </style>
 </head>
+
 <body>
   <div class="login-container">
-    <div class="welcome-text">أهلاً بك في نظام operation cars </div>
+    <div class="welcome-text">أهلاً بك في نظام operation cars</div>
+    <div class="sub-text">سجّل دخولك للوصول للوحة التحكم والعمليات</div>
+
     <h2>تسجيل الدخول</h2>
 
-    <form id="loginForm">
-      <input type="text" id="username" placeholder="اسم المستخدم" required />
-      <input type="password" id="password" placeholder="كلمة المرور" required />
-      <button type="submit">تسجيل الدخول</button>
+    <form id="loginForm" autocomplete="on">
+      <input type="text" id="username" placeholder="اسم المستخدم" required autocomplete="username" />
+      <input type="password" id="password" placeholder="كلمة المرور" required autocomplete="current-password" />
+      <div class="hint">ملاحظة: بيانات الدخول يتم التحقق منها من السيرفر (ليس من الصفحة).</div>
+      <button id="submitBtn" type="submit">تسجيل الدخول</button>
     </form>
 
     <div id="error" class="error-message"></div>
+    <div id="ok" class="ok-message"></div>
   </div>
 
   <div class="footer">
-    م/برمجة - محمود مصطفى | 0558453363
+    م/برمجة - محمود مصطفى
   </div>
 
   <script>
-    // 🔒 منع كليك يمين
+    // ملاحظة مهمة: منع كليك يمين و F12 مش "حماية" حقيقية،
+    // لكنه مجرد إزعاج بسيط. سيبه لو بتحبه.
     document.addEventListener('contextmenu', function (e) {
       e.preventDefault();
     });
 
-    // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
     document.addEventListener('keydown', function (e) {
-      // F12
-      if (e.key === "F12") {
-        e.preventDefault();
-      }
-
-      // Ctrl + Shift + I أو Ctrl + Shift + J أو Ctrl + U
-      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
-          (e.ctrlKey && e.key === 'U')) {
+      if (e.key === "F12") e.preventDefault();
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || (e.ctrlKey && e.key === 'U')) {
         e.preventDefault();
       }
     });
 
-    // ✅ منطق تسجيل الدخول
     const loginForm = document.getElementById("loginForm");
     const errorBox  = document.getElementById("error");
+    const okBox     = document.getElementById("ok");
+    const submitBtn = document.getElementById("submitBtn");
 
-    loginForm.addEventListener("submit", function (e) {
+    function setLoading(isLoading) {
+      submitBtn.disabled = isLoading;
+      submitBtn.textContent = isLoading ? "جاري التحقق..." : "تسجيل الدخول";
+    }
+
+    loginForm.addEventListener("submit", async function (e) {
       e.preventDefault();
+
+      errorBox.textContent = "";
+      okBox.textContent = "";
 
       const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
 
-      // بيانات الدخول الثابتة
-      const VALID_USER = "mahmoud";
-      const VALID_PASS = "0558453363";
+      if (!username || !password) {
+        errorBox.textContent = "❌ أدخل اسم المستخدم وكلمة المرور.";
+        return;
+      }
 
-      if (username === VALID_USER && password === VALID_PASS) {
-        errorBox.textContent = "";
-        // توجيه مباشر إلى لوحة التحكم
-        window.location.href = "/dashboard";
+      setLoading(true);
 
- 
-      } else {
-        errorBox.textContent = "❌ اسم المستخدم أو كلمة المرور غير صحيحة.";
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include", // مهم لسيشن/كوكيز
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.ok) {
+          okBox.textContent = "✅ تم تسجيل الدخول بنجاح… جارٍ التحويل";
+          // تحويل
+          window.location.href = "/dashboard";
+        } else {
+          errorBox.textContent = data.error || "❌ اسم المستخدم أو كلمة المرور غير صحيحة.";
+        }
+
+      } catch (err) {
+        errorBox.textContent = "❌ حصل خطأ في الاتصال بالسيرفر. جرّب مرة أخرى.";
+      } finally {
+        setLoading(false);
       }
     });
   </script>
 </body>
 </html>
-
-
-
-
-
-
-

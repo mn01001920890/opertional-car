@@ -339,7 +339,6 @@
       border: 1px solid rgba(255, 193, 7, 0.35);
     }
 
-    /* ✅ الروابط فقط للأماكن اللي عايزها */
     .link {
       color: #0d6efd;
       font-weight: 800;
@@ -347,7 +346,6 @@
       cursor: pointer;
     }
 
-    /* ✅ نص البيان نفسه يبقى عادي غير قابل للنقر */
     .statement-text{
       color:#333;
       font-weight: 700;
@@ -356,7 +354,6 @@
       user-select: text;
     }
 
-    /* ✅ رقم القيد: نص ثابت غير قابل للنقر */
     .journal-ref{
       display:inline-flex;
       align-items:center;
@@ -516,7 +513,7 @@
             <th data-col="car_type">النوع</th>
             <th data-col="issue_date">تاريخ الإصدار</th>
             <th data-col="start_date">بداية التفويض</th>
-            <th data-col="planned_end">نهاية الجمعة (المحاسبية)</th>
+            <th data-col="planned_end">نهاية التفويض (نهاية الجمعة المحاسبية)</th>
             <th data-col="close_date">تاريخ الإقفال</th>
             <th data-col="days">عدد الأيام</th>
             <th data-col="daily_rent">الإيجار/يوم</th>
@@ -542,6 +539,11 @@
     // ✅ Compatible with NEW app.py
     // /api/authorizations/closed -> {items,total,journal_yes,journal_no}
     // /api/journal_entries/auth_close_map?auth_ids=... -> {map:{id:{has,statement,journal_entry_id}}}
+    //
+    // ✅ التحديث المطلوب:
+    // - "نهاية التفويض" المعروضة للمستخدم = قيمة قاعدة البيانات end_date (بعد أي تعديل)
+    // - واعتبارها هي "نهاية الجمعة المحاسبية" في العرض (يعني العنوان محاسبي لكن القيمة من DB)
+    // - حساب الأيام يعتمد على end_date (وليس planned_end_date)
     // =========================
 
     let loaded = [];
@@ -567,7 +569,7 @@
       { key: "car_type",      label: "النوع",             essential: false },
       { key: "issue_date",    label: "تاريخ الإصدار",     essential: false },
       { key: "start_date",    label: "بداية التفويض",     essential: false },
-      { key: "planned_end",   label: "نهاية الجمعة",      essential: false },
+      { key: "planned_end",   label: "نهاية التفويض",     essential: false }, // ✅ قيمته = end_date
       { key: "close_date",    label: "تاريخ الإقفال",     essential: false },
       { key: "days",          label: "عدد الأيام",        essential: false },
       { key: "daily_rent",    label: "الإيجار/يوم",       essential: false },
@@ -724,6 +726,12 @@
       btnMore.disabled   = isBusy;
     }
 
+    // ✅ نهاية التفويض = end_date من DB (هي نفسها نهاية الجمعة المحاسبية في العرض)
+    function getDisplayedEndDate(item){
+      // لو الـ API عندك بيرجع end_date باسم مختلف، ضيفه هنا
+      return item.end_date ?? item.planned_end_date ?? null;
+    }
+
     function render(){
       const tableBody = document.getElementById("authTableBody");
       const cardsBox  = document.getElementById("authCards");
@@ -761,15 +769,26 @@
         return;
       }
 
+      // =========================
+      // TABLE
+      // =========================
       tableBody.innerHTML = loaded.map(item => {
         const issueFmt   = formatDateTime(item.issue_date);
         const startFmt   = formatDateTime(item.start_date);
-        const plannedFmt = formatDateTime(item.planned_end_date || item.end_date);
+
+        // ✅ هنا نهاية التفويض المعروضة (والتي تُعتبر نهاية الجمعة المحاسبية في العرض)
+        const endDateVal = getDisplayedEndDate(item);
+        const endFmt     = formatDateTime(endDateVal);
+
         const closeFmt   = formatDateTime(item.close_date);
 
         let days = (typeof item.rental_days === "number") ? item.rental_days : null;
+
+        // ✅ حساب الأيام على end_date (وليس planned_end_date)
         if (days == null) {
-          days = calcDaysBetween(item.start_date || item.issue_date, item.planned_end_date || item.end_date || item.close_date);
+          const startForDays = item.start_date || item.issue_date;
+          const endForDays   = endDateVal || item.close_date;
+          days = calcDaysBetween(startForDays, endForDays);
         }
 
         const daysText     = days != null ? `${days} يوم` : "—";
@@ -791,7 +810,6 @@
         const stmtText = stmt || "—";
         const jeId = authCloseJournalId.get(authIdNum) || null;
 
-        // ✅ تحديث: إلغاء اللينك نهائيًا + إظهار رقم القيد فقط كنص ثابت
         const journalRef = (hasJournal && jeId)
           ? `<div class="journal-ref">🧾 رقم القيد: #${Number(jeId)}</div>`
           : ``;
@@ -816,7 +834,10 @@
             <td data-col="car_type">${escapeHtml(safeText(item.car_type)  || "—")}</td>
             <td data-col="issue_date">${escapeHtml(issueFmt)}</td>
             <td data-col="start_date">${escapeHtml(startFmt)}</td>
-            <td data-col="planned_end">${escapeHtml(plannedFmt)}</td>
+
+            <!-- ✅ هنا نهاية التفويض = end_date من DB -->
+            <td data-col="planned_end">${escapeHtml(endFmt)}</td>
+
             <td data-col="close_date">${escapeHtml(closeFmt)}</td>
             <td data-col="days">${escapeHtml(daysText)}</td>
             <td data-col="daily_rent">${escapeHtml(dailyRentTxt)}</td>
@@ -844,15 +865,26 @@
         `;
       }).join("");
 
+      // =========================
+      // CARDS
+      // =========================
       cardsBox.innerHTML = loaded.map(item => {
         const issueFmt   = formatDateTime(item.issue_date);
         const startFmt   = formatDateTime(item.start_date);
-        const plannedFmt = formatDateTime(item.planned_end_date || item.end_date);
+
+        // ✅ نهاية التفويض المعروضة = end_date
+        const endDateVal = getDisplayedEndDate(item);
+        const endFmt     = formatDateTime(endDateVal);
+
         const closeFmt   = formatDateTime(item.close_date);
 
         let days = (typeof item.rental_days === "number") ? item.rental_days : null;
+
+        // ✅ حساب الأيام على end_date
         if (days == null) {
-          days = calcDaysBetween(item.start_date || item.issue_date, item.planned_end_date || item.end_date || item.close_date);
+          const startForDays = item.start_date || item.issue_date;
+          const endForDays   = endDateVal || item.close_date;
+          days = calcDaysBetween(startForDays, endForDays);
         }
 
         const daysText     = days != null ? `${days} يوم` : "—";
@@ -873,7 +905,6 @@
         const stmtText = stmt || "—";
         const jeId = authCloseJournalId.get(authIdNum) || null;
 
-        // ✅ تحديث: إظهار رقم القيد فقط داخل الكارت (بدون لينك)
         const journalRef = (hasJournal && jeId)
           ? `<div class="row"><span class="label">رقم القيد:</span>
                <span class="journal-ref" style="margin-top:0;">#${Number(jeId)}</span>
@@ -906,7 +937,10 @@
 
             <div class="row" data-col="issue_date"><span class="label">تاريخ الإصدار:</span> ${escapeHtml(issueFmt)}</div>
             <div class="row" data-col="start_date"><span class="label">بداية التفويض:</span> ${escapeHtml(startFmt)}</div>
-            <div class="row" data-col="planned_end"><span class="label">نهاية الجمعة (المحاسبية):</span> ${escapeHtml(plannedFmt)}</div>
+
+            <!-- ✅ هنا نهاية التفويض = end_date من DB -->
+            <div class="row" data-col="planned_end"><span class="label">نهاية التفويض (نهاية الجمعة المحاسبية):</span> ${escapeHtml(endFmt)}</div>
+
             <div class="row" data-col="close_date"><span class="label">تاريخ الإقفال:</span> ${escapeHtml(closeFmt)}</div>
 
             <div class="row" data-col="days"><span class="label">عدد الأيام:</span> ${escapeHtml(daysText)}</div>

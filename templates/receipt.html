@@ -12,6 +12,8 @@
       --card-radius: 14px;
       --shadow: 0 4px 12px rgba(0,0,0,0.25);
       --muted: #6b7280;
+      --danger:#dc2626;
+      --success:#16a34a;
     }
 
     * { box-sizing: border-box; }
@@ -90,7 +92,7 @@
     .page-content {
       max-width: 1100px;
       margin: 0 auto;
-      padding: 80px 16px 24px; /* مساحة للهيدر الثابت */
+      padding: 80px 16px 24px;
     }
 
     h2 {
@@ -143,6 +145,7 @@
       font-size: 12px;
       color: var(--muted);
       line-height: 1.6;
+      margin: 0;
     }
 
     .form-grid {
@@ -185,6 +188,8 @@
       outline: none;
       transition: 0.15s ease;
       font-family: inherit;
+      background: #fff;
+      color: #111827;
     }
 
     input[type="text"]:focus,
@@ -196,10 +201,7 @@
       box-shadow: 0 0 0 2px rgba(13,110,253,0.18);
     }
 
-    textarea {
-      min-height: 70px;
-      resize: vertical;
-    }
+    textarea { min-height: 70px; resize: vertical; }
 
     .btn-primary {
       margin-top: 8px;
@@ -216,10 +218,8 @@
       transition: 0.2s ease;
     }
 
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      opacity: 0.95;
-    }
+    .btn-primary:hover { transform: translateY(-1px); opacity: 0.95; }
+    .btn-primary[disabled] { opacity: 0.65; cursor: wait; transform: none; }
 
     .btn-secondary {
       margin-top: 6px;
@@ -236,6 +236,7 @@
     }
 
     .btn-secondary:hover { background: #e5e7eb; }
+    .btn-secondary[disabled]{ opacity: .55; cursor:not-allowed; }
 
     .status-bar {
       margin-top: 8px;
@@ -285,6 +286,12 @@
       border: 1px solid rgba(29,78,216,0.18);
     }
 
+    .pill.warn {
+      background:#fff7ed;
+      color:#b45309;
+      border:1px solid rgba(180,83,9,0.18);
+    }
+
     .small-title {
       font-size: 13px;
       font-weight: 700;
@@ -318,7 +325,6 @@
 
     @media print {
       @page { size: A4; margin: 12mm; }
-
       body { background:#fff !important; color:#000 !important; }
       body * { visibility: hidden !important; }
 
@@ -335,9 +341,7 @@
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 
-    .print-sheet{
-      background:#fff;
-    }
+    .print-sheet{ background:#fff; }
 
     .print-head{
       border-bottom: 2px solid #111;
@@ -462,8 +466,9 @@
   <main class="page-content">
     <h2>سند تحصيل نقدي</h2>
     <p class="subtitle">
-      استخدم هذه الشاشة لتسجيل سداد نقدي من السائق عن تفويض واحد أو أكثر، وسيتم إنشاء
-      <strong>قيد يومية تلقائيًا</strong> وفق شجرة الحسابات:
+      استخدم هذه الشاشة لتسجيل سداد نقدي من السائق عن تفويض واحد أو أكثر.
+      <br />
+      <strong>سيتم إنشاء قيد يومية تلقائيًا</strong> وفق شجرة الحسابات:
       <br>
       من حـ/ <strong>الصندوق</strong> (مدين) &nbsp;&nbsp; إلى حـ/ <strong>السائقين / اسم السائق</strong> (دائن).
       <br>
@@ -521,9 +526,7 @@
               <select id="authSelect" style="margin-top:6px;">
                 <option value="">بدون ربط بتفويض محدد</option>
               </select>
-              <div class="hint">
-                لو جالك من رابط فيه authorization_id هيختاره تلقائيًا.
-              </div>
+              <div class="hint">لو جالك من رابط فيه authorization_id هيختاره تلقائيًا.</div>
             </div>
 
             <!-- المبلغ -->
@@ -541,11 +544,11 @@
             </div>
           </div>
 
-          <button type="submit" class="btn-primary">
+          <button type="submit" class="btn-primary" id="btnSave">
             ✅ حفظ سند التحصيل وتسجيل القيد
           </button>
 
-          <button type="button" class="btn-secondary" id="btnPrintReceipt">
+          <button type="button" class="btn-secondary" id="btnPrintReceipt" disabled>
             🖨️ طباعة إيصال السند (منسق)
           </button>
 
@@ -641,22 +644,22 @@
     let allAuthorizations = [];
     const urlParams = new URLSearchParams(window.location.search);
 
-    // آخر سند محفوظ (علشان زر الطباعة يطبع نفس السند)
     let lastSavedReceipt = null;
 
-    // عناصر
     const driverSearch = document.getElementById("driverSearch");
     const driverSelect = document.getElementById("driverSelect");
     const authSearch   = document.getElementById("authSearch");
     const authSelect   = document.getElementById("authSelect");
     const btnPrintReceipt = document.getElementById("btnPrintReceipt");
+    const btnSave = document.getElementById("btnSave");
 
     document.addEventListener("DOMContentLoaded", () => init());
 
     async function init(){
       setDefaultDateTime();
+      lockForm(true);
 
-      // ✅ ترتيب تحميل مهم عشان URL prefill يشتغل صح
+      // تحميل بيانات أساسية
       await loadDrivers();
       await loadAuthorizations();
 
@@ -665,7 +668,7 @@
         filterDriverOptions(driverSearch.value);
         driverSelect.value = "";
         document.getElementById("driverName").value = "";
-        populateAuthSelect(); // يعيد بناء التفويضات بدون سائق محدد
+        populateAuthSelect();
         authSelect.value = "";
         updateSummary();
       });
@@ -679,17 +682,31 @@
       driverSelect.addEventListener("change", onDriverChange);
       authSelect.addEventListener("change", onAuthChange);
 
-      // ✅ طبّق أي قيم جاية من الـ URL بعد ما البيانات اتحملت
+      // تطبيق URL prefills بعد التحميل
       applyUrlPrefills();
 
-      // زر طباعة الإيصال (منسق)
+      // زر طباعة (بعد الحفظ فقط)
       btnPrintReceipt.addEventListener("click", () => {
-        const data = lastSavedReceipt || buildReceiptDataFromForm(null);
-        printReceipt(data);
+        if (!lastSavedReceipt) {
+          showStatus("لازم تحفظ السند الأول علشان تطبع إيصال رسمي.", true);
+          return;
+        }
+        printReceipt(lastSavedReceipt);
       });
 
-      // إرسال فورم
       document.getElementById("receiptForm").addEventListener("submit", submitReceipt);
+
+      lockForm(false);
+      showStatus("جاهز لتسجيل سند جديد.", false);
+    }
+
+    function lockForm(locked){
+      const inputs = document.querySelectorAll("#receiptForm input, #receiptForm select, #receiptForm textarea, #receiptForm button");
+      inputs.forEach(el => {
+        if (el.id === "btnPrintReceipt") return;
+        el.disabled = !!locked;
+      });
+      btnSave.disabled = !!locked;
     }
 
     function setDefaultDateTime() {
@@ -720,7 +737,6 @@
       return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
 
-    // تحميل السائقين
     async function loadDrivers() {
       try {
         const res = await fetch("/api/drivers");
@@ -747,7 +763,6 @@
       }
     }
 
-    // تحميل التفويضات
     async function loadAuthorizations() {
       try {
         const res = await fetch("/api/authorizations");
@@ -765,15 +780,12 @@
 
     function populateAuthSelect() {
       const chosenDriverId = driverSelect.value;
-
       let filtered = allAuthorizations;
 
       if (chosenDriverId) {
         const driver = allDrivers.find(d => String(d.id) === String(chosenDriverId));
         filtered = allAuthorizations.filter(a => {
-          // الأفضل: لو في driver_id في التفويض
           if (a.driver_id != null) return String(a.driver_id) === String(chosenDriverId);
-          // fallback: مقارنة بالاسم
           if (driver) return (a.driver_name || "").trim() === (driver.name || "").trim();
           return false;
         });
@@ -839,7 +851,6 @@
         driverNameInput.value = "";
       }
 
-      // إعادة بناء التفويضات الخاصة بالسائق
       authSelect.value = "";
       authSearch.value = "";
       populateAuthSelect();
@@ -864,17 +875,11 @@
 
         if (!amountInput.value.trim()) {
           let suggested = null;
-
-          if (auth.closed_amount != null && !Number.isNaN(Number(auth.closed_amount))) {
-            suggested = Number(auth.closed_amount);
-          } else if (auth.planned_amount != null && !Number.isNaN(Number(auth.planned_amount))) {
-            suggested = Number(auth.planned_amount);
-          }
-
+          if (auth.closed_amount != null && !Number.isNaN(Number(auth.closed_amount))) suggested = Number(auth.closed_amount);
+          else if (auth.planned_amount != null && !Number.isNaN(Number(auth.planned_amount))) suggested = Number(auth.planned_amount);
           if (suggested != null) amountInput.value = suggested.toFixed(2);
         }
 
-        // لو التفويض فيه driver_id أو driver_name .. حاول ظبط السائق تلقائيًا
         if (auth.driver_id != null) {
           const d = allDrivers.find(x => String(x.id) === String(auth.driver_id));
           if (d) {
@@ -906,7 +911,6 @@
       const authId = urlParams.get("authorization_id");
       const amountParam = urlParams.get("amount");
 
-      // 1) لو في authorization_id: نثبت التفويض، ونطلع السائق منه (لو موجود)
       if (authId) {
         const auth = allAuthorizations.find(a => String(a.id) === String(authId));
         if (auth) {
@@ -932,7 +936,6 @@
           onAuthChange();
         }
       } else if (driverId) {
-        // 2) لو في driver_id بس
         const d = allDrivers.find(x => String(x.id) === String(driverId));
         if (d) {
           driverSelect.value = d.id;
@@ -943,7 +946,6 @@
         }
       }
 
-      // 3) مبلغ من URL
       if (amountParam) {
         const n = Number(amountParam);
         if (!Number.isNaN(n)) document.getElementById("amount").value = n.toFixed(2);
@@ -1077,7 +1079,6 @@
       const authPeriod = (data && data.authorization && data.authorization.period) ? data.authorization.period : "—";
 
       const amount = (data && typeof data.amount === "number" && !Number.isNaN(data.amount)) ? data.amount : 0;
-
       const desc = (data && data.description) ? data.description : "—";
 
       return `
@@ -1143,15 +1144,30 @@
     function printReceipt(data){
       const printArea = document.getElementById("printArea");
       printArea.innerHTML = buildPrintReceiptHtml(data || buildReceiptDataFromForm(null));
-
-      requestAnimationFrame(() => {
-        setTimeout(() => window.print(), 60);
-      });
+      requestAnimationFrame(() => setTimeout(() => window.print(), 60));
     }
 
     window.addEventListener("afterprint", () => {
       document.getElementById("printArea").innerHTML = "";
     });
+
+    function extractReceiptId(data){
+      return (data && data.receipt && data.receipt.id) || data.id || data.receipt_id || null;
+    }
+
+    function extractWithJournalFlag(data){
+      if (typeof data?.with_journal === "boolean") return data.with_journal;
+      if (typeof data?.receipt?.with_journal === "boolean") return data.receipt.with_journal;
+      if (typeof data?.journal_created === "boolean") return data.journal_created;
+      return true; // الافتراضي: سند التحصيل غالبًا معه قيد
+    }
+
+    function extractOperationLink(data, receiptId){
+      const opId = data?.operation_id || data?.operation?.id || null;
+      if (opId) return `/operations?type=receipt&operation_id=${opId}`;
+      if (receiptId) return `/operations?type=receipt&receipt_id=${receiptId}`;
+      return null;
+    }
 
     async function submitReceipt(e) {
       e.preventDefault();
@@ -1164,10 +1180,7 @@
       const desc       = (document.getElementById("description").value || "").trim();
       const dateVal    = (document.getElementById("receiptDate").value || "").trim();
 
-      if (!amountStr) {
-        showStatus("قيمة المبلغ مطلوبة لتسجيل سند التحصيل.", true);
-        return;
-      }
+      if (!amountStr) { showStatus("قيمة المبلغ مطلوبة لتسجيل سند التحصيل.", true); return; }
 
       const amountNum = Number(amountStr);
       if (Number.isNaN(amountNum) || amountNum <= 0) {
@@ -1190,6 +1203,9 @@
       };
 
       try {
+        btnSave.disabled = true;
+        btnSave.textContent = "جارِ الحفظ...";
+
         const res = await fetch("/api/receipts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1205,32 +1221,33 @@
           return;
         }
 
-        // ✅ مرن في قراءة id حسب استجابة السيرفر
-        const receiptId =
-          (data && data.receipt && data.receipt.id) ||
-          data.id ||
-          (data && data.receipt_id) ||
-          null;
-
-        const opsUrl = receiptId ? `/operations?type=receipt&receipt_id=${receiptId}` : null;
+        const receiptId = extractReceiptId(data);
+        const withJournal = extractWithJournalFlag(data);
+        const opsUrl = withJournal ? extractOperationLink(data, receiptId) : null;
         const listUrl = `/receipts-list`;
 
         showStatus(
-          `✅ تم حفظ سند التحصيل وتسجيل القيد بنجاح.` +
+          `✅ تم حفظ سند التحصيل بنجاح.` +
+          (withJournal
+            ? ` <span class="pill" style="vertical-align:middle;">تم إنشاء قيد</span>`
+            : ` <span class="pill warn" style="vertical-align:middle;">بدون قيد</span>`) +
           (opsUrl ? ` <a href="${opsUrl}" style="color:#1d4ed8;text-decoration:underline;">عرض العملية</a>` : "") +
           ` <a href="${listUrl}" style="color:#1d4ed8;text-decoration:underline; margin-right:6px;">عرض سندات التحصيل</a>`,
           false
         );
 
-        // خزّن السند للطباعة
         lastSavedReceipt = buildReceiptDataFromForm(receiptId);
+        btnPrintReceipt.disabled = false;
 
-        // 🖨️ (اختياري) اطبع تلقائي بعد الحفظ
+        // اطبع تلقائي بعد الحفظ
         printReceipt(lastSavedReceipt);
 
       } catch (err) {
         console.error(err);
         showStatus("⚠️ تعذر الاتصال بالخادم. تأكد إن الباك إند شغال ثم جرّب تاني.", true);
+      } finally {
+        btnSave.disabled = false;
+        btnSave.textContent = "✅ حفظ سند التحصيل وتسجيل القيد";
       }
     }
   </script>

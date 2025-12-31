@@ -380,7 +380,7 @@
     .col-license { width: 9%; }
     .col-issue   { width: 10%; }
     .col-start   { width: 10%; }
-    .col-end     { width: 11%; }
+    .col-end     { width: 13%; }
     .col-days    { width: 7%; text-align: center; }
     .col-delay   { width: 7%; text-align: center; }
     .col-rent    { width: 9%; }
@@ -557,6 +557,26 @@
       background: rgba(2,6,23,0.55);
       display: none;
     }
+
+    /* ✅ سطر عرض تاريخ/وقت النهاية بشكل واضح */
+    .enddt-pill{
+      margin-top: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(34,197,94,0.10);
+      border: 1px solid rgba(34,197,94,0.28);
+      color: #d1fae5;
+      font-size: 0.82rem;
+      font-weight: 700;
+      flex-wrap: wrap;
+    }
+    .enddt-pill b{
+      color:#fff;
+      font-weight: 900;
+    }
   </style>
 </head>
 
@@ -625,7 +645,7 @@
               <th class="col-license">الرخصة</th>
               <th class="col-issue">الإصدار</th>
               <th class="col-start">البداية</th>
-              <th class="col-end">نهاية التفويض</th>
+              <th class="col-end">نهاية التفويض (تاريخ/وقت)</th>
               <th class="col-days">أيام التفويض</th>
               <th class="col-delay">أيام التأخير</th>
               <th class="col-rent">اليومي</th>
@@ -690,6 +710,11 @@
         <div class="modal-hint" id="endDateRuleHint">
           🔒 لا يمكن تعديل تاريخ النهاية أثناء “تجديد التفويض”.
           <br/>✅ يتم فتح التعديل فقط عند اختيار: <b>⛔ لا، تحويل السيارة إلى متاحة بدون تفويض جديد</b>.
+        </div>
+
+        <!-- ✅ جديد: عرض تاريخ/وقت النهاية سواء اتعدل أو لا -->
+        <div class="enddt-pill" title="يتم عرض الوقت تلقائيًا (نهاية اليوم) إذا كان التاريخ بدون وقت">
+          ⏱️ نهاية التفويض (تاريخ/وقت): <b id="endDateTimePreview">—</b>
         </div>
 
         <div id="endDateChangedHint" class="mini-warn">
@@ -773,7 +798,8 @@
     let pendingModalCalc = {
       baseStartDate: null,
       dailyRentNum: null,
-      originalEndDate: null,
+      originalEndDate: null,      // YYYY-MM-DD (للـ input)
+      originalEndRaw: null,       // النص القادم من السيرفر (قد يحتوي وقت)
       computedDays: null,
       computedPlannedAmount: null
     };
@@ -782,11 +808,14 @@
       loadActiveAuthorizations();
     });
 
+    // ✅ parsing ذكي: لو تاريخ فقط → اعتبره نهاية اليوم (23:59:59) عشان التأخير يحسب صح
     function parseDateTime(str) {
       if (!str) return null;
+      const s = String(str).trim();
       try {
-        if (str.includes("T")) return new Date(str);
-        return new Date(str.replace(" ", "T"));
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + "T23:59:59");
+        if (s.includes("T")) return new Date(s);
+        return new Date(s.replace(" ", "T"));
       } catch {
         return null;
       }
@@ -800,6 +829,28 @@
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
       return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function formatDateTimeLocal(d) {
+      if (!d || isNaN(d.getTime())) return "—";
+      const pad = (n) => String(n).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      const mm = pad(d.getMonth() + 1);
+      const dd = pad(d.getDate());
+      const hh = pad(d.getHours());
+      const mi = pad(d.getMinutes());
+      const ss = pad(d.getSeconds());
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+    }
+
+    // ✅ يعرض تاريخ/وقت بشكل ثابت سواء السيرفر مرسل وقت أو تاريخ فقط
+    function formatEndDateTimeSmart(endVal) {
+      if (!endVal) return "—";
+      const s = String(endVal).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s + " 23:59:59";
+      const d = parseDateTime(s);
+      if (d && !isNaN(d.getTime())) return formatDateTimeLocal(d);
+      return s;
     }
 
     function dateOnly(d) {
@@ -921,7 +972,8 @@
 
         const issueDate = a.issue_date || "";
         const startDate = a.start_date ? a.start_date.replace("T", " ").slice(0,19) : "";
-        const plannedEnd = (a.end_date || a.planned_end_date || "");
+        const plannedEndRaw = (a.end_date || a.planned_end_date || "");
+        const plannedEnd = plannedEndRaw ? formatEndDateTimeSmart(plannedEndRaw) : "";
         const dailyRent = a.daily_rent != null ? `${a.daily_rent} ر.س/يوم` : "غير محدد";
         const days = a.rental_days != null ? `${a.rental_days} يوم` : "—";
 
@@ -950,7 +1002,7 @@
 
           <div class="row"><span><span class="label">تاريخ الإصدار:</span><span class="value">${issueDate}</span></span></div>
           <div class="row"><span><span class="label">بداية التفويض:</span><span class="value">${startDate || "—"}</span></span></div>
-          <div class="row"><span><span class="label">نهاية التفويض:</span><span class="value">${plannedEnd || "—"}</span></span></div>
+          <div class="row"><span><span class="label">نهاية التفويض (تاريخ/وقت):</span><span class="value">${plannedEnd || "—"}</span></span></div>
 
           <div class="row">
             <span><span class="label">الإيجار اليومي:</span><span class="value">${dailyRent}</span></span>
@@ -1006,7 +1058,8 @@
 
         const issueDate = a.issue_date || "";
         const startDate = a.start_date ? a.start_date.replace("T", " ").slice(0,19) : "";
-        const plannedEnd = (a.end_date || a.planned_end_date || "");
+        const plannedEndRaw = (a.end_date || a.planned_end_date || "");
+        const plannedEnd = plannedEndRaw ? formatEndDateTimeSmart(plannedEndRaw) : "";
         const days = a.rental_days != null ? a.rental_days : "—";
         const dailyRent = a.daily_rent != null ? a.daily_rent : "—";
 
@@ -1070,6 +1123,35 @@
       return noRenew;
     }
 
+    // ✅ يحسب نص تاريخ/وقت النهاية المعروض في المودال (سواء اتعدل أو لا)
+    function getModalEndDateTimeForDisplay() {
+      const endDateInput = document.getElementById("closeEndDateInput");
+      const v = (endDateInput.value || "").trim();
+
+      // لو فيه قيمة في input (date) → اعرضها كـ نهاية يوم
+      if (v) {
+        // لو المستخدم لم يغير التاريخ وكان الأصل من السيرفر يحتوي وقت → اعرض وقت السيرفر (أدق)
+        const raw = (pendingModalCalc.originalEndRaw || "").trim();
+        const rawDate = raw ? formatDateShort(raw) : "";
+        const changed = v !== (pendingModalCalc.originalEndDate || "").trim();
+
+        if (!changed && raw && rawDate === v && !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+          return formatEndDateTimeSmart(raw);
+        }
+
+        return v + " 23:59:59";
+      }
+
+      // fallback: من السيرفر
+      return formatEndDateTimeSmart(pendingModalCalc.originalEndRaw || pendingModalCalc.originalEndDate || "");
+    }
+
+    function updateEndDateTimePreview() {
+      const el = document.getElementById("endDateTimePreview");
+      if (!el) return;
+      el.textContent = getModalEndDateTimeForDisplay();
+    }
+
     function updateEndDateEditState() {
       const endDateInput = document.getElementById("closeEndDateInput");
       const changedHint = document.getElementById("endDateChangedHint");
@@ -1085,8 +1167,9 @@
         changedHint.style.display = "none";
       }
 
-      // إعادة حسابات العرض
+      // إعادة حسابات العرض + تحديث سطر الوقت
       recalcModalFigures();
+      updateEndDateTimePreview();
     }
 
     function endAuthorization(authId) {
@@ -1098,14 +1181,19 @@
       const carInfo = `${auth.car_number || "بدون رقم"} — ${(auth.car_model || "")} ${(auth.car_type || "")}`.trim();
 
       const periodStart = formatDateShort(auth.start_date || auth.issue_date);
-      const periodEnd = formatDateShort(auth.end_date || auth.planned_end_date);
+
+      // ✅ الأصل من السيرفر (قد يحتوي وقت)
+      const endRaw = (auth.end_date || auth.planned_end_date || "");
+      const periodEndDateOnly = formatDateShort(endRaw);
 
       const baseStart = parseDateTime(auth.start_date || auth.issue_date);
       const dailyRentNum = auth.daily_rent != null ? Number(auth.daily_rent) : null;
 
       pendingModalCalc.baseStartDate = baseStart ? dateOnly(baseStart) : null;
       pendingModalCalc.dailyRentNum = (dailyRentNum != null && !Number.isNaN(dailyRentNum)) ? dailyRentNum : null;
-      pendingModalCalc.originalEndDate = (periodEnd && periodEnd !== "—") ? periodEnd : "";
+
+      pendingModalCalc.originalEndRaw = endRaw || "";
+      pendingModalCalc.originalEndDate = (periodEndDateOnly && periodEndDateOnly !== "—") ? periodEndDateOnly : "";
 
       document.getElementById("modalAuthId").textContent = `#${auth.id}`;
       document.getElementById("modalCarInfo").textContent = carInfo || "—";
@@ -1124,6 +1212,7 @@
         const changed = (endDateInput.value || "").trim() !== (pendingModalCalc.originalEndDate || "").trim();
         document.getElementById("endDateChangedHint").style.display = (changed && isNoRenewSelected()) ? "block" : "none";
         recalcModalFigures();
+        updateEndDateTimePreview();
       };
 
       // ✅ اجعل default الاختيار = تجديد (وبالتالي التاريخ مقفول)
@@ -1143,6 +1232,7 @@
       // طبّق الحالة فورًا
       updateEndDateEditState();
       recalcModalFigures();
+      updateEndDateTimePreview();
 
       const closeAmountInput = document.getElementById("closeAmountInput");
       const closeNoteInput = document.getElementById("closeNoteInput");
@@ -1156,7 +1246,7 @@
 
       closeNoteInput.value =
         auth.closing_note ||
-        `إقفال تفويض رقم ${auth.id} للسيارة ${auth.car_number || ""} عن الفترة من ${periodStart} إلى ${endDateInput.value || periodEnd}`;
+        `إقفال تفويض رقم ${auth.id} للسيارة ${auth.car_number || ""} عن الفترة من ${periodStart} إلى ${endDateInput.value || periodEndDateOnly}`;
 
       document.getElementById("closeModalOverlay").style.display = "flex";
       closeAmountInput.focus();
@@ -1266,7 +1356,7 @@
         `- المبلغ: ${amountNum.toFixed(2)}\n` +
         `- ${withJournal ? "مع قيد محاسبي" : "بدون قيد محاسبي (سيتم تمييز التفويض)"}\n` +
         `- ${localRenew ? "مع تجديد أسبوع جديد" : "بدون تجديد (السيارة ستصبح متاحة)"}\n` +
-        (!localRenew ? `- نهاية التفويض: ${(endDateInput.value || pendingModalCalc.originalEndDate || "—")}\n` : "");
+        (!localRenew ? `- نهاية التفويض (تاريخ/وقت): ${getModalEndDateTimeForDisplay()}\n` : "");
 
       if (!window.confirm(confirmText)) return;
 
@@ -1350,9 +1440,14 @@
              </a>`
           : "";
 
+        const endDtLine = (!serverRenew)
+          ? `<br><span style="color:#065f46;font-weight:900;">⏱️ نهاية التفويض (تاريخ/وقت):</span> ${getModalEndDateTimeForDisplay()}`
+          : "";
+
         const msg = `
           ✅ تم إقفال التفويض بنجاح.
           ${closedWithout ? "<br><b style='color:#b45309'>⚠️ تم الإقفال بدون قيد محاسبي (حسب اختيارك).</b>" : ""}
+          ${endDtLine}
           ${opsLinkHtml ? "<br>" + opsLinkHtml : ""}
           ${receiptLinkHtml ? "<br>" + receiptLinkHtml : ""}
         `;

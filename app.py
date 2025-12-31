@@ -88,6 +88,9 @@ def parse_int(val, default=None, min_val=None, max_val=None):
 
 
 def parse_bool(val, default=False):
+    """
+    يدعم قيم true/false وكذلك عربي شائع.
+    """
     if val is None:
         return default
     if isinstance(val, bool):
@@ -95,7 +98,7 @@ def parse_bool(val, default=False):
     if isinstance(val, (int, float)):
         return bool(val)
     s = str(val).strip().lower()
-    return s in ("1", "true", "yes", "y", "on", "t")
+    return s in ("1", "true", "yes", "y", "on", "t", "نعم", "اه", "أه", "تمام", "صح", "قيد", "محاسبي")
 
 
 # ---------------- Models ----------------
@@ -869,6 +872,9 @@ def end_authorization(auth_id):
     - renew = false ⇒ لا تفويض جديد + السيارة "متاحة"
     - يرجع suggested_receipt لفتح سند تحصيل تلقائي.
     - ✅ يرجع journal_entry_id لو اتعمل قيد (مهم للطباعة/العمليات)
+
+    ✅ تعديل مهم:
+    - القيد المحاسبي لن يُنشأ إلا إذا تم إرسال with_journal=true صراحةً.
     """
     auth = Authorization.query.get(auth_id)
     if not auth:
@@ -897,13 +903,18 @@ def end_authorization(auth_id):
         if with_journal_raw is None:
             with_journal_raw = data.get("accounting_option")
 
-        with_journal = True
-        if isinstance(with_journal_raw, bool):
-            with_journal = with_journal_raw
-        elif isinstance(with_journal_raw, (int, float)):
-            with_journal = bool(with_journal_raw)
-        elif isinstance(with_journal_raw, str):
-            with_journal = with_journal_raw.strip().lower() in ("1", "true", "yes", "y", "with_journal", "journal", "قيد", "محاسبي")
+        # ✅ مهم جدًا: الافتراضي False (يعني لا قيد إلا إذا تم اختياره)
+        with_journal = False
+        if with_journal_raw is not None:
+            if isinstance(with_journal_raw, bool):
+                with_journal = with_journal_raw
+            elif isinstance(with_journal_raw, (int, float)):
+                with_journal = bool(with_journal_raw)
+            elif isinstance(with_journal_raw, str):
+                with_journal = with_journal_raw.strip().lower() in (
+                    "1", "true", "yes", "y", "with_journal", "journal",
+                    "قيد", "محاسبي", "عمل قيد", "عمل قيد محاسبي"
+                )
 
         closing_note = (data.get("closing_note") or "").strip() or None
         closed_amount_input = data.get("closed_amount")
@@ -1213,7 +1224,6 @@ def journal_entries_api():
         except Exception:
             return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم YYYY-MM-DD"}), 400
 
-    # ✅ تنظيف + تحقق قبل الحفظ
     cleaned = []
     total_debit = Decimal("0")
     total_credit = Decimal("0")
@@ -1227,7 +1237,6 @@ def journal_entries_api():
         if not acc:
             return jsonify({"error": f"السطر رقم {i}: الحساب غير موجود"}), 400
 
-        # امنع الحسابات التجميعية
         if getattr(acc, "is_group", False):
             return jsonify({"error": f"السطر رقم {i}: لا يمكن استخدام حساب تجميعي (اختر حساب تفصيلي)"}), 400
 
@@ -1250,7 +1259,6 @@ def journal_entries_api():
     if not cleaned:
         return jsonify({"error": "كل البنود فارغة — أدخل على الأقل سطر واحد فيه مدين أو دائن"}), 400
 
-    # ✅ لازم القيد يكون متوازن
     if (total_debit - total_credit).copy_abs() > Decimal("0.005"):
         return jsonify({
             "error": "القيد غير متوازن: إجمالي المدين لا يساوي إجمالي الدائن",
@@ -1258,7 +1266,6 @@ def journal_entries_api():
             "total_credit": str(total_credit),
         }), 400
 
-    # ✅ الحفظ بعد التحقق
     je = JournalEntry(date=je_date, description=desc_txt)
     db.session.add(je)
     db.session.flush()
@@ -1312,16 +1319,8 @@ def manual_journal_entries_api():
     return jsonify([e.to_dict(with_lines=True) for e in entries])
 
 
-# ✅ NEW: map auth_id -> (has journal? + statement + journal_entry_id)
 @app.route("/api/journal_entries/auth_close_map", methods=["GET"])
 def auth_close_journal_map():
-    """
-    Fast map for closed-auth journal entries:
-    GET /api/journal_entries/auth_close_map?auth_ids=1,2,3
-
-    Returns:
-      { "map": { "1": {"has": true, "statement": "...", "journal_entry_id": 55}, ... } }
-    """
     raw = (request.args.get("auth_ids") or "").strip()
     if not raw:
         return jsonify({"map": {}})
@@ -1338,13 +1337,13 @@ def auth_close_journal_map():
     q = (
         JournalEntry.query
         .filter(JournalEntry.ref_authorization_id.in_(ids))
-        .filter(JournalEntry.ref_receipt_id.is_(None))  # قيد إقفال فقط
+        .filter(JournalEntry.ref_receipt_id.is_(None))
         .order_by(
             JournalEntry.ref_authorization_id.asc(),
             JournalEntry.date.desc(),
             JournalEntry.id.desc(),
         )
-        .distinct(JournalEntry.ref_authorization_id)  # Postgres DISTINCT ON
+        .distinct(JournalEntry.ref_authorization_id)
     )
 
     rows = q.all()
@@ -1426,6 +1425,7 @@ def receipts_api():
         db.session.add(receipt)
         db.session.flush()
 
+        # سند التحصيل دائمًا يسجل قيد (طبيعي لأنه سند محاسبي)
         journal_entry_id = create_journal_for_cash_receipt(receipt)
 
         db.session.commit()
@@ -1464,4 +1464,3 @@ with app.app_context():
 # ---------------- Run (local) ----------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-

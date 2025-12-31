@@ -497,6 +497,12 @@
 
     .modal-textarea { min-height: 70px; resize: vertical; }
 
+    .modal-input[disabled] {
+      opacity: 0.75;
+      cursor: not-allowed;
+      background: rgba(2,6,23,0.55);
+    }
+
     .modal-footer {
       margin-top: 10px;
       display: flex;
@@ -679,14 +685,15 @@
           </div>
         </div>
 
-        <div class="modal-section-title">تاريخ نهاية التفويض (يمكن تعديله قبل الإقفال)</div>
-        <input id="closeEndDateInput" type="date" class="modal-input" />
-        <div class="modal-hint">
-          لو عدّلت التاريخ هنا، هيتغير حساب عدد الأيام وقيمة الأيام المخططة تلقائيًا قبل الإقفال.
+        <div class="modal-section-title">تاريخ نهاية التفويض</div>
+        <input id="closeEndDateInput" type="date" class="modal-input" disabled />
+        <div class="modal-hint" id="endDateRuleHint">
+          🔒 لا يمكن تعديل تاريخ النهاية أثناء “تجديد التفويض”.
+          <br/>✅ يتم فتح التعديل فقط عند اختيار: <b>⛔ لا، تحويل السيارة إلى متاحة بدون تفويض جديد</b>.
         </div>
 
         <div id="endDateChangedHint" class="mini-warn">
-          ⚠️ تم تعديل تاريخ نهاية التفويض — سيتم حفظه في التفويض عند الإقفال.
+          ⚠️ تم تعديل تاريخ نهاية التفويض — سيتم حفظه داخل التفويض عند الإقفال (بدون تجديد).
         </div>
 
         <div class="modal-row" style="margin-top:8px;">
@@ -807,7 +814,6 @@
       bar.style.display = "block";
     }
 
-    // ✅ NEW: بناء لينك سند التحصيل ببيانات جاهزة
     function buildReceiptUrl(params) {
       const qs = new URLSearchParams();
       Object.entries(params || {}).forEach(([k, v]) => {
@@ -816,25 +822,19 @@
       return "/receipt?" + qs.toString();
     }
 
-    // ✅ NEW: محاولة استخراج suggested_receipt من رد السيرفر + fallback آمن
     function getSuggestedReceiptLinkFromResponse(data, fallback) {
       const sr = data && data.suggested_receipt ? data.suggested_receipt : null;
 
-      // لو السيرفر رجّع suggested_receipt جاهز
-      if (sr && (sr.authorization_id || sr.driver_id || sr.amount)) {
+      if (sr && (sr.authorization_id || sr.driver_id || sr.amount || sr.default_amount != null)) {
         return buildReceiptUrl({
           authorization_id: sr.authorization_id || fallback.authorization_id,
           driver_id: sr.driver_id || fallback.driver_id,
-          amount: sr.amount || fallback.amount,
+          amount: (sr.amount || sr.default_amount || fallback.amount),
           description: sr.description || fallback.description
         });
       }
 
-      // fallback: لو اتعمل قيد (journal_entry_id) لكن السيرفر ما رجّعش suggested_receipt
-      if (data && data.journal_entry_id) {
-        return buildReceiptUrl(fallback);
-      }
-
+      if (data && data.journal_entry_id) return buildReceiptUrl(fallback);
       return null;
     }
 
@@ -983,7 +983,7 @@
 
           <div class="actions-row">
             <button class="btn-sm-primary" onclick="openReceipt(${a.id})">🧾 سند تحصيل</button>
-            <button class="btn-sm-danger" onclick="endAuthorization(${a.id}, this)">✅ إنهاء التفويض</button>
+            <button class="btn-sm-danger" onclick="endAuthorization(${a.id})">✅ إنهاء التفويض</button>
           </div>
         `;
 
@@ -1033,7 +1033,7 @@
           <td class="col-actions">
             <div class="td-actions">
               <button class="btn-sm-primary" onclick="openReceipt(${a.id})">🧾</button>
-              <button class="btn-sm-danger" onclick="endAuthorization(${a.id}, this)">✅</button>
+              <button class="btn-sm-danger" onclick="endAuthorization(${a.id})">✅</button>
             </div>
           </td>
         `;
@@ -1062,6 +1062,33 @@
       window.location.href = `/receipt?authorization_id=${authId}`;
     }
 
+    function isNoRenewSelected() {
+      let noRenew = false;
+      document.querySelectorAll('input[name="renewOption"]').forEach(r => {
+        if (r.checked && r.value === "no_renew") noRenew = true;
+      });
+      return noRenew;
+    }
+
+    function updateEndDateEditState() {
+      const endDateInput = document.getElementById("closeEndDateInput");
+      const changedHint = document.getElementById("endDateChangedHint");
+
+      const allowEdit = isNoRenewSelected();
+
+      if (allowEdit) {
+        endDateInput.disabled = false;
+      } else {
+        endDateInput.disabled = true;
+        // رجّع التاريخ للأصلي عند العودة للتجديد
+        endDateInput.value = pendingModalCalc.originalEndDate || "";
+        changedHint.style.display = "none";
+      }
+
+      // إعادة حسابات العرض
+      recalcModalFigures();
+    }
+
     function endAuthorization(authId) {
       const auth = allAuthorizations.find(a => String(a.id) === String(authId));
       if (!auth) { alert("لم يتم العثور على بيانات هذا التفويض."); return; }
@@ -1088,16 +1115,33 @@
       document.getElementById("modalDailyRent").textContent =
         pendingModalCalc.dailyRentNum != null ? `${pendingModalCalc.dailyRentNum} ر.س/يوم` : "غير محدد";
 
+      // ✅ ضبط مدخل تاريخ النهاية + ربط التغيير
       const endDateInput = document.getElementById("closeEndDateInput");
       endDateInput.value = pendingModalCalc.originalEndDate || "";
       document.getElementById("endDateChangedHint").style.display = "none";
 
       endDateInput.oninput = () => {
         const changed = (endDateInput.value || "").trim() !== (pendingModalCalc.originalEndDate || "").trim();
-        document.getElementById("endDateChangedHint").style.display = changed ? "block" : "none";
+        document.getElementById("endDateChangedHint").style.display = (changed && isNoRenewSelected()) ? "block" : "none";
         recalcModalFigures();
       };
 
+      // ✅ اجعل default الاختيار = تجديد (وبالتالي التاريخ مقفول)
+      document.querySelectorAll('input[name="renewOption"]').forEach(r => r.checked = (r.value === "renew"));
+      document.querySelectorAll('input[name="accountingOption"]').forEach(r => r.checked = (r.value === "with_journal"));
+
+      // ✅ اربط تغيير خيار التجديد للتحكم في السماح بتعديل التاريخ
+      document.querySelectorAll('input[name="renewOption"]').forEach(r => {
+        r.onchange = () => {
+          updateEndDateEditState();
+          // إظهار/إخفاء تحذير التعديل حسب الحالة
+          const changed = (endDateInput.value || "").trim() !== (pendingModalCalc.originalEndDate || "").trim();
+          document.getElementById("endDateChangedHint").style.display = (changed && isNoRenewSelected()) ? "block" : "none";
+        };
+      });
+
+      // طبّق الحالة فورًا
+      updateEndDateEditState();
       recalcModalFigures();
 
       const closeAmountInput = document.getElementById("closeAmountInput");
@@ -1113,9 +1157,6 @@
       closeNoteInput.value =
         auth.closing_note ||
         `إقفال تفويض رقم ${auth.id} للسيارة ${auth.car_number || ""} عن الفترة من ${periodStart} إلى ${endDateInput.value || periodEnd}`;
-
-      document.querySelectorAll('input[name="renewOption"]').forEach(r => r.checked = (r.value === "renew"));
-      document.querySelectorAll('input[name="accountingOption"]').forEach(r => r.checked = (r.value === "with_journal"));
 
       document.getElementById("closeModalOverlay").style.display = "flex";
       closeAmountInput.focus();
@@ -1183,24 +1224,49 @@
 
       const noteStr = (noteInput.value || "").trim();
 
-      let localRenew = true;
-      document.querySelectorAll('input[name="renewOption"]').forEach(r => {
-        if (r.checked && r.value === "no_renew") localRenew = false;
-      });
+      const localRenew = !isNoRenewSelected();
 
       let withJournal = true;
       document.querySelectorAll('input[name="accountingOption"]').forEach(r => {
         if (r.checked && r.value === "no_journal") withJournal = false;
       });
 
-      const overrideEndDate = (endDateInput.value || "").trim();
+      // ✅ end_date_override: مسموح فقط عند عدم التجديد
+      let endDateOverride = null;
+
+      if (!localRenew) {
+        const v = (endDateInput.value || "").trim();
+        if (!v) {
+          alert("من فضلك اختر تاريخ نهاية صحيح (لا يمكن تركه فارغ عند عدم التجديد).");
+          endDateInput.focus();
+          return;
+        }
+
+        // validate: end_date >= start_date (لو متاح)
+        if (pendingModalCalc.baseStartDate) {
+          const [y, m, d] = v.split("-").map(Number);
+          const endD = new Date(y, m - 1, d);
+          if (dateOnly(endD) < dateOnly(pendingModalCalc.baseStartDate)) {
+            alert("تاريخ النهاية لا يمكن أن يكون قبل تاريخ بداية التفويض.");
+            endDateInput.focus();
+            return;
+          }
+        }
+
+        // إرسال override فقط لو مختلف عن الأصلي
+        if (v !== (pendingModalCalc.originalEndDate || "").trim()) {
+          endDateOverride = v;
+        } else {
+          endDateOverride = null; // لم يتم تعديل التاريخ → يحفظ كما هو
+        }
+      }
 
       const confirmText =
         `تأكيد إقفال التفويض؟\n` +
         `- المبلغ: ${amountNum.toFixed(2)}\n` +
         `- ${withJournal ? "مع قيد محاسبي" : "بدون قيد محاسبي (سيتم تمييز التفويض)"}\n` +
-        `- ${localRenew ? "مع تجديد أسبوع جديد" : "بدون تجديد"}\n` +
-        (overrideEndDate ? `- نهاية التفويض: ${overrideEndDate}\n` : "");
+        `- ${localRenew ? "مع تجديد أسبوع جديد" : "بدون تجديد (السيارة ستصبح متاحة)"}\n` +
+        (!localRenew ? `- نهاية التفويض: ${(endDateInput.value || pendingModalCalc.originalEndDate || "—")}\n` : "");
 
       if (!window.confirm(confirmText)) return;
 
@@ -1220,7 +1286,7 @@
           closing_note: noteStr,
           renew: localRenew,
           with_journal: withJournal,
-          end_date_override: overrideEndDate || null,
+          end_date_override: endDateOverride, // ✅ null لو غير مسموح/غير متغير
         };
 
         const res = await fetch(`/api/authorizations/${pendingCloseAuth.id}/end`, {
@@ -1255,17 +1321,15 @@
         const closedAuthId = (data.closed_authorization && data.closed_authorization.id) || pendingCloseAuth.id;
 
         let opsLinkHtml = "";
-        if (serverWithJournal) {
+        if (serverWithJournal && data.journal_entry_id) {
           opsLinkHtml = `<a href="/operations?type=auth_close&auth_id=${closedAuthId}"
             style="margin-right:8px;color:#1d4ed8;text-decoration:underline;font-weight:700;">
             📄 عرض القيد في العمليات
           </a>`;
         }
 
-        const closedWithout = !!data.closed_without_journal;
+        const closedWithout = !serverWithJournal;
 
-        // ✅ NEW: لينك سند التحصيل (يظهر فقط لو فيه قيد)
-        // fallback من بيانات التفويض + مبلغ الإقفال
         const fallbackParams = {
           authorization_id: closedAuthId,
           driver_id: (pendingCloseAuth.driver_id || pendingCloseAuth.driverId || ""),
@@ -1288,7 +1352,7 @@
 
         const msg = `
           ✅ تم إقفال التفويض بنجاح.
-          ${closedWithout ? "<br><b style='color:#b45309'>⚠️ تم الإقفال بدون قيد محاسبي (سيظهر بعلامة في صفحة المغلق).</b>" : ""}
+          ${closedWithout ? "<br><b style='color:#b45309'>⚠️ تم الإقفال بدون قيد محاسبي (حسب اختيارك).</b>" : ""}
           ${opsLinkHtml ? "<br>" + opsLinkHtml : ""}
           ${receiptLinkHtml ? "<br>" + receiptLinkHtml : ""}
         `;

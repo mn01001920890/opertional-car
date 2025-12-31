@@ -6,7 +6,6 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_, and_, func, exists, desc
-from sqlalchemy.pool import NullPool
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 import os
@@ -41,22 +40,13 @@ if not DATABASE_URL:
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# ✅ تحسين الاتصال على Vercel/Serverless (بدون ما نكسر التشغيل المحلي)
-# - على Vercel الأفضل إلغاء pooling لتقليل مشاكل connections
-is_vercel = bool(os.environ.get("VERCEL")) or bool(os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
-if is_vercel:
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "poolclass": NullPool,
-        "pool_pre_ping": True,
-    }
-else:
-    # تشغيل محلي / سيرفر ثابت
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_pre_ping": True,
-        "pool_recycle": 280,
-        "pool_size": 5,
-        "max_overflow": 10,
-    }
+# تحسين ثبات الاتصال
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 280,
+    "pool_size": 5,
+    "max_overflow": 10,
+}
 
 db = SQLAlchemy(app)
 
@@ -111,39 +101,35 @@ def parse_bool(val, default=False):
     return s in ("1", "true", "yes", "y", "on", "t", "نعم", "اه", "أه", "تمام", "صح", "قيد", "محاسبي")
 
 
-def parse_dt_any(val: str):
+def parse_end_date_override(date_str: str):
     """
     يقبل:
-    - ISO 8601: 2025-11-12T10:30
-    - تاريخ فقط: 2025-11-12  (هيتحول لنهاية اليوم 23:59:59)
+      - YYYY-MM-DD
+      - ISO 8601 (اختياري)
+    ويرجّع datetime بنهاية اليوم 23:59:59
     """
-    if not val:
+    if not date_str:
         return None
-    s = str(val).strip()
+    s = str(date_str).strip()
     if not s:
         return None
+
+    # لو جالك ISO كامل
     try:
-        # ISO 8601 (قد يحتوي وقت)
         dt = datetime.fromisoformat(s)
-        return dt
+        return dt.replace(hour=23, minute=59, second=59, microsecond=0)
     except Exception:
         pass
+
+    # YYYY-MM-DD
     try:
-        # YYYY-MM-DD
-        d = datetime.strptime(s, "%Y-%m-%d")
-        return d
+        parts = s.split("-")
+        if len(parts) != 3:
+            return None
+        y, m, d = [int(x) for x in parts]
+        return datetime(y, m, d, 23, 59, 59, 0)
     except Exception:
         return None
-
-
-def normalize_end_of_day(dt: datetime) -> datetime:
-    if not dt:
-        return None
-    # لو التاريخ جاء بدون وقت (00:00:00 غالبًا)، نخليه نهاية اليوم
-    # (حتى لو جاء بوقت، هنحافظ على الوقت لو المستخدم كتبه صراحة)
-    if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0:
-        return dt.replace(hour=23, minute=59, second=59, microsecond=0)
-    return dt.replace(microsecond=0)
 
 
 # ---------------- Models ----------------
@@ -232,8 +218,7 @@ class Car(db.Model):
     __tablename__ = "cars"
 
     id = db.Column(db.Integer, primary_key=True)
-    # ✅ تحسين آمن: تعريف unique في الموديل (لو الجدول قديم لن يتغير إلا بمهاجرة)
-    plate = db.Column(db.String(50), nullable=False, unique=True)
+    plate = db.Column(db.String(50), nullable=False)
     model = db.Column(db.String(80))
     car_type = db.Column(db.String(80))
     status = db.Column(db.String(50), default="متاحة")
@@ -742,8 +727,9 @@ def add_authorization():
         start_date = None
         sd = (data.get("start_date") or "").strip()
         if sd:
-            start_date = parse_dt_any(sd)
-            if not start_date:
+            try:
+                start_date = datetime.fromisoformat(sd)
+            except Exception:
                 return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601 مثل 2025-11-12T10:30"}), 400
 
         if not start_date:
@@ -833,15 +819,6 @@ def get_authorizations():
 # ✅ UPDATED: closed authorizations (fast + summary + close_date order)
 @app.route("/api/authorizations/closed", methods=["GET"])
 def get_closed_authorizations():
-    """
-    Closed Authorizations (FAST):
-    - Order: close_date DESC (newest first)
-    - Pagination: limit/offset
-    - light=1 (optional)
-    - q=... (server search)
-    Returns:
-      { items: [...], total: N, journal_yes: N, journal_no: N }
-    """
     q_raw = (request.args.get("q") or "").strip()
     light = parse_bool(request.args.get("light"), default=False)
 
@@ -874,7 +851,7 @@ def get_closed_authorizations():
     journal_exists = exists().where(
         and_(
             JournalEntry.ref_authorization_id == Authorization.id,
-            JournalEntry.ref_receipt_id.is_(None),   # قيد إقفال تفويض فقط
+            JournalEntry.ref_receipt_id.is_(None),
         )
     )
 
@@ -899,16 +876,11 @@ def get_closed_authorizations():
 
 @app.route("/api/authorizations/active", methods=["GET"])
 def get_active_authorizations():
-    # ✅ تحسين آمن: اختياري limit/offset (لو مش مبعوت يرجّع الكل زي القديم)
-    limit = parse_int(request.args.get("limit"), default=None, min_val=1, max_val=5000)
-    offset = parse_int(request.args.get("offset"), default=0, min_val=0)
-
-    q = Authorization.query.filter(Authorization.close_date.is_(None)).order_by(Authorization.id.desc())
-    if limit is not None:
-        auths = q.offset(offset).limit(limit).all()
-    else:
-        auths = q.all()
-
+    auths = (
+        Authorization.query.filter(Authorization.close_date.is_(None))
+        .order_by(Authorization.id.desc())
+        .all()
+    )
     return jsonify([a.to_dict() for a in auths])
 
 
@@ -923,11 +895,9 @@ def end_authorization(auth_id):
     - يرجع suggested_receipt لفتح سند تحصيل تلقائي.
     - ✅ يرجع journal_entry_id لو اتعمل قيد (مهم للطباعة/العمليات)
 
-    ✅ تعديل مهم (مطلوب منك):
-    - لو المستخدم عدّل "تاريخ نهاية التفويض" في صفحة الإغلاق:
-      ابعت في الـ payload أحد الحقول:
-        end_date  أو planned_end_date  أو end_date_override
-      وسيتم حفظه فعلاً في auth.end_date قبل حساب الأيام والمبلغ.
+    ✅ تحديث مهم لتوافق صفحة rented.html:
+    - دعم end_date_override (YYYY-MM-DD) لكن فقط عند renew=False
+    - حفظ end_date المعدل داخل التفويض قبل الإقفال
     """
     auth = Authorization.query.get(auth_id)
     if not auth:
@@ -944,7 +914,7 @@ def end_authorization(auth_id):
         if renew_raw is None:
             renew_raw = data.get("renew_option")
 
-        renew = True  # (نفس سلوكك القديم)
+        renew = True
         if isinstance(renew_raw, bool):
             renew = renew_raw
         elif isinstance(renew_raw, (int, float)):
@@ -956,7 +926,6 @@ def end_authorization(auth_id):
         if with_journal_raw is None:
             with_journal_raw = data.get("accounting_option")
 
-        # ✅ الافتراضي False: لا قيد إلا لو اتبعت صراحة
         with_journal = False
         if with_journal_raw is not None:
             if isinstance(with_journal_raw, bool):
@@ -972,36 +941,32 @@ def end_authorization(auth_id):
         closing_note = (data.get("closing_note") or "").strip() or None
         closed_amount_input = data.get("closed_amount")
 
-        # ✅ (1) حفظ end_date المعدّل لو موجود في الطلب
-        end_date_raw = (
-            data.get("end_date") or
-            data.get("planned_end_date") or
-            data.get("end_date_override")
-        )
-        if end_date_raw not in (None, "", " "):
-            dt = parse_dt_any(end_date_raw)
-            if not dt:
-                return jsonify({"error": "صيغة تاريخ نهاية التفويض غير صحيحة. استخدم ISO 8601 أو YYYY-MM-DD"}), 400
-            dt = normalize_end_of_day(dt)
-
-            # تحقق بسيط: لا ينفع نهاية قبل بداية
-            base_start = auth.start_date or auth.issue_date
-            if base_start and dt.date() < base_start.date():
-                return jsonify({"error": "تاريخ النهاية لا يمكن أن يكون قبل تاريخ بداية التفويض"}), 400
-
-            auth.end_date = dt
+        # ✅ end_date_override: يُستخدم فقط عند عدم التجديد
+        end_date_override_str = (data.get("end_date_override") or "").strip()
+        end_date_override_dt = None
+        if (not renew) and end_date_override_str:
+            end_date_override_dt = parse_end_date_override(end_date_override_str)
+            if not end_date_override_dt:
+                return jsonify({"error": "صيغة end_date_override غير صحيحة. استخدم YYYY-MM-DD"}), 400
 
         close_dt = datetime.utcnow()
         auth.close_date = close_dt
         auth.status = "منتهية"
 
-        # لو مازال end_date فارغ ولم يُرسل تعديل => نثبتها على الجمعة
+        # لو end_date مش موجودة → احسبها افتراضيًا
         if not auth.end_date:
             base_for_end = auth.start_date or auth.issue_date
             if base_for_end:
                 auth.end_date = get_friday_end(base_for_end)
 
-        # حساب الأيام والمبلغ بناءً على end_date (بعد التعديل)
+        # ✅ لو فيه override (بدون تجديد) خزّنه
+        if end_date_override_dt:
+            base_start_chk = auth.start_date or auth.issue_date
+            if base_start_chk and end_date_override_dt.date() < base_start_chk.date():
+                return jsonify({"error": "تاريخ النهاية لا يمكن أن يكون قبل تاريخ بداية التفويض."}), 400
+            auth.end_date = end_date_override_dt
+
+        # احسب الأيام والمبلغ بناء على end_date (المعدلة أو الأصلية)
         rental_days = None
         auto_amount = None
         base_start = auth.start_date or auth.issue_date
@@ -1019,7 +984,7 @@ def end_authorization(auth_id):
 
         if closed_amount_input not in (None, "", " "):
             tmp = safe_decimal(closed_amount_input)
-            if tmp is not None and tmp > 0:
+            if tmp is not None and tmp >= 0:
                 closed_amount_dec = tmp
                 final_amount = float(tmp)
 
@@ -1036,7 +1001,6 @@ def end_authorization(auth_id):
         new_auth = None
 
         if renew:
-            # يبدأ الأسبوع التالي بناءً على end_date (بعد التعديل)
             if auth.end_date:
                 new_issue = auth.end_date + timedelta(days=1)
             else:
@@ -1119,11 +1083,6 @@ def add_car():
         plate = (data.get("plate") or "").strip()
         if not plate:
             return jsonify({"error": "رقم اللوحة مطلوب"}), 400
-
-        # ✅ تحسين آمن: منع تكرار اللوحة على مستوى التطبيق حتى لو قاعدة البيانات قديمة
-        existing = Car.query.filter_by(plate=plate).first()
-        if existing:
-            return jsonify({"error": "هذه السيارة مسجَّلة بالفعل بنفس رقم اللوحة"}), 400
 
         daily_rent_dec = safe_decimal(data.get("daily_rent"))
 
@@ -1281,20 +1240,12 @@ def get_account_ledger(account_id):
 @app.route("/api/journal_entries", methods=["GET", "POST"])
 def journal_entries_api():
     if request.method == "GET":
-        # ✅ تحسين آمن: اختياري limit/offset (لو مش موجود يرجّع الكل زي القديم)
-        limit = parse_int(request.args.get("limit"), default=None, min_val=1, max_val=5000)
-        offset = parse_int(request.args.get("offset"), default=0, min_val=0)
-
-        q = (
+        entries = (
             JournalEntry.query
             .options(selectinload(JournalEntry.lines).selectinload(JournalLine.account))
             .order_by(JournalEntry.date.desc(), JournalEntry.id.desc())
+            .all()
         )
-        if limit is not None:
-            entries = q.offset(offset).limit(limit).all()
-        else:
-            entries = q.all()
-
         return jsonify([e.to_dict(with_lines=True) for e in entries])
 
     data = request.get_json() or {}
@@ -1307,10 +1258,10 @@ def journal_entries_api():
 
     je_date = datetime.utcnow()
     if date_str:
-        dt = parse_dt_any(date_str)
-        if not dt:
-            return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم YYYY-MM-DD أو ISO 8601"}), 400
-        je_date = dt
+        try:
+            je_date = datetime.fromisoformat(date_str)
+        except Exception:
+            return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم YYYY-MM-DD"}), 400
 
     cleaned = []
     total_debit = Decimal("0")
@@ -1422,23 +1373,19 @@ def auth_close_journal_map():
     if not ids:
         return jsonify({"map": {}})
 
-    # ✅ تحسين آمن على Postgres: بدل distinct() نجيب آخر ID لكل ref_authorization_id
-    subq = (
-        db.session.query(
-            JournalEntry.ref_authorization_id.label("aid"),
-            func.max(JournalEntry.id).label("max_id"),
-        )
+    q = (
+        JournalEntry.query
         .filter(JournalEntry.ref_authorization_id.in_(ids))
         .filter(JournalEntry.ref_receipt_id.is_(None))
-        .group_by(JournalEntry.ref_authorization_id)
-        .subquery()
+        .order_by(
+            JournalEntry.ref_authorization_id.asc(),
+            JournalEntry.date.desc(),
+            JournalEntry.id.desc(),
+        )
+        .distinct(JournalEntry.ref_authorization_id)
     )
 
-    rows = (
-        JournalEntry.query
-        .join(subq, JournalEntry.id == subq.c.max_id)
-        .all()
-    )
+    rows = q.all()
 
     mp = {}
     for je in rows:
@@ -1463,16 +1410,7 @@ def auth_close_journal_map():
 @app.route("/api/receipts", methods=["GET", "POST"])
 def receipts_api():
     if request.method == "GET":
-        # ✅ تحسين آمن: اختياري limit/offset (لو مش موجود يرجّع الكل زي القديم)
-        limit = parse_int(request.args.get("limit"), default=None, min_val=1, max_val=5000)
-        offset = parse_int(request.args.get("offset"), default=0, min_val=0)
-
-        q = CashReceipt.query.order_by(CashReceipt.date.desc(), CashReceipt.id.desc())
-        if limit is not None:
-            receipts = q.offset(offset).limit(limit).all()
-        else:
-            receipts = q.all()
-
+        receipts = CashReceipt.query.order_by(CashReceipt.date.desc(), CashReceipt.id.desc()).all()
         return jsonify([r.to_dict() for r in receipts])
 
     data = request.get_json() or {}
@@ -1495,10 +1433,10 @@ def receipts_api():
 
     rc_date = datetime.utcnow()
     if date_str:
-        dt = parse_dt_any(date_str)
-        if not dt:
-            return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601 أو YYYY-MM-DD"}), 400
-        rc_date = dt
+        try:
+            rc_date = datetime.fromisoformat(date_str)
+        except Exception:
+            return jsonify({"error": "صيغة التاريخ غير صحيحة. استخدم ISO 8601"}), 400
 
     driver_obj = None
     if driver_id:
@@ -1526,7 +1464,6 @@ def receipts_api():
         db.session.add(receipt)
         db.session.flush()
 
-        # سند التحصيل دائمًا يسجل قيد (طبيعي لأنه سند محاسبي)
         journal_entry_id = create_journal_for_cash_receipt(receipt)
 
         db.session.commit()

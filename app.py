@@ -781,6 +781,14 @@ def receipts_list_page():
     return render_template("receipts-list.html")
 
 
+# ✅ NEW: Users page (Admin Only)
+@app.route("/users")
+def users_page():
+    if not is_admin():
+        return redirect("/dashboard")
+    return render_template("users.html")
+
+
 # ---------------- Health / Debug ----------------
 @app.route("/api/health")
 def api_health():
@@ -943,6 +951,80 @@ def users_api():
         db.session.add(u)
         db.session.commit()
         return jsonify({"message": "✅ تم إنشاء المستخدم", "user": u.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"DB error: {str(e)}"}), 500
+
+
+# ✅ NEW: Update / Disable user (Admin Only)
+@app.route("/api/users/<int:user_id>", methods=["PATCH", "DELETE"])
+def user_update_delete_api(user_id: int):
+    """
+    Admin only:
+      PATCH  -> update username / password / is_admin / is_active
+      DELETE -> safer delete (deactivate)
+    """
+    if not is_logged_in():
+        return jsonify({"error": "Unauthorized"}), 401
+    if not is_admin():
+        return jsonify({"error": "Forbidden"}), 403
+
+    u = User.query.get(user_id)
+    if not u:
+        return jsonify({"error": "User not found"}), 404
+
+    me_id = session.get("user_id")
+
+    if request.method == "DELETE":
+        if u.id == me_id:
+            return jsonify({"error": "لا يمكن تعطيل/حذف المستخدم الحالي"}), 400
+        u.is_active = False
+        try:
+            db.session.commit()
+            return jsonify({"message": "✅ تم تعطيل المستخدم"}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"DB error: {str(e)}"}), 500
+
+    # PATCH
+    data = request.get_json(silent=True) or {}
+
+    new_username = (data.get("username") or "").strip()
+    new_password = (data.get("password") or "").strip()
+
+    has_is_admin = ("is_admin" in data)
+    has_is_active = ("is_active" in data)
+
+    # username
+    if new_username:
+        exists_u = User.query.filter(
+            func.lower(User.username) == new_username.lower(),
+            User.id != u.id
+        ).first()
+        if exists_u:
+            return jsonify({"error": "اسم المستخدم مستخدم بالفعل"}), 400
+        u.username = new_username
+
+    # password
+    if new_password:
+        if len(new_password) < 8:
+            return jsonify({"error": "كلمة المرور ضعيفة (على الأقل 8 أحرف)"}), 400
+        u.password_hash = generate_password_hash(new_password)
+
+    # flags
+    if has_is_admin:
+        if u.id == me_id and (not bool(data.get("is_admin"))):
+            return jsonify({"error": "لا يمكن إزالة صلاحية الأدمن من المستخدم الحالي"}), 400
+        u.is_admin = bool(data.get("is_admin"))
+
+    if has_is_active:
+        if u.id == me_id and (not bool(data.get("is_active"))):
+            return jsonify({"error": "لا يمكن تعطيل المستخدم الحالي"}), 400
+        u.is_active = bool(data.get("is_active"))
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "✅ تم تحديث المستخدم", "user": u.to_dict()}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"DB error: {str(e)}"}), 500

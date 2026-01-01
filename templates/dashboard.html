@@ -71,6 +71,16 @@
       transform: translateY(-1px);
     }
 
+    /* ✅ زر خروج بنفس ستايل المستخدمين */
+    .nav-btn.logout {
+      background: #ffffff;
+      color: #dc2626;
+    }
+    .nav-btn.logout:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+
     .page-title {
       margin: 0;
       font-size: 1rem;
@@ -186,6 +196,9 @@
 
       <!-- ✅ زر المستخدمين (للأدمن فقط) -->
       <button class="nav-btn hidden" id="btnUsersTop" onclick="goTo('/users')">👥 المستخدمين</button>
+
+      <!-- ✅ زر خروج -->
+      <button class="nav-btn logout" onclick="logout()">🚪 خروج</button>
     </div>
 
     <h1 class="page-title">🚘 نظام إدارة التفويضات وتأجير السيارات</h1>
@@ -238,6 +251,17 @@
   <script>
     function goTo(page) {
       window.location.href = page;
+    }
+
+    // ✅ خروج (نفس منطق صفحة users)
+    async function logout(){
+      try{
+        await fetch('/api/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }catch(e){}
+      window.location.href = '/';
     }
 
     // ✅ إظهار زر المستخدمين للأدمن فقط

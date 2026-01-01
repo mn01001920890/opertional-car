@@ -25,7 +25,7 @@
       background:linear-gradient(135deg,var(--main-blue),var(--main-purple));
       color:var(--ink);
     }
-    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    .wrap{max-width:1150px;margin:0 auto;padding:18px}
     .top{
       display:flex;align-items:center;justify-content:space-between;gap:10px;
       padding:14px 16px;border-radius:var(--radius);
@@ -33,13 +33,21 @@
       backdrop-filter: blur(10px);
     }
     .top h1{margin:0;font-size:18px}
+    .top .sub{
+      margin-top:4px;
+      color:rgba(229,231,235,.85);
+      font-size:13px;
+    }
     .top .links{display:flex;gap:10px;flex-wrap:wrap}
     .btn{
       border:0; cursor:pointer; color:#fff;
       padding:10px 12px; border-radius:12px;
       background:rgba(255,255,255,.12);
+      transition:.15s ease;
+      user-select:none;
     }
-    .btn:hover{background:rgba(255,255,255,.18)}
+    .btn:hover{background:rgba(255,255,255,.18); transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
     .grid{
       margin-top:14px;
       display:grid; gap:14px;
@@ -67,15 +75,14 @@
     }
     .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .check{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--muted)}
-    .primary{
-      background:linear-gradient(135deg, var(--success), #22c55e);
-    }
-    .danger{background:linear-gradient(135deg, var(--danger), #ef4444)}
-    .warn{background:linear-gradient(135deg, var(--warn), #fbbf24); color:#111}
+    .primary{ background:linear-gradient(135deg, var(--success), #22c55e); }
+    .danger{ background:linear-gradient(135deg, var(--danger), #ef4444); }
+    .warn{ background:linear-gradient(135deg, var(--warn), #fbbf24); color:#111; }
+    .ghost{ background:rgba(255,255,255,.10); }
     .table-wrap{overflow:auto;border-radius:12px;border:1px solid rgba(255,255,255,.12)}
-    table{width:100%;border-collapse:collapse;min-width:760px}
-    th,td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:right}
-    th{background:rgba(255,255,255,.06);color:#fff;font-weight:700;font-size:13px}
+    table{width:100%;border-collapse:collapse;min-width:920px}
+    th,td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:right;vertical-align:top}
+    th{background:rgba(255,255,255,.06);color:#fff;font-weight:700;font-size:13px;white-space:nowrap}
     td{color:#e5e7eb;font-size:13px}
     .pill{
       display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;
@@ -83,17 +90,26 @@
     }
     .pill.ok{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.35)}
     .pill.no{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.35)}
+    .pill.me{background:rgba(99,102,241,.18);border-color:rgba(99,102,241,.35)}
     .actions{display:flex;gap:8px;flex-wrap:wrap}
     .small{padding:8px 10px;border-radius:10px;font-size:12px}
     .msg{margin-top:10px;color:var(--muted);font-size:13px;min-height:18px}
+    .muted{color:rgba(229,231,235,.8)}
+    .sep{height:1px;background:rgba(255,255,255,.08);margin:12px 0}
+    .hint{font-size:12px;color:rgba(229,231,235,.75);line-height:1.6}
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="top">
-      <h1>👥 إدارة المستخدمين (Admin Only)</h1>
+      <div>
+        <h1>👥 إدارة المستخدمين (Admin Only)</h1>
+        <div class="sub" id="whoami">جار التحقق من الجلسة...</div>
+      </div>
+
       <div class="links">
-        <button class="btn" onclick="location.href='/'">🏠 الدخول</button>
+        <button class="btn" onclick="location.href='/dashboard'">🏠 الرئيسية</button>
         <button class="btn" onclick="location.href='/cars'">🚗 السيارات</button>
         <button class="btn" onclick="location.href='/drivers'">👤 السائقين</button>
         <button class="btn" onclick="logout()">🚪 خروج</button>
@@ -101,6 +117,7 @@
     </div>
 
     <div class="grid">
+      <!-- Create user -->
       <div class="card">
         <h2>➕ إضافة مستخدم جديد</h2>
 
@@ -117,15 +134,32 @@
 
         <div class="row" style="margin-top:12px">
           <button class="btn primary" onclick="createUser()">✅ إنشاء</button>
-          <button class="btn" onclick="loadUsers()">🔄 تحديث القائمة</button>
+          <button class="btn ghost" onclick="loadUsers()">🔄 تحديث القائمة</button>
         </div>
 
         <div class="msg" id="createMsg"></div>
+
+        <div class="sep"></div>
+        <div class="hint">
+          ملاحظات:
+          <ul style="margin:8px 0 0; padding:0 18px 0 0;">
+            <li>التعطيل هنا معناه <span class="muted">is_active = false</span> (مش حذف من الداتابيز).</li>
+            <li>النظام هيمنع تعطيل نفسك أو إزالة أدمن عن نفسك.</li>
+          </ul>
+        </div>
       </div>
 
+      <!-- Users list -->
       <div class="card">
-        <h2>📋 المستخدمين</h2>
-        <div class="table-wrap">
+        <div class="row" style="justify-content:space-between;gap:12px">
+          <h2 style="margin:0">📋 المستخدمين</h2>
+          <div class="row" style="gap:10px;min-width:260px;flex:1;justify-content:flex-end">
+            <input id="q" placeholder="🔎 بحث باليوزر..." oninput="renderUsers()" style="max-width:320px" />
+            <button class="btn ghost" onclick="loadUsers()">🔄</button>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="margin-top:10px">
           <table>
             <thead>
               <tr>
@@ -133,21 +167,26 @@
                 <th>Username</th>
                 <th>Admin</th>
                 <th>Active</th>
+                <th>Created</th>
                 <th>Last Login</th>
                 <th>إجراءات</th>
               </tr>
             </thead>
             <tbody id="usersTbody">
-              <tr><td colspan="6">جار التحميل...</td></tr>
+              <tr><td colspan="7">جار التحميل...</td></tr>
             </tbody>
           </table>
         </div>
+
         <div class="msg" id="listMsg"></div>
       </div>
     </div>
   </div>
 
 <script>
+  let ME = null;         // {id, username, ...}
+  let USERS = [];        // cached
+
   async function api(url, method="GET", body=null){
     const opts = { method, headers: { "Content-Type":"application/json" } };
     if(body) opts.body = JSON.stringify(body);
@@ -164,55 +203,119 @@
     el.style.color = ok ? "rgba(229,231,235,.9)" : "rgba(254,202,202,.95)";
   }
 
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, m => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[m]));
+  }
+
   async function logout(){
     try{ await api("/api/logout","POST"); }catch(e){}
     location.href="/";
   }
 
+  async function loadMe(){
+    try{
+      const r = await api("/api/me","GET");
+      ME = r.user;
+      const role = ME.is_admin ? "Admin" : "User";
+      document.getElementById("whoami").innerHTML =
+        `مسجل كـ: <span class="pill me">#${ME.id} ${escapeHtml(ME.username)}</span> — الدور: <b>${role}</b>`;
+    }catch(e){
+      // لو الجلسة بايظة
+      document.getElementById("whoami").textContent = "الجلسة غير صالحة — سيتم تحويلك للدخول.";
+      setTimeout(()=> location.href="/", 600);
+    }
+  }
+
   async function loadUsers(){
     setMsg("listMsg","",true);
     const tb = document.getElementById("usersTbody");
-    tb.innerHTML = `<tr><td colspan="6">جار التحميل...</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="7">جار التحميل...</td></tr>`;
     try{
       const users = await api("/api/users","GET");
-      if(!users.length){
-        tb.innerHTML = `<tr><td colspan="6">لا يوجد مستخدمين</td></tr>`;
-        return;
-      }
-      tb.innerHTML = users.map(u => {
-        const adminPill = u.is_admin ? `<span class="pill ok">Admin</span>` : `<span class="pill">No</span>`;
-        const actPill = u.is_active ? `<span class="pill ok">Active</span>` : `<span class="pill no">Disabled</span>`;
-        const last = u.last_login_at ? u.last_login_at : "-";
-        return `
-          <tr>
-            <td>${u.id}</td>
-            <td>${escapeHtml(u.username)}</td>
-            <td>${adminPill}</td>
-            <td>${actPill}</td>
-            <td>${escapeHtml(last)}</td>
-            <td>
-              <div class="actions">
-                <button class="btn small warn" onclick="resetPass(${u.id})">🔑 تغيير كلمة السر</button>
-                <button class="btn small" onclick="toggleActive(${u.id}, ${u.is_active ? 'false':'true'})">
-                  ${u.is_active ? '⛔ تعطيل' : '✅ تفعيل'}
-                </button>
-                <button class="btn small" onclick="toggleAdmin(${u.id}, ${u.is_admin ? 'false':'true'})">
-                  ${u.is_admin ? '⬇️ إلغاء Admin' : '⬆️ جعل Admin'}
-                </button>
-                <button class="btn small danger" onclick="disableUser(${u.id})">🗑️ تعطيل نهائي</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join("");
+      USERS = Array.isArray(users) ? users : [];
+      renderUsers();
     }catch(e){
-      tb.innerHTML = `<tr><td colspan="6">فشل تحميل المستخدمين</td></tr>`;
+      USERS = [];
+      tb.innerHTML = `<tr><td colspan="7">فشل تحميل المستخدمين</td></tr>`;
       setMsg("listMsg", e.message, false);
     }
   }
 
+  function renderUsers(){
+    const tb = document.getElementById("usersTbody");
+    const q = (document.getElementById("q").value || "").trim().toLowerCase();
+
+    const filtered = USERS.filter(u => {
+      if(!q) return true;
+      return String(u.username || "").toLowerCase().includes(q) || String(u.id).includes(q);
+    });
+
+    if(!filtered.length){
+      tb.innerHTML = `<tr><td colspan="7">لا يوجد نتائج</td></tr>`;
+      return;
+    }
+
+    tb.innerHTML = filtered.map(u => {
+      const isMe = ME && (u.id === ME.id);
+
+      const adminPill = u.is_admin
+        ? `<span class="pill ok">Admin</span>`
+        : `<span class="pill">No</span>`;
+
+      const actPill = u.is_active
+        ? `<span class="pill ok">Active</span>`
+        : `<span class="pill no">Disabled</span>`;
+
+      const created = u.created_at ? escapeHtml(u.created_at) : "-";
+      const last = u.last_login_at ? escapeHtml(u.last_login_at) : "-";
+
+      const meTag = isMe ? ` <span class="pill me">أنت</span>` : "";
+
+      // تعطيل أزرار خطرة على النفس (حتى لو API مانع)
+      const disSelf = isMe ? "disabled" : "";
+
+      return `
+        <tr>
+          <td>${u.id}</td>
+          <td>${escapeHtml(u.username)}${meTag}</td>
+          <td>${adminPill}</td>
+          <td>${actPill}</td>
+          <td>${created}</td>
+          <td>${last}</td>
+          <td>
+            <div class="actions">
+              <button class="btn small" onclick="renameUser(${u.id}, '${escapeJs(u.username)}')" ${disSelf}>✏️ تغيير الاسم</button>
+              <button class="btn small warn" onclick="resetPass(${u.id})" ${disSelf}>🔑 تغيير كلمة السر</button>
+
+              <button class="btn small"
+                onclick="toggleActive(${u.id}, ${u.is_active ? 'false':'true'})"
+                ${disSelf}>
+                ${u.is_active ? '⛔ تعطيل' : '✅ تفعيل'}
+              </button>
+
+              <button class="btn small"
+                onclick="toggleAdmin(${u.id}, ${u.is_admin ? 'false':'true'})"
+                ${disSelf}>
+                ${u.is_admin ? '⬇️ إلغاء Admin' : '⬆️ جعل Admin'}
+              </button>
+
+              <button class="btn small danger" onclick="disableUser(${u.id})" ${disSelf}>🗑️ تعطيل نهائي</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function escapeJs(s){
+    return String(s ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  }
+
   async function createUser(){
     setMsg("createMsg","",true);
+
     const username = (document.getElementById("newUsername").value || "").trim();
     const password = (document.getElementById("newPassword").value || "").trim();
     const is_admin = document.getElementById("newIsAdmin").checked;
@@ -221,6 +324,11 @@
       setMsg("createMsg","اكتب اسم المستخدم وكلمة المرور", false);
       return;
     }
+    if(password.length < 8){
+      setMsg("createMsg","كلمة المرور لازم تكون 8 أحرف على الأقل", false);
+      return;
+    }
+
     try{
       await api("/api/users","POST",{username, password, is_admin});
       document.getElementById("newUsername").value = "";
@@ -233,11 +341,29 @@
     }
   }
 
+  async function renameUser(id, current){
+    const newU = prompt("اكتب اسم مستخدم جديد:", current || "");
+    if(!newU) return;
+    const v = newU.trim();
+    if(!v) return;
+    try{
+      await api(`/api/users/${id}`,"PATCH",{username: v});
+      await loadUsers();
+    }catch(e){
+      alert(e.message);
+    }
+  }
+
   async function resetPass(id){
     const p = prompt("اكتب كلمة سر جديدة (8 أحرف على الأقل):");
     if(!p) return;
+    const v = p.trim();
+    if(v.length < 8){
+      alert("كلمة المرور لازم تكون 8 أحرف على الأقل");
+      return;
+    }
     try{
-      await api(`/api/users/${id}`,"PATCH",{password: p});
+      await api(`/api/users/${id}`,"PATCH",{password: v});
       await loadUsers();
     }catch(e){
       alert(e.message);
@@ -272,13 +398,11 @@
     }
   }
 
-  function escapeHtml(s){
-    return String(s ?? "").replace(/[&<>"']/g, m => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-    }[m]));
-  }
-
-  loadUsers();
+  // init
+  (async ()=>{
+    await loadMe();
+    await loadUsers();
+  })();
 </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -13,9 +13,7 @@
       --shadow: 0 4px 10px rgba(0,0,0,0.25);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -82,15 +80,13 @@
     }
 
     @media (max-width: 700px) {
-      .page-title {
-        font-size: 0.95rem;
-      }
+      .page-title { font-size: 0.95rem; }
     }
 
     /* محتوى الصفحة */
     .page-content {
       flex: 1;
-      padding: 90px 16px 60px; /* مساحة للهيدر والفوتر */
+      padding: 90px 16px 60px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -168,20 +164,16 @@
 
     /* 📱 موبايل / تابلت */
     @media (max-width: 600px) {
-      h1 {
-        font-size: 22px;
-      }
-
-      .section {
-        padding: 14px 10px 18px;
-      }
-
-      .menu-btn {
-        width: 100%;
-      }
+      h1 { font-size: 22px; }
+      .section { padding: 14px 10px 18px; }
+      .menu-btn { width: 100%; }
     }
+
+    /* إخفاء زر الأدمن لحد ما نتحقق */
+    .hidden { display: none !important; }
   </style>
 </head>
+
 <body>
 
   <!-- 🔝 الهيدر الثابت -->
@@ -191,7 +183,11 @@
       <button class="nav-btn" onclick="goTo('/rented')">🚗 السيارات المؤجرة</button>
       <button class="nav-btn" onclick="goTo('/cars-status')">📊 حالة السيارات</button>
       <button class="nav-btn" onclick="goTo('/operations')">🧾 كل العمليات</button>
+
+      <!-- ✅ زر المستخدمين (للأدمن فقط) -->
+      <button class="nav-btn hidden" id="btnUsersTop" onclick="goTo('/users')">👥 المستخدمين</button>
     </div>
+
     <h1 class="page-title">🚘 نظام إدارة التفويضات وتأجير السيارات</h1>
   </header>
 
@@ -206,33 +202,15 @@
       </p>
 
       <div class="container">
-        <button class="menu-btn" onclick="goTo('/issue')">
-          📝 إصدار تفويض جديد
-        </button>
+        <button class="menu-btn" onclick="goTo('/issue')">📝 إصدار تفويض جديد</button>
+        <button class="menu-btn" onclick="goTo('/view')">📜 عرض جميع التفويضات</button>
+        <button class="menu-btn" onclick="goTo('/drivers')">👤 إدارة السائقين</button>
+        <button class="menu-btn" onclick="goTo('/cars')">🚗 إدارة السيارات</button>
+        <button class="menu-btn" onclick="goTo('/rented')">🚗 السيارات المؤجرة الآن</button>
+        <button class="menu-btn" onclick="goTo('/cars-status')">📊 حالة السيارات</button>
 
-        <button class="menu-btn" onclick="goTo('/view')">
-          📜 عرض جميع التفويضات
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/drivers')">
-          👤 إدارة السائقين
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/cars')">
-          🚗 إدارة السيارات
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/rented')">
-          🚗 السيارات المؤجرة الآن
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/cars-status')">
-          📊 حالة السيارات
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/game')">
-          📊 حالة السيارات
-        </button>
+        <!-- ✅ زر إدارة المستخدمين داخل الداشبورد (للأدمن فقط) -->
+        <button class="menu-btn hidden" id="btnUsersCard" onclick="goTo('/users')">👥 إدارة المستخدمين</button>
       </div>
     </section>
 
@@ -244,67 +222,57 @@
       </p>
 
       <div class="container">
-        <button class="menu-btn" onclick="goTo('/accounts')">
-          📒 دليل الحسابات
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/ledger')">
-          📑 دفتر الأستاذ (لكل حساب)
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/general')">
-          📓 اليومية العامة
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/journal-list')">
-          📓 عرض القيود اليدوية
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/receipt')">
-          🧾 سند تحصيل نقدي جديد
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/receipts-list')">
-          📄 عرض سندات التحصيل النقدية
-        </button>
-
-        <button class="menu-btn" onclick="goTo('/operations')">
-          🧾 كل العمليات
-        </button>
+        <button class="menu-btn" onclick="goTo('/accounts')">📒 دليل الحسابات</button>
+        <button class="menu-btn" onclick="goTo('/ledger')">📑 دفتر الأستاذ (لكل حساب)</button>
+        <button class="menu-btn" onclick="goTo('/general')">📓 اليومية العامة</button>
+        <button class="menu-btn" onclick="goTo('/journal-list')">📓 عرض القيود اليدوية</button>
+        <button class="menu-btn" onclick="goTo('/receipt')">🧾 سند تحصيل نقدي جديد</button>
+        <button class="menu-btn" onclick="goTo('/receipts-list')">📄 عرض سندات التحصيل النقدية</button>
+        <button class="menu-btn" onclick="goTo('/operations')">🧾 كل العمليات</button>
       </div>
     </section>
   </main>
 
-  <footer>
-    © 2025 جميع الحقوق محفوظة لنظام التفويضات
-  </footer>
+  <footer>© 2025 جميع الحقوق محفوظة لنظام التفويضات</footer>
 
   <script>
     function goTo(page) {
       window.location.href = page;
     }
+
+    // ✅ إظهار زر المستخدمين للأدمن فقط
+    async function setupAdminButtons() {
+      try {
+        const res = await fetch('/api/me', { cache: 'no-store' });
+        const data = await res.json();
+
+        if (res.ok && data && data.ok && data.user && data.user.is_admin) {
+          document.getElementById('btnUsersTop').classList.remove('hidden');
+          document.getElementById('btnUsersCard').classList.remove('hidden');
+        }
+      } catch (e) {
+        // لو حصل مشكلة، نخليها مخفية وخلاص
+      }
+    }
+
+    setupAdminButtons();
   </script>
-                     <script>
-                    // 🔒 منع كليك يمين
-                    document.addEventListener('contextmenu', function (e) {
-                      e.preventDefault();
-                    });
-                  
-                    // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
-                    document.addEventListener('keydown', function (e) {
-                      // F12
-                      if (e.key === "F12") {
-                        e.preventDefault();
-                      }
-                  
-                      // Ctrl + Shift + I أو Ctrl + Shift + J أو Ctrl + U
-                      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || 
-                          (e.ctrlKey && e.key === 'U')) {
-                        e.preventDefault();
-                      }
-                    });
-                  </script>
+
+  <script>
+    // 🔒 منع كليك يمين
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    });
+
+    // 🔒 منع مفاتيح الأدوات المشهورة للمطورين
+    document.addEventListener('keydown', function (e) {
+      if (e.key === "F12") e.preventDefault();
+      if ((e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+          (e.ctrlKey && e.key === 'U')) {
+        e.preventDefault();
+      }
+    });
+  </script>
 
 </body>
-
 </html>

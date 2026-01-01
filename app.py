@@ -1,6 +1,7 @@
 # ======================================================
 # 🚗 Flask Authorization System — Weekly Authorizations + Accounting + Cash Receipts
 # + 🔐 Secure Login (Users + Sessions) + Admin Bootstrap
+# + ✅ Vercel/Neon safer DB engine options (serverless-friendly)
 # ======================================================
 
 from flask import (
@@ -10,6 +11,7 @@ from flask import (
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_, and_, func, exists, desc
+from sqlalchemy.pool import NullPool
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -25,18 +27,17 @@ def _is_vercel() -> bool:
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 if not SECRET_KEY:
-    # في local ممكن ندي مفتاح مؤقت
     if _is_vercel():
         raise ValueError("❌ لازم تضيف SECRET_KEY في Vercel Environment Variables")
     SECRET_KEY = "dev-" + secrets.token_hex(16)
 
 app.config["SECRET_KEY"] = SECRET_KEY
 
-# كوكيز آمنة
+# Cookies
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-# على Vercel لازم تكون Secure
 app.config["SESSION_COOKIE_SECURE"] = True if _is_vercel() else False
+
 
 # ---------------- Favicon ----------------
 @app.route("/favicon.ico")
@@ -46,6 +47,7 @@ def favicon():
         "favicon.ico",
         mimetype="image/vnd.microsoft.icon",
     )
+
 
 # ---------------- DB Config (Vercel/Neon) ----------------
 def normalize_database_url(url: str) -> str:
@@ -65,15 +67,23 @@ if not DATABASE_URL:
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# تحسين ثبات الاتصال
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True,
-    "pool_recycle": 280,
-    "pool_size": 5,
-    "max_overflow": 10,
-}
+# ✅ Vercel (Serverless) best practice: disable pooling to avoid too many DB connections
+if _is_vercel():
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "poolclass": NullPool,
+        "pool_pre_ping": True,
+        "connect_args": {"sslmode": "require"},
+    }
+else:
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 280,
+        "pool_size": 5,
+        "max_overflow": 10,
+    }
 
 db = SQLAlchemy(app)
+
 
 # ---------------- Helpers ----------------
 def get_friday_end(base_dt: datetime) -> datetime:
@@ -139,7 +149,7 @@ def parse_end_date_override(date_str: str):
     if not s:
         return None
 
-    # لو جالك ISO كامل
+    # ISO
     try:
         dt = datetime.fromisoformat(s)
         return dt.replace(hour=23, minute=59, second=59, microsecond=0)
@@ -195,13 +205,13 @@ def protect_app():
     if path in public_paths:
         return None
 
-    # لو API
+    # APIs require login
     if path.startswith("/api/"):
         if not is_logged_in():
             return require_login_api()
         return None
 
-    # لو صفحات
+    # Pages require login
     if not is_logged_in():
         return redirect("/")
 
@@ -210,11 +220,9 @@ def protect_app():
 
 @app.after_request
 def add_security_headers(resp):
-    # Headers أمنية أساسية
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["Referrer-Policy"] = "same-origin"
-    # لو حبيت CSP لاحقًا نضيفه بحذر عشان ما يكسرش الـ inline scripts
     return resp
 
 
@@ -705,7 +713,6 @@ def create_journal_for_cash_receipt(receipt: CashReceipt):
 # ---------------- Routes (Pages) ----------------
 @app.route("/")
 def index_page():
-    # لو مسجل دخول بالفعل ودّيه للوحة
     if is_logged_in():
         return redirect("/dashboard")
     return render_template("index.html")
@@ -781,7 +788,7 @@ def receipts_list_page():
     return render_template("receipts-list.html")
 
 
-# ✅ NEW: Users page (Admin Only)
+# ✅ Users page (Admin Only)
 @app.route("/users")
 def users_page():
     if not is_admin():
@@ -883,7 +890,6 @@ def api_bootstrap_admin():
 
         exists_u = User.query.filter(func.lower(User.username) == username.lower()).first()
         if exists_u:
-            # لو موجود نخليه admin لو مافيش admins
             exists_u.is_admin = True
             exists_u.is_active = True
             if not exists_u.password_hash:
@@ -909,13 +915,9 @@ def api_bootstrap_admin():
         return jsonify({"ok": False, "error": f"Server error: {str(e)}"}), 500
 
 
+# ---------------- Users APIs (Admin Only) ----------------
 @app.route("/api/users", methods=["GET", "POST"])
 def users_api():
-    """
-    Admin only:
-      GET  -> list users
-      POST -> create user
-    """
     if not is_logged_in():
         return jsonify({"error": "Unauthorized"}), 401
     if not is_admin():
@@ -925,7 +927,6 @@ def users_api():
         users = User.query.order_by(User.id.desc()).all()
         return jsonify([u.to_dict() for u in users])
 
-    # POST
     data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip()
     password = (data.get("password") or "").strip()
@@ -956,14 +957,8 @@ def users_api():
         return jsonify({"error": f"DB error: {str(e)}"}), 500
 
 
-# ✅ NEW: Update / Disable user (Admin Only)
 @app.route("/api/users/<int:user_id>", methods=["PATCH", "DELETE"])
 def user_update_delete_api(user_id: int):
-    """
-    Admin only:
-      PATCH  -> update username / password / is_admin / is_active
-      DELETE -> safer delete (deactivate)
-    """
     if not is_logged_in():
         return jsonify({"error": "Unauthorized"}), 401
     if not is_admin():
@@ -986,7 +981,6 @@ def user_update_delete_api(user_id: int):
             db.session.rollback()
             return jsonify({"error": f"DB error: {str(e)}"}), 500
 
-    # PATCH
     data = request.get_json(silent=True) or {}
 
     new_username = (data.get("username") or "").strip()
@@ -995,7 +989,6 @@ def user_update_delete_api(user_id: int):
     has_is_admin = ("is_admin" in data)
     has_is_active = ("is_active" in data)
 
-    # username
     if new_username:
         exists_u = User.query.filter(
             func.lower(User.username) == new_username.lower(),
@@ -1005,13 +998,11 @@ def user_update_delete_api(user_id: int):
             return jsonify({"error": "اسم المستخدم مستخدم بالفعل"}), 400
         u.username = new_username
 
-    # password
     if new_password:
         if len(new_password) < 8:
             return jsonify({"error": "كلمة المرور ضعيفة (على الأقل 8 أحرف)"}), 400
         u.password_hash = generate_password_hash(new_password)
 
-    # flags
     if has_is_admin:
         if u.id == me_id and (not bool(data.get("is_admin"))):
             return jsonify({"error": "لا يمكن إزالة صلاحية الأدمن من المستخدم الحالي"}), 400
@@ -1030,7 +1021,7 @@ def user_update_delete_api(user_id: int):
         return jsonify({"error": f"DB error: {str(e)}"}), 500
 
 
-# ---------------- APIs ----------------
+# ---------------- Authorizations APIs ----------------
 @app.route("/api/issue", methods=["POST"])
 def add_authorization():
     try:
@@ -1382,15 +1373,13 @@ def end_authorization(auth_id):
         return jsonify({"error": f"DB error: {str(e)}"}), 500
 
 
-# ----- Cars APIs -----
-@app.route("/api/cars", methods=["GET"])
-def list_cars():
-    cars = Car.query.order_by(Car.id.desc()).all()
-    return jsonify([c.to_dict() for c in cars])
+# ---------------- Cars APIs ----------------
+@app.route("/api/cars", methods=["GET", "POST"])
+def cars_api():
+    if request.method == "GET":
+        cars = Car.query.order_by(Car.id.desc()).all()
+        return jsonify([c.to_dict() for c in cars])
 
-
-@app.route("/api/cars", methods=["POST"])
-def add_car():
     try:
         data = request.get_json() or {}
         plate = (data.get("plate") or "").strip()
@@ -1424,15 +1413,13 @@ def cars_status():
     return jsonify({"total": total, "available": available, "rented": rented, "repair": repair})
 
 
-# ----- Drivers APIs -----
-@app.route("/api/drivers", methods=["GET"])
-def list_drivers():
-    drivers = Driver.query.order_by(Driver.id.desc()).all()
-    return jsonify([d.to_dict() for d in drivers])
+# ---------------- Drivers APIs ----------------
+@app.route("/api/drivers", methods=["GET", "POST"])
+def drivers_api():
+    if request.method == "GET":
+        drivers = Driver.query.order_by(Driver.id.desc()).all()
+        return jsonify([d.to_dict() for d in drivers])
 
-
-@app.route("/api/drivers", methods=["POST"])
-def add_driver():
     try:
         data = request.get_json() or {}
         name = (data.get("name") or "").strip()
@@ -1443,7 +1430,11 @@ def add_driver():
         if existing:
             return jsonify({"error": "هذا السائق مسجَّل بالفعل"}), 400
 
-        new_driver = Driver(name=name, phone=data.get("phone"), license_no=data.get("license_no"))
+        new_driver = Driver(
+            name=name,
+            phone=data.get("phone"),
+            license_no=data.get("license_no")
+        )
         db.session.add(new_driver)
         db.session.commit()
         return jsonify({"message": "✅ Driver added", "driver": new_driver.to_dict()}), 201
@@ -1452,7 +1443,7 @@ def add_driver():
         return jsonify({"error": str(e)}), 500
 
 
-# ----- Accounts APIs -----
+# ---------------- Accounts APIs ----------------
 @app.route("/api/accounts", methods=["GET", "POST"])
 def accounts_api():
     if request.method == "GET":
@@ -1500,7 +1491,11 @@ def create_driver_account_api():
 
     existing = Account.query.filter_by(related_driver_id=driver.id).first()
     if existing:
-        return jsonify({"message": "✅ الحساب الخاص بالسائق موجود بالفعل", "account": existing.to_dict(), "already_exists": True}), 200
+        return jsonify({
+            "message": "✅ الحساب الخاص بالسائق موجود بالفعل",
+            "account": existing.to_dict(),
+            "already_exists": True
+        }), 200
 
     try:
         acc = ensure_driver_sub_account(driver)
@@ -1512,7 +1507,7 @@ def create_driver_account_api():
         return jsonify({"error": f"DB error: {str(e)}"}), 500
 
 
-# ----- Ledger API -----
+# ---------------- Ledger API ----------------
 @app.route("/api/accounts/<int:account_id>/ledger", methods=["GET"])
 def get_account_ledger(account_id):
     account = Account.query.get(account_id)
@@ -1549,7 +1544,7 @@ def get_account_ledger(account_id):
     return jsonify({"account": account.to_dict(), "lines": ledger_rows})
 
 
-# ----- General Journal APIs -----
+# ---------------- General Journal APIs ----------------
 @app.route("/api/journal_entries", methods=["GET", "POST"])
 def journal_entries_api():
     if request.method == "GET":
@@ -1719,7 +1714,7 @@ def auth_close_journal_map():
     return jsonify({"map": mp})
 
 
-# ----- Cash Receipts APIs -----
+# ---------------- Cash Receipts APIs ----------------
 @app.route("/api/receipts", methods=["GET", "POST"])
 def receipts_api():
     if request.method == "GET":
@@ -1805,7 +1800,7 @@ def receipt_get_one(receipt_id):
 # ---------------- Auto create tables + ensure core accounts ----------------
 with app.app_context():
     try:
-        db.create_all()          # ✅ هيضيف جدول users بدون ما يلمس البيانات
+        db.create_all()
         ensure_core_accounts()
     except Exception as e:
         print("❌ DB init error:", e)
